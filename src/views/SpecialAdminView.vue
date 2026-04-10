@@ -158,13 +158,22 @@ const deleteError = ref("");
 const actionUserId = ref("");
 const actionError = ref("");
 
+async function readApiPayload(res) {
+  const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return await res.json().catch(() => ({}));
+  }
+  const text = await res.text();
+  return { error: text?.slice(0, 180) || "Serwer zwrócił nieprawidłową odpowiedź." };
+}
+
 async function loadUsers() {
   isLoading.value = true;
   loadError.value = "";
   try {
     const headers = await getAuthHeader();
     const res = await fetch(`${API_BASE}/api/admin/users`, { headers });
-    const data = await res.json();
+    const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się pobrać użytkowników.");
     users.value = data.users || [];
   } catch (e) {
@@ -189,7 +198,7 @@ async function executeDelete() {
       method: "DELETE",
       headers
     });
-    const data = await res.json();
+    const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się usunąć użytkownika.");
     users.value = users.value.filter((u) => u.id !== userToDelete.value.id);
     userToDelete.value = null;
@@ -214,7 +223,7 @@ async function toggleBlock(user, blocked) {
       body: JSON.stringify({ blocked })
     });
 
-    const data = await res.json();
+    const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się zmienić statusu konta.");
 
     users.value = users.value.map((u) => (u.id === user.id ? { ...u, blocked } : u));

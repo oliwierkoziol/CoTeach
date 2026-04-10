@@ -100,6 +100,45 @@ function normalizeLessonDate(dateInput) {
   return parsed.toISOString().split("T")[0];
 }
 
+function extractBearerToken(req) {
+  const authHeader = String(req.headers.authorization || "").trim();
+  if (!authHeader) return "";
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme?.toLowerCase() !== "bearer" || !token) return "";
+  return token;
+}
+
+async function getRequestUser(req) {
+  if (!supabase) return null;
+  const token = extractBearerToken(req);
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user?.id) return null;
+  return data.user;
+}
+
+async function isRequestAdmin(req) {
+  if (!supabase) return true;
+  const user = await getRequestUser(req);
+  if (!user) return false;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) return false;
+  return data?.admin === true;
+}
+
+async function requireAdmin(req, res) {
+  const admin = await isRequestAdmin(req);
+  if (!admin) {
+    res.status(403).json({ error: "Brak uprawnień administratora." });
+    return false;
+  }
+  return true;
+}
+
 function rowToLesson(row) {
   return {
     id: row.id,
@@ -650,6 +689,72 @@ app.get("/api/admin", (_req, res) => {
     users: [...db.users.values()],
     licenses: [...db.licenses.values()]
   });
+});
+
+app.get("/api/admin/users", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.json({ users: [] });
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, admin, blocked, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return res.status(500).json({ error: `Nie udało się pobrać użytkowników: ${error.message}` });
+  }
+
+  return res.json({ users: data || [] });
+});
+
+app.patch("/api/admin/users/:userId/block", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const blocked = req.body?.blocked === true;
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ blocked, updated_at: new Date().toISOString() })
+    .eq("id", req.params.userId)
+    .select("id, blocked")
+    .maybeSingle();
+
+  if (error) {
+    return res.status(500).json({ error: `Nie udało się zmienić statusu konta: ${error.message}` });
+  }
+
+  if (!data) return res.status(404).json({ error: "Użytkownik nie istnieje." });
+  return res.json({ user: data });
+});
+
+app.delete("/api/admin/users/:userId", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const userId = req.params.userId;
+
+  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === String(userId));
+  for (const lesson of lessonsToDelete) {
+    db.lessons.delete(lesson.id);
+    db.costs.delete(lesson.id);
+  }
+
+  const { error: profileDeleteError } = await supabase.from("profiles").delete().eq("id", userId);
+  if (profileDeleteError) {
+    return res.status(500).json({ error: `Nie udało się usunąć profilu: ${profileDeleteError.message}` });
+  }
+
+  const { error: lessonsDeleteError } = await supabase.from("lessons").delete().eq("teacher_id", userId);
+  if (lessonsDeleteError) {
+    return res.status(500).json({ error: `Nie udało się usunąć lekcji użytkownika: ${lessonsDeleteError.message}` });
+  }
+
+  const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+  if (authDeleteError) {
+    return res.status(500).json({ error: `Nie udało się usunąć konta auth: ${authDeleteError.message}` });
+  }
+
+  return res.json({ ok: true });
 });
 
 app.get("/api/license/check", (req, res) => {

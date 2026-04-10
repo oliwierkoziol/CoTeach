@@ -55,10 +55,14 @@ create table if not exists public.profiles (
   email text,
   full_name text,
   admin boolean not null default false,
+  blocked boolean not null default false,
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists blocked boolean not null default false;
 
 alter table public.profiles enable row level security;
 
