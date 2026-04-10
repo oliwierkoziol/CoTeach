@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -6,6 +7,9 @@ import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import { createClient } from "@supabase/supabase-js";
 
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
 const app = express();
 const upload = multer();
 const port = 3001;
@@ -13,6 +17,7 @@ const port = 3001;
 const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "openai/gpt-4o-mini";
 const OPENROUTER_VISION_MODEL =
   process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
+const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
@@ -196,6 +201,49 @@ function normalize(text) {
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function getTodayIsoDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function normalizeLessonDate(dateInput) {
+  const raw = String(dateInput || "").trim();
+  if (!raw) return getTodayIsoDate();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return getTodayIsoDate();
+  return parsed.toISOString().split("T")[0];
+}
+
+async function resolveRequestUser(req, res) {
+  const authHeader = String(req.headers.authorization || "").trim();
+  if (!authHeader) return defaultTeacherId;
+
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    res.status(401).json({ error: "Invalid authorization header." });
+    return null;
+  }
+
+  if (!supabase) {
+    res.status(503).json({ error: "Auth is unavailable on server." });
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user?.id) {
+    res.status(401).json({ error: "Invalid or expired auth token." });
+    return null;
+  }
+
+  return data.user.id;
+}
+
+function getOwnedLesson(lessonId, teacherId) {
+  const lesson = db.lessons.get(lessonId);
+  if (!lesson) return null;
+  return lesson.teacherId === teacherId ? lesson : null;
 }
 
 function fallbackGeneratePlan(rawText) {
@@ -439,16 +487,22 @@ async function extractTextFromFile(file) {
 }
 
 app.post("/api/lessons", async (req, res) => {
-  const { title, subject, month, rawText = "" } = req.body || {};
-  if (!title || !subject || !month) return res.status(400).json({ error: "Missing fields" });
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const { title, subject, month, date, rawText = "" } = req.body || {};
+  if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
+  const normalizedDate = normalizeLessonDate(date);
+  const lessonMonth = (month || new Date(`${normalizedDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" }))
+    .toString()
+    .trim();
   const lesson = {
     id: randomUUID(),
     schoolId: defaultSchoolId,
-    teacherId: defaultTeacherId,
+    teacherId,
     title,
     subject,
-    month,
-    date: new Date().toISOString().split("T")[0],
+    month: lessonMonth,
+    date: normalizedDate,
     status: "draft",
     sourceFiles: [],
     plan: rawText ? await generatePlanWithLLM(rawText) : [],
@@ -461,12 +515,18 @@ app.post("/api/lessons", async (req, res) => {
 });
 
 app.get("/api/lessons", (_req, res) => {
-  res.json({ lessons: [...db.lessons.values()] });
+app.get("/api/lessons", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lessons = [...db.lessons.values()].filter((lesson) => lesson.teacherId === teacherId);
+  res.json({ lessons });
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
   try {
-    const lesson = db.lessons.get(req.params.lessonId);
+    const teacherId = await resolveRequestUser(req, res);
+    if (!teacherId) return;
+    const lesson = getOwnedLesson(req.params.lessonId, teacherId);
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
 
     let extractedText = (req.body.rawText || "").trim();
@@ -496,7 +556,10 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
 });
 
 app.put("/api/lessons/:lessonId/plan", (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+app.put("/api/lessons/:lessonId/plan", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   lesson.plan = req.body.plan || [];
   lesson.status = "ready";
@@ -505,8 +568,59 @@ app.put("/api/lessons/:lessonId/plan", (req, res) => {
   return res.json({ lesson });
 });
 
+app.put("/api/lessons/:lessonId/meta", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+
+  const nextTitle = String(req.body?.title || "").trim();
+  const nextSubject = String(req.body?.subject || "").trim();
+  const nextDate = normalizeLessonDate(req.body?.date || lesson.date);
+
+  if (!nextTitle || !nextSubject) {
+    return res.status(400).json({ error: "Title and subject are required." });
+  }
+
+  lesson.title = nextTitle;
+  lesson.subject = nextSubject;
+  lesson.date = nextDate;
+  lesson.month = new Date(`${nextDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" });
+
+  if (lesson.finalNote) {
+    lesson.finalNote.updatedAt = new Date().toISOString();
+  }
+
+  db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
+  return res.json({ lesson });
+});
+
+app.delete("/api/lessons/:lessonId", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lessonId = req.params.lessonId;
+  const lesson = getOwnedLesson(lessonId, teacherId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+
+  db.lessons.delete(lessonId);
+  db.costs.delete(lessonId);
+
+  if (supabase) {
+    const { error } = await supabase.from("lessons").delete().eq("id", lessonId);
+    if (error) {
+      return res.status(500).json({ error: `Supabase lesson delete failed: ${error.message}` });
+    }
+  }
+
+  return res.json({ ok: true });
+});
+
 app.post("/api/lessons/:lessonId/live/start", (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   const check = checkLicenseForSchool(lesson.schoolId);
   if (!check.allowed) return res.status(403).json({ error: check.reason });
@@ -518,7 +632,9 @@ app.post("/api/lessons/:lessonId/live/start", (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
@@ -538,7 +654,9 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
 });
 
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
   db.lessons.set(lesson.id, lesson);
@@ -548,11 +666,13 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   const html = await generateFinalNoteWithLLM(lesson);
   const noteId = randomUUID();
-  const baseUrl = req.body.baseUrl || "http://localhost:5173";
+  const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
   lesson.finalNote = {
     id: noteId,
     lessonId: lesson.id,
@@ -571,7 +691,10 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
 });
 
 app.get("/api/lessons/:lessonId/costs", (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
+app.get("/api/lessons/:lessonId/costs", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   return res.json(getCostSummary(lesson.id));
 });
@@ -598,8 +721,11 @@ app.get("/api/license/check", (req, res) => {
 
 app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
+    const teacherId = await resolveRequestUser(req, res);
+    if (!teacherId) return;
     const lessonId = String(req.body.lessonId || "");
-    if (!lessonId || !db.lessons.has(lessonId)) {
+    const lesson = getOwnedLesson(lessonId, teacherId);
+    if (!lessonId || !lesson) {
       return res.status(400).json({ error: "Valid lessonId is required." });
     }
     if (!req.file?.buffer) {

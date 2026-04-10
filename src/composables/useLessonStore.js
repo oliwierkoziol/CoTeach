@@ -1,6 +1,11 @@
 import { reactive } from "vue";
 
-const API_BASE = "http://localhost:3001";
+function normalizeBaseUrl(url) {
+  return String(url || "").trim().replace(/\/$/, "");
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL);
+const RESOLVED_API_BASE = API_BASE || "http://localhost:3001";
 
 const state = reactive({
   lesson: null,
@@ -13,7 +18,7 @@ const state = reactive({
 });
 
 async function api(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, options);
+  const response = await fetch(`${RESOLVED_API_BASE}${path}`, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || "API error");
@@ -95,6 +100,27 @@ export function useLessonStore() {
     return state.lessons;
   }
 
+  async function updateLessonMeta(lessonId, payload) {
+    const data = await api(`/api/lessons/${lessonId}/meta`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (state.lesson?.id === lessonId) {
+      state.lesson = data.lesson;
+    }
+    state.lessons = state.lessons.map((item) => (item.id === lessonId ? data.lesson : item));
+    return data.lesson;
+  }
+
+  async function deleteLesson(lessonId) {
+    await api(`/api/lessons/${lessonId}`, { method: "DELETE" });
+    if (state.lesson?.id === lessonId) {
+      state.lesson = null;
+    }
+    state.lessons = state.lessons.filter((item) => item.id !== lessonId);
+  }
+
   async function fetchAdmin() {
     return api("/api/admin");
   }
@@ -113,6 +139,8 @@ export function useLessonStore() {
     refreshCoverage,
     finalizeLesson,
     fetchLessons,
+    updateLessonMeta,
+    deleteLesson,
     fetchAdmin,
     fetchSharedNote
   };

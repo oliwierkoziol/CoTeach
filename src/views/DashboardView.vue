@@ -16,23 +16,23 @@
             <span>Lekcje w tym miesiącu</span>
             <span class="text-blue-600">◍</span>
           </div>
-          <div class="text-3xl font-bold text-blue-600 mt-2">{{ lessonsCount }}</div>
-          <p class="text-xs text-gray-500 mt-1">+3 od ostatniego miesiąca</p>
+          <div class="text-3xl font-bold text-blue-600 mt-2">{{ lessonsCountThisMonth }}</div>
+          <p class="text-xs text-gray-500 mt-1">Wszystkie zapisane: {{ lessonsTotal }}</p>
         </div>
         <div class="bg-white/80 backdrop-blur border border-green-200 rounded-xl p-6">
           <div class="text-sm text-gray-600 flex items-center justify-between">
             <span>Średni czas lekcji</span>
             <span class="text-green-600">◌</span>
           </div>
-          <div class="text-3xl font-bold text-green-600 mt-2">42 min</div>
-          <p class="text-xs text-gray-500 mt-1">Optymalna długość</p>
+          <div class="text-3xl font-bold text-green-600 mt-2">{{ averageLessonMinutes }} min</div>
+          <p class="text-xs text-gray-500 mt-1">Na podstawie zakończonych lekcji</p>
         </div>
         <div class="bg-white/80 backdrop-blur border border-purple-200 rounded-xl p-6">
           <div class="text-sm text-gray-600 flex items-center justify-between">
-            <span>Efektywność realizacji</span>
+            <span>Pokrycie materiału</span>
             <span class="text-purple-600">⌁</span>
           </div>
-          <div class="text-3xl font-bold text-purple-600 mt-2">{{ completionRate }}%</div>
+          <div class="text-3xl font-bold text-purple-600 mt-2">{{ materialCoverageRate }}%</div>
           <p class="text-xs text-gray-500 mt-1">Punktów planu omówionych</p>
         </div>
       </div>
@@ -99,16 +99,57 @@ const { state, fetchLessons } = useLessonStore();
 
 onMounted(fetchLessons);
 
-const lessonsCount = computed(() => state.lessons.length);
-const completionRate = computed(() => {
-  if (!state.lessons.length) return 0;
-  const values = state.lessons.map((lesson) => {
-    if (!lesson.plan?.length) return 0;
-    const discussed = lesson.plan.filter((p) => p.status === "discussed").length;
-    return Math.round((discussed / lesson.plan.length) * 100);
-  });
-  return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+function parseLessonDate(value) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    return new Date(`${value}T00:00:00`);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const lessonsTotal = computed(() => state.lessons.length);
+
+const lessonsCountThisMonth = computed(() => {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  return state.lessons.filter((lesson) => {
+    const lessonDate = parseLessonDate(lesson.date);
+    return lessonDate && lessonDate.getMonth() === month && lessonDate.getFullYear() === year;
+  }).length;
 });
+
+const averageLessonMinutes = computed(() => {
+  const durations = state.lessons
+    .map((lesson) => {
+      if (!lesson.startedAt || !lesson.finishedAt) return null;
+      const start = new Date(lesson.startedAt).getTime();
+      const end = new Date(lesson.finishedAt).getTime();
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+      return (end - start) / 60000;
+    })
+    .filter((value) => value !== null);
+
+  if (!durations.length) return 0;
+  const total = durations.reduce((acc, value) => acc + value, 0);
+  return Math.round(total / durations.length);
+});
+
+const materialCoverageRate = computed(() => {
+  let totalPoints = 0;
+  let discussedPoints = 0;
+
+  for (const lesson of state.lessons) {
+    const plan = Array.isArray(lesson.plan) ? lesson.plan : [];
+    totalPoints += plan.length;
+    discussedPoints += plan.filter((point) => point.status === "discussed").length;
+  }
+
+  if (!totalPoints) return 0;
+  return Math.round((discussedPoints / totalPoints) * 100);
+});
+
 const presentationLink = computed(() => {
   const id = state.lesson?.id || state.lessons[0]?.id || "demo";
   return `/presentation/${id}`;
