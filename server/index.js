@@ -318,16 +318,8 @@ app.post("/api/lessons", async (req, res) => {
   return res.status(201).json({ lesson });
 });
 
-<<<<<<< Updated upstream
 app.get("/api/lessons", (_req, res) => {
   res.json({ lessons: [...db.lessons.values()] });
-=======
-app.get("/api/lessons", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lessons = [...db.lessons.values()].filter((lesson) => lesson.teacherId === teacherId);
-  res.json({ lessons });
->>>>>>> Stashed changes
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
@@ -360,15 +352,8 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
   }
 });
 
-<<<<<<< Updated upstream
 app.put("/api/lessons/:lessonId/plan", (req, res) => {
   const lesson = db.lessons.get(req.params.lessonId);
-=======
-app.put("/api/lessons/:lessonId/plan", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
->>>>>>> Stashed changes
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   lesson.plan = req.body.plan || [];
   lesson.status = "ready";
@@ -376,63 +361,8 @@ app.put("/api/lessons/:lessonId/plan", async (req, res) => {
   return res.json({ lesson });
 });
 
-<<<<<<< Updated upstream
 app.post("/api/lessons/:lessonId/live/start", (req, res) => {
   const lesson = db.lessons.get(req.params.lessonId);
-=======
-app.put("/api/lessons/:lessonId/meta", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
-
-  const nextTitle = String(req.body?.title || "").trim();
-  const nextSubject = String(req.body?.subject || "").trim();
-  const nextDate = normalizeLessonDate(req.body?.date || lesson.date);
-
-  if (!nextTitle || !nextSubject) {
-    return res.status(400).json({ error: "Title and subject are required." });
-  }
-
-  lesson.title = nextTitle;
-  lesson.subject = nextSubject;
-  lesson.date = nextDate;
-  lesson.month = new Date(`${nextDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" });
-
-  if (lesson.finalNote) {
-    lesson.finalNote.updatedAt = new Date().toISOString();
-  }
-
-  db.lessons.set(lesson.id, lesson);
-  await persistLessonSafe(lesson);
-  return res.json({ lesson });
-});
-
-app.delete("/api/lessons/:lessonId", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lessonId = req.params.lessonId;
-  const lesson = getOwnedLesson(lessonId, teacherId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
-
-  db.lessons.delete(lessonId);
-  db.costs.delete(lessonId);
-
-  if (supabase) {
-    const { error } = await supabase.from("lessons").delete().eq("id", lessonId);
-    if (error) {
-      return res.status(500).json({ error: `Supabase lesson delete failed: ${error.message}` });
-    }
-  }
-
-  return res.json({ ok: true });
-});
-
-app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
->>>>>>> Stashed changes
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   const check = checkLicenseForSchool(lesson.schoolId);
   if (!check.allowed) return res.status(403).json({ error: check.reason });
@@ -491,15 +421,8 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   return res.json({ finalNote: lesson.finalNote });
 });
 
-<<<<<<< Updated upstream
 app.get("/api/lessons/:lessonId/costs", (req, res) => {
   const lesson = db.lessons.get(req.params.lessonId);
-=======
-app.get("/api/lessons/:lessonId/costs", async (req, res) => {
-  const teacherId = await resolveRequestUser(req, res);
-  if (!teacherId) return;
-  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
->>>>>>> Stashed changes
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   return res.json(getCostSummary(lesson.id));
 });
