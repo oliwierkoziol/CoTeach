@@ -43,7 +43,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
-import blockedImage from "../assets/logo.png";
+import blockedImage from "../assets/czarek.jpg";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const route = useRoute();
