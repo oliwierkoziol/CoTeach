@@ -44,7 +44,7 @@ const errorMessage = ref("");
 async function handleLogin() {
   errorMessage.value = "";
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value,
   });
@@ -52,6 +52,14 @@ async function handleLogin() {
   if (error) {
     errorMessage.value = error.message;
     return;
+  }
+
+  if (data?.user) {
+    // Zaktualizuj last login (updated_at) w profilu
+    await supabase
+      .from("profiles")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", data.user.id);
   }
 
   router.push("/");
