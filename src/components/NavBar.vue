@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
@@ -154,7 +154,12 @@ onMounted(async () => {
   });
 });
 
+const toggleProfileMenu = () => {
+  showProfileMenu.value = !showProfileMenu.value;
+};
+
 const handleLogout = async () => {
+  showProfileMenu.value = false;
   await supabase.auth.signOut();
   router.push("/login");
 };
