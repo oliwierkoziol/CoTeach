@@ -1,4 +1,5 @@
 import { reactive } from "vue";
+import { supabase } from "../supabase";
 
 const API_BASE = "http://localhost:3001";
 
@@ -13,7 +14,21 @@ const state = reactive({
 });
 
 async function api(path, options = {}) {
+<<<<<<< Updated upstream
   const response = await fetch(`${API_BASE}${path}`, options);
+=======
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${RESOLVED_API_BASE}${path}`, {
+    ...options,
+    headers
+  });
+>>>>>>> Stashed changes
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || "API error");

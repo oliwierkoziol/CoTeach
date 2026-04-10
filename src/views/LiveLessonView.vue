@@ -165,6 +165,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { supabase } from "../supabase";
 
 const route = useRoute();
 const router = useRouter();
@@ -387,9 +388,13 @@ async function beginWhisperMode() {
       const form = new FormData();
       form.set("lessonId", state.lesson.id);
       form.set("file", event.data, `chunk-${Date.now()}.webm`);
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData?.session?.access_token;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const response = await fetch("http://localhost:3001/api/transcribe", {
         method: "POST",
+        headers,
         body: form
       });
       const data = await response.json();
