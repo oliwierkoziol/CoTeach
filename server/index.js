@@ -34,6 +34,15 @@ const openai = process.env.OPENAI_API_KEY
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
 
+async function getUserFromBearerToken(req) {
+  const authHeader = String(req.headers.authorization || "");
+  const [, token] = authHeader.match(/^Bearer\s+(.*)$/i) || [];
+  if (!token || !supabase) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user;
+}
+
 const db = {
   schools: new Map(),
   users: new Map(),
@@ -492,6 +501,41 @@ async function extractTextFromFile(file) {
   }
   throw new Error("Unsupported file type");
 }
+
+app.delete("/api/account", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase is not configured." });
+
+  const user = await getUserFromBearerToken(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    await supabase.from("profiles").delete().eq("id", user.id);
+    const { error } = await supabase.auth.admin.deleteUser(user.id);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Failed to delete account." });
+  }
+});
+
+app.put("/api/account/email", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase is not configured." });
+
+  const user = await getUserFromBearerToken(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: "Email is required." });
+
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(user.id, { email });
+    if (error) return res.status(500).json({ error: error.message });
+    await supabase.from("profiles").upsert({ id: user.id, email, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    return res.json({ email: data.user?.email || email });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Failed to update email." });
+  }
+});
 
 app.post("/api/lessons", async (req, res) => {
   const { title, subject, month, date, rawText = "" } = req.body || {};

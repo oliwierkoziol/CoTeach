@@ -56,7 +56,7 @@ async function api(path, options = {}) {
     if (response.status === 401) cachedAccessToken = null;
     if (response.status === 403 && data?.code === "ACCOUNT_BLOCKED") {
       cachedAccessToken = null;
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       if (window.location.pathname !== "/login") {
         window.location.assign("/login?blocked=1");
       }
