@@ -1,15 +1,18 @@
 <template>
   <header class="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-      <RouterLink to="/" class="flex items-center no-underline">
-        <img src="../assets/logo.png" alt="CoTeach logo" class="h-2 w-16 rounded-2xl object-contain logo" />
+      <RouterLink to="/" class="flex items-center gap-3 no-underline">
+        <div>
+          <img :src="logoSrc" alt="CoTeach" class="h-9 w-auto" />
+          <p class="text-xs text-slate-500">Nauczanie wspomagane AI</p>
+        </div>
       </RouterLink>
 
       <div class="flex items-center gap-3">
         <RouterLink
           v-if="!isAuthenticated"
           to="/login"
-          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
+          class="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 hover:bg-slate-800 transition"
         >
           Zaloguj się
         </RouterLink>
@@ -17,7 +20,7 @@
         <RouterLink
           v-if="!isAuthenticated"
           to="/register"
-          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/10 border border-slate-200 hover:bg-slate-50 transition"
         >
           Zarejestruj się za darmo
         </RouterLink>
@@ -25,7 +28,7 @@
         <button
           v-if="isAuthenticated"
           @click="handleLogout"
-          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
+          class="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 hover:bg-slate-800 transition"
         >
           Wyloguj
         </button>
@@ -38,6 +41,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
+import logoSrc from "../assets/coteach-logo.svg";
 
 const router = useRouter();
 const isAuthenticated = ref(false);
