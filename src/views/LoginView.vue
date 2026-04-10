@@ -33,10 +33,11 @@
 
 <script setup>
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { supabase } from "../supabase";
 
 const router = useRouter();
+const route = useRoute();
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
@@ -54,6 +55,7 @@ async function handleLogin() {
     return;
   }
 
-  router.push("/");
+  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "";
+  router.push(redirect && redirect.startsWith("/") ? redirect : "/");
 }
 </script>

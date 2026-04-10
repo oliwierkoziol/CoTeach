@@ -29,6 +29,10 @@
         {{ errorMessage }}
       </div>
 
+      <div v-if="infoMessage" class="mt-4 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+        {{ infoMessage }}
+      </div>
+
       <div class="mt-6 text-center text-sm text-slate-600">
         Masz już konto? <RouterLink to="/login" class="font-semibold text-indigo-600 hover:underline">Zaloguj się</RouterLink>
       </div>
@@ -46,9 +50,11 @@ const name = ref("");
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
+const infoMessage = ref("");
 
 async function handleRegister() {
   errorMessage.value = "";
+  infoMessage.value = "";
 
   const { data, error } = await supabase.auth.signUp({
     email: email.value,
@@ -65,8 +71,14 @@ async function handleRegister() {
     return;
   }
 
-  if (data?.user) {
+  if (data?.session) {
     router.push("/");
+    return;
+  }
+
+  if (data?.user) {
+    infoMessage.value =
+      "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
   }
 }
 </script>

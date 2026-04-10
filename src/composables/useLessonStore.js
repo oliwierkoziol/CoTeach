@@ -1,7 +1,13 @@
 import { reactive } from "vue";
 import { supabase } from "../supabase";
 
-const API_BASE = "http://localhost:3001";
+function normalizeBaseUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/\/$/, "");
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
 
 const state = reactive({
   lesson: null,
@@ -14,7 +20,8 @@ const state = reactive({
 });
 
 async function api(path, options = {}) {
-  const token = data?.session?.access_token;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
