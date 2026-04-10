@@ -145,15 +145,6 @@
         </div>
 
         <div class="space-y-6">
-          <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-            <h3 class="font-semibold mb-2">Aktywne moduły live</h3>
-            <ul class="text-sm space-y-1">
-              <li>Audio streaming i nasłuchiwanie</li>
-              <li>Analiza semantyczna AI</li>
-              <li>Dashboard nauczyciela</li>
-              <li>Alerty i sugerowane akcje</li>
-            </ul>
-          </div>
 
           <div v-if="pendingPoints.length > 0 && elapsedSec > 120" class="rounded-lg border border-red-300 bg-red-50 p-4 text-sm">
             Uwaga! Pozostało {{ pendingPoints.length }} nieomówionych punktów.
@@ -174,6 +165,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { supabase } from "../supabase";
 
 function normalizeBaseUrl(url) {
   return String(url || "").trim().replace(/\/$/, "");
@@ -404,9 +396,13 @@ async function beginWhisperMode() {
       const form = new FormData();
       form.set("lessonId", state.lesson.id);
       form.set("file", event.data, `chunk-${Date.now()}.webm`);
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData?.session?.access_token;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const response = await fetch(`${RESOLVED_API_BASE}/api/transcribe`, {
         method: "POST",
+        headers,
         body: form
       });
       const data = await response.json();
