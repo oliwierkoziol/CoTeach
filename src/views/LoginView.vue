@@ -131,7 +131,7 @@ async function handleLogin() {
     .maybeSingle();
 
   if (!profileError && profile?.blocked === true) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     setBlockedError();
     return;
   }

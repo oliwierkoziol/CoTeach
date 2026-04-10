@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { supabase } from "../supabase";
+import { supabase } from "../supabase.js";
 import DashboardView from "../views/DashboardView.vue";
 import PreparationView from "../views/PreparationView.vue";
 import LiveLessonView from "../views/LiveLessonView.vue";
@@ -34,7 +34,11 @@ const router = createRouter({
 
 const supabaseConfigured =
   Boolean(String(import.meta.env.VITE_SUPABASE_URL || "").trim()) &&
-  Boolean(String(import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim());
+  Boolean(
+    String(
+      import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || ""
+    ).trim()
+  );
 
 router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
@@ -55,7 +59,7 @@ router.beforeEach(async (to) => {
     .maybeSingle();
 
   if (!blockedCheckError && profile?.blocked === true) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return { path: "/login", query: { blocked: "1" } };
   }
 
