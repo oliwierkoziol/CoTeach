@@ -19,9 +19,29 @@ const state = reactive({
   shareUrl: ""
 });
 
+let cachedAccessToken = null;
+const SESSION_WAIT_MS = 4000;
+
+async function resolveAccessToken() {
+  try {
+    const result = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), SESSION_WAIT_MS))
+    ]);
+    const token = result?.data?.session?.access_token || null;
+    if (token) {
+      cachedAccessToken = token;
+    } else {
+      cachedAccessToken = null;
+    }
+    return token || cachedAccessToken;
+  } catch {
+    return cachedAccessToken;
+  }
+}
+
 async function api(path, options = {}) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
+  const token = await resolveAccessToken();
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -33,9 +53,14 @@ async function api(path, options = {}) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) cachedAccessToken = null;
     throw new Error(data.error || "API error");
   }
   return data;
+}
+
+export function clearLessonStoreAuthCache() {
+  cachedAccessToken = null;
 }
 
 export function useLessonStore() {
