@@ -36,41 +36,41 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <RouterLink to="/preparation" class="block">
-          <div class="rounded-2xl p-6 h-full text-white bg-blue-600 hover:shadow-xl transition-all">
-            <h3 class="text-1xl font-bold mb-2">Przygotuj Materiały</h3>
-            <p class="text-blue-200 mb-4">Upload plików, OCR pisma odręcznego, generowanie planu lekcji z AI</p>
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Rozpocznij Przygotowanie</button>
-          </div>
-        </RouterLink>
-        <RouterLink to="/live-lesson" class="block">
-          <div class="rounded-2xl p-6 h-full text-white bg-green-600 hover:shadow-xl transition-all">
-            <h3 class="text-1xl font-bold mb-2">Lekcja na Żywo</h3>
-            <p class="text-green-200 mb-4">Monitoring w czasie rzeczywistym, transkrypcja audio, śledzenie postępu</p>
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Rozpocznij Lekcję</button>
-          </div>
-        </RouterLink>
-        <RouterLink :to="presentationLink" class="block">
-          <div class="rounded-2xl p-6 h-full text-white bg-purple-600 hover:shadow-xl transition-all">
-            <h3 class="text-1xl font-bold mb-2">Koło Ratunkowe</h3>
-            <p class="text-purple-200 mb-4">Auto-prezentacja nieomówionych tematów z grafikami AI</p>
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Generuj Prezentację</button>
-          </div>
-        </RouterLink>
-        <RouterLink to="/archive" class="block">
-          <div class="rounded-2xl p-6 h-full text-white bg-orange-600 hover:shadow-xl transition-all">
-            <h3 class="text-1xl font-bold mb-2">Archiwum</h3>
-            <p class="text-orange-200 mb-4">Złote notatki, kody QR, organizacja według przedmiot/miesiąc</p>
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Przeglądaj Archiwum</button>
-          </div>
-        </RouterLink>
-        <RouterLink to="/admin" class="block">
-          <div class="rounded-2xl p-6 h-full text-white bg-gray-800 hover:shadow-xl transition-all">
-            <h3 class="text-1xl font-bold mb-2">Administracja</h3>
-            <p class="text-gray-400 mb-4">Licencje, monitoring kosztów API, tryb demo</p>
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Panel Administracyjny</button>
-          </div>
-        </RouterLink>
+        <div class="rounded-2xl p-6 h-full text-white bg-blue-600 hover:shadow-xl transition-all">
+          <h3 class="text-1xl font-bold mb-2">Przygotuj Materiały</h3>
+          <p class="text-blue-200 mb-4">Upload plików, OCR pisma odręcznego, generowanie planu lekcji z AI</p>
+          <RouterLink to="/preparation">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Rozpocznij Przygotowanie</button>
+          </RouterLink>
+        </div>
+        <div class="rounded-2xl p-6 h-full text-white bg-green-600 hover:shadow-xl transition-all">
+          <h3 class="text-1xl font-bold mb-2">Lekcja na Żywo</h3>
+          <p class="text-green-200 mb-4">Monitoring w czasie rzeczywistym, transkrypcja audio, śledzenie postępu</p>
+          <RouterLink to="/live-lesson">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Rozpocznij Lekcję</button>
+          </RouterLink>
+        </div>
+        <div class="rounded-2xl p-6 h-full text-white bg-purple-600 hover:shadow-xl transition-all">
+          <h3 class="text-1xl font-bold mb-2">Koło Ratunkowe</h3>
+          <p class="text-purple-200 mb-4">Auto-prezentacja nieomówionych tematów z grafikami AI</p>
+          <RouterLink :to="presentationLink">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Generuj Prezentację</button>
+          </RouterLink>
+        </div>
+        <div class="rounded-2xl p-6 h-full text-white bg-orange-600 hover:shadow-xl transition-all">
+          <h3 class="text-1xl font-bold mb-2">Archiwum</h3>
+          <p class="text-orange-200 mb-4">Złote notatki, kody QR, organizacja według przedmiot/miesiąc</p>
+          <RouterLink to="/archive">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Przeglądaj Archiwum</button>
+          </RouterLink>
+        </div>
+        <div class="rounded-2xl p-6 h-full text-white bg-gray-800 hover:shadow-xl transition-all">
+          <h3 class="text-1xl font-bold mb-2">Administracja</h3>
+          <p class="text-gray-400 mb-4">Licencje, monitoring kosztów API, tryb demo</p>
+          <RouterLink to="/admin">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Panel Administracyjny</button>
+          </RouterLink>
+        </div>
       </div>
 
       <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl p-6">
