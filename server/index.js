@@ -4,6 +4,7 @@ import multer from "multer";
 import { randomUUID } from "crypto";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
 const upload = multer();
@@ -15,6 +16,14 @@ const OPENROUTER_VISION_MODEL =
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_ENABLED = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const supabase = SUPABASE_ENABLED
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    })
+  : null;
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
@@ -31,6 +40,126 @@ const db = {
   lessons: new Map(),
   costs: new Map()
 };
+
+function parseJsonArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value;
+}
+
+function rowToLesson(row) {
+  return {
+    id: row.id,
+    schoolId: row.school_id,
+    teacherId: row.teacher_id,
+    title: row.title,
+    subject: row.subject,
+    month: row.month,
+    date: row.date,
+    status: row.status,
+    sourceFiles: parseJsonArray(row.source_files),
+    plan: parseJsonArray(row.plan),
+    transcripts: parseJsonArray(row.transcripts),
+    finalNote: row.final_note || null,
+    startedAt: row.started_at || null,
+    finishedAt: row.finished_at || null
+  };
+}
+
+function lessonToRow(lesson) {
+  return {
+    id: lesson.id,
+    school_id: lesson.schoolId,
+    teacher_id: lesson.teacherId,
+    title: lesson.title,
+    subject: lesson.subject,
+    month: lesson.month,
+    date: lesson.date,
+    status: lesson.status,
+    source_files: lesson.sourceFiles || [],
+    plan: lesson.plan || [],
+    transcripts: lesson.transcripts || [],
+    final_note: lesson.finalNote || null,
+    started_at: lesson.startedAt || null,
+    finished_at: lesson.finishedAt || null,
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function persistLesson(lesson) {
+  if (!supabase) return;
+  const { error } = await supabase.from("lessons").upsert(lessonToRow(lesson), { onConflict: "id" });
+  if (error) throw new Error(`Supabase lesson upsert failed: ${error.message}`);
+}
+
+async function persistLessonSafe(lesson) {
+  try {
+    await persistLesson(lesson);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function persistCostEvent(event) {
+  if (!supabase) return;
+  const { error } = await supabase.from("lesson_cost_events").insert(event);
+  if (error) throw new Error(`Supabase cost insert failed: ${error.message}`);
+}
+
+async function loadLessonsFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from("lessons")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(`Supabase lessons load failed: ${error.message}`);
+  for (const row of data || []) {
+    const lesson = rowToLesson(row);
+    db.lessons.set(lesson.id, lesson);
+  }
+}
+
+async function loadCostEventsFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("lesson_cost_events").select("*");
+  if (error) throw new Error(`Supabase costs load failed: ${error.message}`);
+  for (const row of data || []) {
+    const current = db.costs.get(row.lesson_id) || [];
+    current.push({
+      id: row.id,
+      lessonId: row.lesson_id,
+      provider: row.provider,
+      amountPLN: Number(row.amount_pln || 0),
+      at: row.created_at || new Date().toISOString()
+    });
+    db.costs.set(row.lesson_id, current);
+  }
+}
+
+async function bootstrapPersistence() {
+  if (!supabase) {
+    console.log("Supabase disabled: using in-memory storage only.");
+    return;
+  }
+  await loadLessonsFromSupabase();
+  await loadCostEventsFromSupabase();
+  console.log(`Supabase enabled: loaded ${db.lessons.size} lessons.`);
+}
+
+function buildLessonSummary(lesson) {
+  const discussed = (lesson.plan || []).filter((p) => p.status === "discussed").length;
+  const total = (lesson.plan || []).length;
+  const missingTitles = (lesson.plan || [])
+    .filter((p) => p.status !== "discussed")
+    .map((p) => p.title)
+    .slice(0, 5);
+  const transcriptWords = (lesson.transcripts || [])
+    .map((t) => String(t.text || "").trim())
+    .join(" ")
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const missing = missingTitles.length ? missingTitles.join(", ") : "brak";
+  return `Omówiono ${discussed}/${total} punktów. Braki: ${missing}. Zarejestrowane słowa transkrypcji: ${transcriptWords}.`;
+}
 
 const defaultSchoolId = "school-default";
 const defaultLicenseId = "license-default";
@@ -248,10 +377,22 @@ Transkrypcja: ${transcript}
   }
 }
 
-function addCost(lessonId, provider, amountPLN) {
+async function addCost(lessonId, provider, amountPLN) {
   const events = db.costs.get(lessonId) || [];
-  events.push({ id: randomUUID(), lessonId, provider, amountPLN, at: new Date().toISOString() });
+  const event = { id: randomUUID(), lessonId, provider, amountPLN, at: new Date().toISOString() };
+  events.push(event);
   db.costs.set(lessonId, events);
+  try {
+    await persistCostEvent({
+      id: event.id,
+      lesson_id: event.lessonId,
+      provider: event.provider,
+      amount_pln: event.amountPLN,
+      created_at: event.at
+    });
+  } catch (error) {
+    console.error(error.message);
+  }
 }
 
 function getCostSummary(lessonId) {
@@ -315,6 +456,7 @@ app.post("/api/lessons", async (req, res) => {
   };
   if (lesson.plan.length) lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
   return res.status(201).json({ lesson });
 });
 
@@ -344,8 +486,9 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
     lesson.plan = await generatePlanWithLLM(extractedText);
     if (!lesson.plan.length) return res.status(400).json({ error: "Could not derive topics from material." });
     lesson.status = "ready";
-    addCost(lesson.id, "gemini", 0.2);
+    await addCost(lesson.id, "gemini", 0.2);
     db.lessons.set(lesson.id, lesson);
+    await persistLessonSafe(lesson);
     return res.json({ lesson });
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -358,6 +501,7 @@ app.put("/api/lessons/:lessonId/plan", (req, res) => {
   lesson.plan = req.body.plan || [];
   lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
+  persistLessonSafe(lesson);
   return res.json({ lesson });
 });
 
@@ -369,10 +513,11 @@ app.post("/api/lessons/:lessonId/live/start", (req, res) => {
   lesson.status = "live";
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
+  persistLessonSafe(lesson);
   return res.json({ lesson });
 });
 
-app.post("/api/lessons/:lessonId/transcript", (req, res) => {
+app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   const lesson = db.lessons.get(req.params.lessonId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
@@ -386,8 +531,9 @@ app.post("/api/lessons/:lessonId/transcript", (req, res) => {
     startedAtMs,
     createdAt: new Date().toISOString()
   });
-  addCost(lesson.id, "deepgram", 0.03);
+  await addCost(lesson.id, "deepgram", 0.03);
   db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
   return res.json({ ok: true });
 });
 
@@ -396,6 +542,7 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
   db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
   const missing = lesson.plan.filter((item) => item.status !== "discussed");
   return res.json({ plan: lesson.plan, missing });
 });
@@ -410,6 +557,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
     id: noteId,
     lessonId: lesson.id,
     html,
+    summary: buildLessonSummary(lesson),
     publicPath: `/share/${noteId}`,
     shareUrl: `${baseUrl}/share/${noteId}`,
     createdAt: new Date().toISOString()
@@ -417,7 +565,8 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   lesson.status = "finished";
   lesson.finishedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
-  addCost(lesson.id, "gemini", 0.12);
+  await addCost(lesson.id, "gemini", 0.12);
+  await persistLessonSafe(lesson);
   return res.json({ finalNote: lesson.finalNote });
 });
 
@@ -481,7 +630,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     const durationSec = Number(transcription.duration || 0);
     const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
     const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
-    addCost(lessonId, "openai", fragmentCost);
+    await addCost(lessonId, "openai", fragmentCost);
 
     const text = String(transcription.text || "").trim();
     return res.json({
@@ -505,10 +654,17 @@ app.get("/api/health", (_req, res) => {
     visionModel: OPENROUTER_VISION_MODEL,
     sttModel: "whisper-1",
     whisperEnabled: Boolean(openai),
-    openRouterEnabled: Boolean(apiKey)
+    openRouterEnabled: Boolean(apiKey),
+    supabaseEnabled: SUPABASE_ENABLED
   });
 });
 
-app.listen(port, () => {
-  console.log(`API listening at http://localhost:${port}`);
-});
+bootstrapPersistence()
+  .catch((error) => {
+    console.error(`Persistence bootstrap failed: ${error.message}`);
+  })
+  .finally(() => {
+    app.listen(port, () => {
+      console.log(`API listening at http://localhost:${port}`);
+    });
+  });
