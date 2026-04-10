@@ -16,7 +16,7 @@
           Email
           <input v-model="email" type="email" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="twoj@email.com" />
         </label>
-
+       
         <label class="block text-sm font-medium text-slate-700">
           Hasło
           <input v-model="password" type="password" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="••••••••" />
@@ -53,11 +53,6 @@ async function handleRegister() {
   const { data, error } = await supabase.auth.signUp({
     email: email.value,
     password: password.value,
-    options: {
-      data: {
-        full_name: name.value,
-      },
-    },
   });
 
   if (error) {
@@ -65,8 +60,32 @@ async function handleRegister() {
     return;
   }
 
-  if (data?.user) {
+  const user = data?.user;
+  if (!user) {
     router.push("/");
+    return;
   }
+
+  const now = new Date().toISOString();
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    [
+      {
+        id: user.id,
+        email: email.value,
+        full_name: name.value,
+        avatar_url: null,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+    { onConflict: "id" }
+  );
+
+  if (profileError) {
+    errorMessage.value = "Błąd przy tworzeniu profilu: " + profileError.message;
+    return;
+  }
+
+  router.push("/");
 }
 </script>
