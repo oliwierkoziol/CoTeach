@@ -3,10 +3,8 @@
     <div class="max-w-7xl mx-auto px-4 py-8">
       <div class="mb-8">
         <div class="text-center sm:text-left">
-          <h1 class="text-5xl font-bold text-gray-900 mb-4">CoTeach</h1>
-          <p class="text-xl text-gray-600 max-w-2xl mx-auto sm:mx-0">
-            System Wspomagania Nauczyciela - Inteligentne zarządzanie lekcjami z pomocą AI
-          </p>
+          <h1 class="text-5xl font-bold text-gray-900 mb-12 mt-6">Witaj, Jan</h1>
+
         </div>
       </div>
 
@@ -16,7 +14,7 @@
             <span>Lekcje w tym miesiącu</span>
             <span class="text-blue-600">◍</span>
           </div>
-          <div class="text-3xl font-bold text-blue-600 mt-2">{{ lessonsCount }}</div>
+          <div class="text-2xl font-bold text-blue-600 mt-2">{{ lessonsCount }}</div>
           <p class="text-xs text-gray-500 mt-1">+3 od ostatniego miesiąca</p>
         </div>
         <div class="bg-white/80 backdrop-blur border border-green-200 rounded-xl p-6">
@@ -24,7 +22,7 @@
             <span>Średni czas lekcji</span>
             <span class="text-green-600">◌</span>
           </div>
-          <div class="text-3xl font-bold text-green-600 mt-2">42 min</div>
+          <div class="text-2xl font-bold text-green-600 mt-2">42 min</div>
           <p class="text-xs text-gray-500 mt-1">Optymalna długość</p>
         </div>
         <div class="bg-white/80 backdrop-blur border border-purple-200 rounded-xl p-6">
@@ -40,41 +38,36 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <RouterLink to="/preparation" class="block">
           <div class="rounded-2xl p-6 h-full text-white bg-gradient-to-br from-blue-500 to-indigo-600 hover:shadow-xl transition-all">
-            <div class="text-4xl mb-4">📤</div>
-            <h3 class="text-2xl font-bold mb-2">Przygotuj Materiały</h3>
-            <p class="text-blue-100 mb-4">Upload plików, OCR pisma odręcznego, generowanie planu lekcji z AI</p>
+            <h3 class="text-1xl font-bold mb-2">Przygotuj Materiały</h3>
+            <p class="text-blue-200 mb-4">Upload plików, OCR pisma odręcznego, generowanie planu lekcji z AI</p>
             <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Rozpocznij Przygotowanie</button>
           </div>
         </RouterLink>
         <RouterLink to="/live-lesson" class="block">
           <div class="rounded-2xl p-6 h-full text-white bg-gradient-to-br from-green-500 to-emerald-600 hover:shadow-xl transition-all">
-            <div class="text-4xl mb-4">📡</div>
-            <h3 class="text-2xl font-bold mb-2">Lekcja na Żywo</h3>
-            <p class="text-green-100 mb-4">Monitoring w czasie rzeczywistym, transkrypcja audio, śledzenie postępu</p>
+            <h3 class="text-1xl font-bold mb-2">Lekcja na Żywo</h3>
+            <p class="text-green-200 mb-4">Monitoring w czasie rzeczywistym, transkrypcja audio, śledzenie postępu</p>
             <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Rozpocznij Lekcję</button>
           </div>
         </RouterLink>
         <RouterLink :to="presentationLink" class="block">
           <div class="rounded-2xl p-6 h-full text-white bg-gradient-to-br from-purple-500 to-pink-600 hover:shadow-xl transition-all">
-            <div class="text-4xl mb-4">🖥️</div>
-            <h3 class="text-2xl font-bold mb-2">Koło Ratunkowe</h3>
-            <p class="text-purple-100 mb-4">Auto-prezentacja nieomówionych tematów z grafikami AI</p>
+            <h3 class="text-1xl font-bold mb-2">Koło Ratunkowe</h3>
+            <p class="text-purple-200 mb-4">Auto-prezentacja nieomówionych tematów z grafikami AI</p>
             <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Generuj Prezentację</button>
           </div>
         </RouterLink>
         <RouterLink to="/archive" class="block">
           <div class="rounded-2xl p-6 h-full text-white bg-gradient-to-br from-orange-500 to-red-600 hover:shadow-xl transition-all">
-            <div class="text-4xl mb-4">🗂️</div>
-            <h3 class="text-2xl font-bold mb-2">Archiwum</h3>
-            <p class="text-orange-100 mb-4">Złote notatki, kody QR, organizacja według przedmiot/miesiąc</p>
+            <h3 class="text-1xl font-bold mb-2">Archiwum</h3>
+            <p class="text-orange-200 mb-4">Złote notatki, kody QR, organizacja według przedmiot/miesiąc</p>
             <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Przeglądaj Archiwum</button>
           </div>
         </RouterLink>
         <RouterLink to="/admin" class="block">
           <div class="rounded-2xl p-6 h-full text-white bg-gradient-to-br from-gray-700 to-gray-900 hover:shadow-xl transition-all">
-            <div class="text-4xl mb-4">⚙️</div>
-            <h3 class="text-2xl font-bold mb-2">Administracja</h3>
-            <p class="text-gray-300 mb-4">Licencje, monitoring kosztów API, tryb demo</p>
+            <h3 class="text-1xl font-bold mb-2">Administracja</h3>
+            <p class="text-gray-400 mb-4">Licencje, monitoring kosztów API, tryb demo</p>
             <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md">Panel Administracyjny</button>
           </div>
         </RouterLink>

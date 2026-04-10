@@ -13,7 +13,7 @@
         <RouterLink
           v-if="!isAuthenticated"
           to="/login"
-          class="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 hover:bg-slate-800 transition"
+          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
         >
           Zaloguj się
         </RouterLink>
@@ -21,7 +21,7 @@
         <RouterLink
           v-if="!isAuthenticated"
           to="/register"
-          class="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-950/10 border border-slate-200 hover:bg-slate-50 transition"
+          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
         >
           Zarejestruj się za darmo
         </RouterLink>
@@ -29,7 +29,7 @@
         <button
           v-if="isAuthenticated"
           @click="handleLogout"
-          class="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 hover:bg-slate-800 transition"
+          class="rounded-md bg-black px-5 py-2 text-sm font-medium text-white"
         >
           Wyloguj
         </button>
