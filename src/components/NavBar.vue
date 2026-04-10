@@ -65,6 +65,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { supabase } from "../supabase";
+import { clearLessonStoreAuthCache } from "../composables/useLessonStore";
 
 const router = useRouter();
 const route = useRoute();
@@ -72,8 +73,11 @@ const isAuthenticated = ref(false);
 const userEmail = ref("");
 const userAvatarUrl = ref("");
 const showProfileMenu = ref(false);
+const sessionUserId = ref("");
 
 let authListener = null;
+let authDebounceTimer = null;
+let routeDebounceTimer = null;
 
 const userInitials = computed(() => {
   if (!userEmail.value) return "U";
@@ -105,40 +109,71 @@ const updateSession = async () => {
   if (data.session) {
     isAuthenticated.value = true;
     userEmail.value = data.session.user?.email || "";
+    sessionUserId.value = data.session.user.id;
     await loadUserAvatar(data.session.user.id);
   } else {
     isAuthenticated.value = false;
     userEmail.value = "";
     userAvatarUrl.value = "";
+    sessionUserId.value = "";
   }
 };
+
+function applyAuthSession(session) {
+  isAuthenticated.value = !!session;
+  userEmail.value = session?.user?.email || "";
+  sessionUserId.value = session?.user?.id || "";
+  if (session?.user?.id) {
+    return loadUserAvatar(session.user.id);
+  }
+  userAvatarUrl.value = "";
+  return Promise.resolve();
+}
+
+function onDocumentVisibility() {
+  if (document.visibilityState === "hidden") {
+    showProfileMenu.value = false;
+  }
+}
 
 onMounted(async () => {
   await updateSession();
 
-  const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    isAuthenticated.value = !!session;
-    userEmail.value = session?.user?.email || "";
-    if (session?.user?.id) {
-      await loadUserAvatar(session.user.id);
-    } else {
-      userAvatarUrl.value = "";
-    }
+  document.addEventListener("visibilitychange", onDocumentVisibility);
+
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    clearTimeout(authDebounceTimer);
+    authDebounceTimer = setTimeout(() => {
+      void (async () => {
+        try {
+          await applyAuthSession(session);
+        } catch (e) {
+          console.error(e);
+        }
+      })();
+    }, 200);
   });
   authListener = data.subscription;
 });
 
 watch(
-  () => route.fullPath,
-  async () => {
+  () => route.path,
+  (path, prevPath) => {
+    if (path === prevPath) return;
     if (!isAuthenticated.value) return;
-    const { data } = await supabase.auth.getSession();
-    const id = data.session?.user?.id;
-    if (id) await loadUserAvatar(id);
+    const id = sessionUserId.value;
+    if (!id) return;
+    clearTimeout(routeDebounceTimer);
+    routeDebounceTimer = setTimeout(() => {
+      void loadUserAvatar(id).catch((e) => console.error(e));
+    }, 250);
   }
 );
 
 onUnmounted(() => {
+  document.removeEventListener("visibilitychange", onDocumentVisibility);
+  clearTimeout(authDebounceTimer);
+  clearTimeout(routeDebounceTimer);
   authListener?.unsubscribe();
   authListener = null;
 });
@@ -150,9 +185,11 @@ const toggleProfileMenu = () => {
 const handleLogout = async () => {
   showProfileMenu.value = false;
   await supabase.auth.signOut({ scope: "local" });
+  clearLessonStoreAuthCache();
   isAuthenticated.value = false;
   userEmail.value = "";
   userAvatarUrl.value = "";
+  sessionUserId.value = "";
   router.push("/login");
 };
 </script>
