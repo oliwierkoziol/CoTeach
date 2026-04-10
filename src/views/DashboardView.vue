@@ -143,7 +143,7 @@ async function loadDisplayName() {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), loadDisplayName()]);
+  await Promise.allSettled([fetchLessons(), loadDisplayName()]);
 });
 
 watch(

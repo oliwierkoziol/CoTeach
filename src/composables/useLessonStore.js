@@ -139,9 +139,15 @@ export function useLessonStore() {
   }
 
   async function fetchLessons() {
-    const data = await api("/api/lessons");
-    state.lessons = data.lessons || [];
-    return state.lessons;
+    try {
+      const data = await api("/api/lessons");
+      state.lessons = data.lessons || [];
+      return state.lessons;
+    } catch (error) {
+      state.lessons = [];
+      state.error = error.message || "Nie udało się pobrać lekcji";
+      return [];
+    }
   }
 
   async function fetchAdmin() {
