@@ -83,11 +83,20 @@
           <p class="text-green-700">{{ successMessage }}</p>
         </div>
 
-        <!-- Back button -->
-        <div class="mt-8">
-          <RouterLink to="/" class="inline-block rounded-2xl bg-slate-900 px-6 py-3 text-white font-semibold hover:bg-slate-800 transition">
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <RouterLink
+            to="/"
+            class="inline-block rounded-2xl bg-slate-900 px-6 py-3 text-white font-semibold hover:bg-slate-800 transition"
+          >
             Wróć do Dashboardu
           </RouterLink>
+          <button
+            type="button"
+            class="inline-block rounded-2xl border-2 border-slate-900 bg-white px-6 py-3 font-semibold text-slate-900 hover:bg-slate-50 transition"
+            @click="handleLogout"
+          >
+            Wyloguj się
+          </button>
         </div>
       </div>
     </div>
@@ -96,7 +105,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
+
+const router = useRouter();
 
 const userProfile = ref({
   full_name: "",
@@ -221,6 +233,11 @@ const handleAvatarUpload = async (event) => {
     }
   }
 };
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  router.push("/login");
+}
 
 onMounted(loadUserProfile);
 </script>

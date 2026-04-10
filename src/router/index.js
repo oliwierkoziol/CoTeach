@@ -23,7 +23,6 @@ const router = createRouter({
     { path: "/admin", component: AdminView },
     { path: "/login", component: LoginView },
     { path: "/register", component: RegisterView },
-    { path: "/profile", component: ProfileView },
     { path: "/share/:noteId", component: ShareView }
   ]
 });

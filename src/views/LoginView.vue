@@ -33,11 +33,7 @@
 
 <script setup>
 import { ref } from "vue";
-import { useRouter, useRoute } from "vue-router";
 import { supabase } from "../supabase";
-
-const router = useRouter();
-const route = useRoute();
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
@@ -45,9 +41,9 @@ const errorMessage = ref("");
 async function handleLogin() {
   errorMessage.value = "";
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
-    password: password.value,
+    password: password.value
   });
 
   if (error) {
@@ -55,7 +51,12 @@ async function handleLogin() {
     return;
   }
 
-  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "";
-  router.push(redirect && redirect.startsWith("/") ? redirect : "/");
+  if (!data.session) {
+    errorMessage.value =
+      "Brak sesji po logowaniu. Jeśli konto wymaga potwierdzenia e-mail, użyj linku z wiadomości.";
+    return;
+  }
+
+  window.location.assign("/");
 }
 </script>

@@ -62,43 +62,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { supabase } from "../supabase";
 
 const router = useRouter();
+const route = useRoute();
 const isAuthenticated = ref(false);
 const userEmail = ref("");
 const userAvatarUrl = ref("");
 const showProfileMenu = ref(false);
 
+let authListener = null;
+
 const userInitials = computed(() => {
   if (!userEmail.value) return "U";
   const parts = userEmail.value.split("@");
   const initials = parts[0]
-    .split(".")
+    .split(/[.\s_-]+/)
+    .filter(Boolean)
     .map((p) => p[0])
     .join("")
     .toUpperCase();
   return (initials || userEmail.value[0]).substring(0, 2);
 });
 
+async function loadUserAvatar(userId) {
+  if (!userId) {
+    userAvatarUrl.value = "";
+    return;
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+  userAvatarUrl.value = profile?.avatar_url || "";
+}
+
 const updateSession = async () => {
   const { data } = await supabase.auth.getSession();
   if (data.session) {
     isAuthenticated.value = true;
     userEmail.value = data.session.user?.email || "";
-    
-    // Load user profile with avatar
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("avatar_url")
-      .eq("id", data.session.user.id)
-      .single();
-    
-    if (profile?.avatar_url) {
-      userAvatarUrl.value = profile.avatar_url;
-    }
+    await loadUserAvatar(data.session.user.id);
   } else {
     isAuthenticated.value = false;
     userEmail.value = "";
@@ -108,50 +115,32 @@ const updateSession = async () => {
 
 onMounted(async () => {
   await updateSession();
-  
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+
+  const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
     isAuthenticated.value = !!session;
     userEmail.value = session?.user?.email || "";
-    
     if (session?.user?.id) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", session.user.id)
-        .single();
-      
-      if (profile?.avatar_url) {
-        userAvatarUrl.value = profile.avatar_url;
-      } else {
-        userAvatarUrl.value = "";
-      }
-
-      // Subscribe to real-time updates for avatar changes
-      const subscription = supabase
-        .channel(`profiles:${session.user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "profiles",
-            filter: `id=eq.${session.user.id}`,
-          },
-          (payload) => {
-            if (payload.new?.avatar_url) {
-              userAvatarUrl.value = payload.new.avatar_url;
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
+      await loadUserAvatar(session.user.id);
     } else {
       userAvatarUrl.value = "";
     }
   });
+  authListener = data.subscription;
+});
+
+watch(
+  () => route.fullPath,
+  async () => {
+    if (!isAuthenticated.value) return;
+    const { data } = await supabase.auth.getSession();
+    const id = data.session?.user?.id;
+    if (id) await loadUserAvatar(id);
+  }
+);
+
+onUnmounted(() => {
+  authListener?.unsubscribe();
+  authListener = null;
 });
 
 const toggleProfileMenu = () => {
@@ -160,7 +149,10 @@ const toggleProfileMenu = () => {
 
 const handleLogout = async () => {
   showProfileMenu.value = false;
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
+  isAuthenticated.value = false;
+  userEmail.value = "";
+  userAvatarUrl.value = "";
   router.push("/login");
 };
 </script>
