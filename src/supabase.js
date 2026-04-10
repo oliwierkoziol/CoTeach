@@ -6,3 +6,13 @@ const url = String(import.meta.env.VITE_SUPABASE_URL ?? "")
 const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 export const supabase = createClient(url, anonKey);
+
+export function createTemporarySupabaseClient() {
+  return createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  });
+}

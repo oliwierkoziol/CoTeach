@@ -18,7 +18,8 @@ Projekt został przeniesiony z React do Vue z zachowaniem designu i podłączeni
 2. Skopiuj `.env.example` do `.env.local` (opcjonalnie).
 3. Ustaw `OPENROUTER_API_KEY` w `.env.local` (OCR, plan, coverage, notatka).
 4. Jeśli chcesz używać Whisper STT, ustaw `OPENAI_API_KEY`.
-5. `npm run dev`
+5. Aby działało usuwanie konta, ustaw `SUPABASE_URL` oraz `SUPABASE_SERVICE_ROLE_KEY` po stronie serwera.
+6. `npm run dev`
 
 Adresy:
 - Frontend: `http://localhost:5173`

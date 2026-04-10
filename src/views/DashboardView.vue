@@ -76,6 +76,16 @@
         </div>
       </div>
 
+      <div v-if="isAdmin" class="grid grid-cols-1 mb-8">
+        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-gray-900 hover:shadow-xl transition-all border border-gray-700">
+          <h3 class="text-1xl font-bold mb-2">Panel sterowania admina</h3>
+          <p class="text-gray-400 mb-4 flex-1">Zarządzanie kontami użytkowników, uprawnienia i ustawienia platformy</p>
+          <RouterLink to="/admin/users" class="mt-auto">
+            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Otwórz Panel Admina</button>
+          </RouterLink>
+        </div>
+      </div>
+
       <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl p-6">
         <h3 class="text-yellow-900 font-semibold text-lg mb-2">💡 Tryb Demo - Wersja Prototypowa</h3>
         <p class="text-yellow-700 text-sm">
@@ -97,6 +107,7 @@ const route = useRoute();
 const { state, fetchLessons } = useLessonStore();
 
 const displayName = ref("użytkowniku");
+const isAdmin = ref(false);
 
 async function loadDisplayName() {
   const {
@@ -110,9 +121,11 @@ async function loadDisplayName() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, admin")
     .eq("id", user.id)
     .maybeSingle();
+
+  isAdmin.value = profile?.admin === true;
 
   const profileName = String(profile?.full_name || "").trim();
   if (profileName) {

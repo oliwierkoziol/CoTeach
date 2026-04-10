@@ -24,6 +24,14 @@
         {{ errorMessage }}
       </div>
 
+      <div v-if="shouldShowBlockedImage" class="mt-4 flex justify-center">
+        <img
+          :src="blockedImage"
+          alt="Konto zablokowane"
+          class="w-40 h-40 object-contain"
+        />
+      </div>
+
       <div class="mt-6 text-center text-sm text-slate-600">
         Nie masz konta? <RouterLink to="/register" class="font-semibold text-blue-600 hover:underline">Zarejestruj się</RouterLink>
       </div>
@@ -32,11 +40,70 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
+import blockedImage from "../assets/logo.png";
+
+const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
+const route = useRoute();
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
+const shouldShowBlockedImage = computed(() =>
+  String(errorMessage.value || "").toLowerCase().includes("zablokowane")
+);
+
+function setBlockedError() {
+  errorMessage.value = "To konto jest obecnie zablokowane.";
+}
+
+function readPendingProfileSeed() {
+  try {
+    const raw = localStorage.getItem(PENDING_PROFILE_SEED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      email: String(parsed.email || "").trim().toLowerCase(),
+      full_name: String(parsed.full_name || "").trim(),
+      created_at: Number(parsed.created_at || 0)
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function syncProfileAfterLogin(session) {
+  const user = session?.user;
+  if (!user?.id) return;
+
+  const pending = readPendingProfileSeed();
+  const authEmail = String(user.email || "").trim().toLowerCase();
+  const metadataName = String(user.user_metadata?.full_name || "").trim();
+  const fullName =
+    pending && pending.email === authEmail && pending.full_name ? pending.full_name : metadataName;
+
+  await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: authEmail || null,
+      full_name: fullName || null,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "id" }
+  );
+
+  if (fullName && fullName !== metadataName) {
+    await supabase.auth.updateUser({
+      data: {
+        full_name: fullName
+      }
+    });
+  }
+
+  localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
+}
 
 async function handleLogin() {
   errorMessage.value = "";
@@ -57,6 +124,30 @@ async function handleLogin() {
     return;
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("blocked")
+    .eq("id", data.session.user.id)
+    .maybeSingle();
+
+  if (!profileError && profile?.blocked === true) {
+    await supabase.auth.signOut();
+    setBlockedError();
+    return;
+  }
+
+  try {
+    await syncProfileAfterLogin(data.session);
+  } catch {
+    // Login should still succeed even if profile sync fails transiently.
+  }
+
   window.location.assign("/");
 }
+
+onMounted(() => {
+  if (String(route.query.blocked || "") === "1") {
+    setBlockedError();
+  }
+});
 </script>

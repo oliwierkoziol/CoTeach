@@ -45,6 +45,8 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
+const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
+
 const router = useRouter();
 const name = ref("");
 const email = ref("");
@@ -52,18 +54,34 @@ const password = ref("");
 const errorMessage = ref("");
 const infoMessage = ref("");
 
+async function upsertProfileRow({ id, email, fullName }) {
+  if (!id) return;
+  await supabase.from("profiles").upsert(
+    {
+      id,
+      email: email || null,
+      full_name: fullName || null,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "id" }
+  );
+}
+
 async function handleRegister() {
   errorMessage.value = "";
   infoMessage.value = "";
 
+  const fullName = String(name.value || "").trim();
+  const normalizedEmail = String(email.value || "").trim().toLowerCase();
+
   const { data, error } = await supabase.auth.signUp({
-    email: email.value,
+    email: normalizedEmail,
     password: password.value,
     options: {
       data: {
-        full_name: name.value,
-      },
-    },
+        full_name: fullName
+      }
+    }
   });
 
   if (error) {
@@ -71,12 +89,29 @@ async function handleRegister() {
     return;
   }
 
-  if (data?.session) {
+  const userId = data?.user?.id || "";
+  const session = data?.session;
+
+  if (session && userId) {
+    try {
+      await upsertProfileRow({
+        id: userId,
+        email: normalizedEmail,
+        fullName
+      });
+      localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
+    } catch {
+      // Keep registration successful even if profile upsert is temporarily unavailable.
+    }
     router.push("/");
     return;
   }
 
   if (data?.user) {
+    localStorage.setItem(
+      PENDING_PROFILE_SEED_KEY,
+      JSON.stringify({ email: normalizedEmail, full_name: fullName, created_at: Date.now() })
+    );
     infoMessage.value =
       "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
   }

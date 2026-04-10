@@ -43,27 +43,78 @@
         <div class="space-y-6">
           <div>
             <label class="block text-sm font-semibold text-slate-700 mb-2">Imię i nazwisko</label>
-            <input
-              v-model.trim="userProfile.full_name"
-              type="text"
-              autocomplete="name"
-              class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              placeholder="Jan Kowalski"
-            />
-            <button
-              type="button"
-              class="mt-3 w-full sm:w-auto rounded-2xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
-              :disabled="isSavingName"
-              @click.prevent="saveFullName"
-            >
-              {{ isSavingName ? "Zapisywanie…" : "Zapisz imię i nazwisko" }}
-            </button>
+            <div class="flex gap-2">
+              <input
+                v-model.trim="userProfile.full_name"
+                type="text"
+                autocomplete="name"
+                class="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                placeholder="Jan Kowalski"
+              />
+              <button
+                type="button"
+                class="shrink-0 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                :disabled="isSavingName"
+                @click.prevent="saveFullName"
+              >
+                {{ isSavingName ? "Zapisywanie…" : "Zapisz" }}
+              </button>
+            </div>
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Email</label>
-            <div class="text-lg text-slate-900 border-b-2 border-slate-200 pb-2">
-              {{ userProfile.email || "Brak danych" }}
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Adres e-mail</label>
+            <div class="text-lg text-slate-900 border-b border-slate-200 pb-1 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="truncate">{{ displayEmail }}</span>
+                <button
+                  v-if="userProfile.email"
+                  type="button"
+                  class="text-sm font-semibold text-indigo-600 hover:underline"
+                  @click="showEmailValue = !showEmailValue"
+                >
+                  {{ showEmailValue ? "Ukryj" : "Pokaż" }}
+                </button>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                :disabled="isSavingEmail"
+                @click="toggleEmailEdit"
+              >
+                {{ showEmailEditor ? "Anuluj" : "Edytuj" }}
+              </button>
+            </div>
+            <div v-if="showEmailEditor" class="mt-3">
+              <input
+                v-model.trim="newEmail"
+                type="email"
+                autocomplete="email"
+                class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                placeholder="Nowy adres e-mail"
+              />
+              <button
+                type="button"
+                class="mt-3 w-full sm:w-auto rounded-2xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                :disabled="isSavingEmail"
+                @click.prevent="saveEmail"
+              >
+                {{ isSavingEmail ? "Zapisywanie..." : "Zapisz nowy e-mail" }}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Hasło</label>
+            <div class="text-lg text-slate-900 border-b border-slate-200 pb-1 flex items-center justify-between gap-3">
+              <span class="tracking-widest text-slate-400 select-none">••••••••••</span>
+              <button
+                type="button"
+                class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                @click="showPasswordModal = true"
+              >
+                Edytuj
+              </button>
             </div>
           </div>
 
@@ -73,6 +124,7 @@
               {{ formatDate(userProfile.created_at) }}
             </div>
           </div>
+
         </div>
 
         <div v-if="isUploading" class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-2xl text-center">
@@ -102,6 +154,130 @@
             Wyloguj się
           </button>
         </div>
+
+        <!-- Password change modal -->
+        <Teleport to="body">
+          <Transition name="pw-modal">
+          <div
+            v-if="showPasswordModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+            @mousedown.self="closePasswordModal"
+          >
+            <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 pw-modal-card">
+              <div class="flex items-start justify-between mb-2">
+                <div>
+                  <h2 class="text-xl font-bold text-slate-900">Zaktualizuj hasło</h2>
+                  <p class="text-sm text-slate-500 mt-1">Wprowadź swoje obecne hasło i nowe hasło.</p>
+                </div>
+                <button
+                  type="button"
+                  class="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                  @click="closePasswordModal"
+                  aria-label="Zamknij"
+                >&times;</button>
+              </div>
+
+              <div class="space-y-4 mt-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1">Bieżące hasło <span class="text-red-500">*</span></label>
+                  <input
+                    v-model="pwCurrent"
+                    type="password"
+                    autocomplete="current-password"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1">Nowe hasło <span class="text-red-500">*</span></label>
+                  <input
+                    v-model="pwNew"
+                    type="password"
+                    autocomplete="new-password"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-1">Potwierdź nowe hasło <span class="text-red-500">*</span></label>
+                  <input
+                    v-model="pwConfirm"
+                    type="password"
+                    autocomplete="new-password"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+              </div>
+
+              <div v-if="pwError" class="mt-3 rounded-xl bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{{ pwError }}</div>
+              <div v-if="pwSuccess" class="mt-3 rounded-xl bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">{{ pwSuccess }}</div>
+
+              <div class="mt-5 flex gap-3">
+                <button
+                  type="button"
+                  class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  :disabled="isSavingPassword"
+                  @click="closePasswordModal"
+                >
+                  Anuluj
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                  :disabled="isSavingPassword"
+                  @click="savePassword"
+                >
+                  {{ isSavingPassword ? 'Zapisywanie...' : 'Gotowe' }}
+                </button>
+              </div>
+            </div>
+          </div>
+          </Transition>
+        </Teleport>
+
+        <div class="mt-8 rounded-2xl border border-red-200 bg-red-50/70 p-4">
+          <label class="block text-sm font-semibold text-red-800 mb-2">Usuń konto</label>
+          <p class="text-sm text-red-700">
+            Usunięcie konta jest trwałe i nie można go cofnąć.
+          </p>
+          <button
+            type="button"
+            class="mt-3 w-full sm:w-auto rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+            :disabled="isDeletingAccount"
+            @click="toggleDeleteConfirm"
+          >
+            {{ showDeleteConfirm ? "Anuluj usuwanie" : "Usuń konto" }}
+          </button>
+
+          <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-white p-4">
+            <p class="text-sm text-red-700">
+              Wpisz hasło, aby potwierdzić usunięcie konta.
+            </p>
+            <input
+              v-model="deletePassword"
+              type="password"
+              autocomplete="current-password"
+              class="mt-3 w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              placeholder="Podaj hasło"
+            />
+            <div class="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                class="rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                :disabled="isDeletingAccount || !deletePassword.trim()"
+                @click="handleDeleteAccount"
+              >
+                {{ isDeletingAccount ? "Usuwanie konta..." : "Potwierdź usunięcie" }}
+              </button>
+              <button
+                type="button"
+                class="rounded-2xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+                :disabled="isDeletingAccount"
+                @click="cancelDeleteConfirm"
+              >
+                Cofnij
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -110,7 +286,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
-import { supabase } from "../supabase";
+import { createTemporarySupabaseClient, supabase } from "../supabase";
 
 const router = useRouter();
 
@@ -127,9 +303,31 @@ const authEmail = ref("");
 const avatarUrl = ref("");
 const isUploading = ref(false);
 const isSavingName = ref(false);
+const isSavingEmail = ref(false);
+const isDeletingAccount = ref(false);
+const showEmailEditor = ref(false);
+const showEmailValue = ref(false);
+const showDeleteConfirm = ref(false);
+const deletePassword = ref("");
+const newEmail = ref("");
+const showPasswordModal = ref(false);
+const pwCurrent = ref("");
+const pwNew = ref("");
+const pwConfirm = ref("");
+const isSavingPassword = ref(false);
+const pwError = ref("");
+const pwSuccess = ref("");
 const errorMessage = ref("");
 const successMessage = ref("");
 const fileInput = ref(null);
+
+function normalizeBaseUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/\/$/, "");
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
 
 const userInitials = computed(() => {
   if (!userProfile.value.full_name) return "U";
@@ -139,6 +337,21 @@ const userInitials = computed(() => {
     .join("")
     .toUpperCase()
     .substring(0, 2);
+});
+
+const displayEmail = computed(() => {
+  const email = String(userProfile.value.email || "").trim();
+  if (!email) return "Brak danych";
+  if (showEmailValue.value) return email;
+
+  const at = email.indexOf("@");
+  if (at <= 0) return "********";
+
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  if (local.length <= 2) return `${local[0] || "*"}***${domain}`;
+
+  return `${local[0]}${"*".repeat(Math.max(3, local.length - 1))}${domain}`;
 });
 
 function formatDate(dateString) {
@@ -168,6 +381,7 @@ const loadUserProfile = async () => {
   userProfile.value.created_at = user.created_at || "";
   authUserId.value = user.id;
   authEmail.value = user.email || "";
+  newEmail.value = user.email || "";
 
   const { data: row, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
@@ -177,10 +391,28 @@ const loadUserProfile = async () => {
   }
 
   if (row) {
-    userProfile.value.full_name = row.full_name || user.user_metadata?.full_name || "";
+    const effectiveEmail = row.email || user.email || "";
+    const effectiveName = row.full_name || user.user_metadata?.full_name || "";
+    userProfile.value.email = effectiveEmail;
+    authEmail.value = effectiveEmail;
+    newEmail.value = effectiveEmail;
+    userProfile.value.full_name = effectiveName;
     userProfile.value.avatar_url = row.avatar_url || "";
     if (row.avatar_url) avatarUrl.value = row.avatar_url;
     else avatarUrl.value = "";
+
+    // Backfill missing full_name in profiles when we only have it in auth metadata.
+    if (!row.full_name && effectiveName) {
+      await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          email: effectiveEmail,
+          full_name: effectiveName,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: "id" }
+      );
+    }
   } else {
     userProfile.value.full_name = user.user_metadata?.full_name || "";
     userProfile.value.avatar_url = "";
@@ -246,6 +478,12 @@ async function saveFullName() {
 
     if (pErr) throw new Error(pErr.message);
 
+    await supabase.auth.updateUser({
+      data: {
+        full_name: name
+      }
+    });
+
     userProfile.value.full_name = name;
     successMessage.value = "Zapisano imię i nazwisko.";
     await nextTick();
@@ -261,6 +499,145 @@ async function saveFullName() {
     }
   } finally {
     isSavingName.value = false;
+  }
+}
+
+async function saveEmail() {
+  const email = String(newEmail.value || "").trim().toLowerCase();
+  const currentEmail = String(userProfile.value.email || "").trim().toLowerCase();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  if (!email) {
+    errorMessage.value = "Podaj nowy adres e-mail.";
+    return;
+  }
+
+  if (!emailPattern.test(email)) {
+    errorMessage.value = "Podaj poprawny adres e-mail (np. nazwa@domena.pl).";
+    return;
+  }
+
+  if (email === currentEmail) {
+    errorMessage.value = "Nowy adres e-mail musi być inny niż obecny.";
+    return;
+  }
+
+  if (isSavingEmail.value) return;
+  isSavingEmail.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  try {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      throw new Error("Brak aktywnej sesji. Zaloguj się ponownie i spróbuj jeszcze raz.");
+    }
+
+    const response = await fetch(`${API_BASE}/api/account/email`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ email })
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result?.error || "Nie udało się zmienić adresu e-mail.");
+    }
+
+    const effectiveEmail = String(result?.email || email).trim().toLowerCase();
+    userProfile.value.email = effectiveEmail;
+    authEmail.value = effectiveEmail;
+    newEmail.value = effectiveEmail;
+    showEmailEditor.value = false;
+    showEmailValue.value = false;
+
+    successMessage.value = "Adres e-mail został zmieniony.";
+    await nextTick();
+    setTimeout(() => {
+      successMessage.value = "";
+    }, 5000);
+  } catch (error) {
+    errorMessage.value = error?.message || "Nie udało się zmienić adresu e-mail.";
+  } finally {
+    isSavingEmail.value = false;
+  }
+}
+
+function closePasswordModal() {
+  if (isSavingPassword.value) return;
+  showPasswordModal.value = false;
+  pwCurrent.value = "";
+  pwNew.value = "";
+  pwConfirm.value = "";
+  pwError.value = "";
+  pwSuccess.value = "";
+}
+
+async function savePassword() {
+  pwError.value = "";
+  pwSuccess.value = "";
+
+  if (!pwCurrent.value) {
+    pwError.value = "Podaj bieżące hasło.";
+    return;
+  }
+  if (!pwNew.value) {
+    pwError.value = "Podaj nowe hasło.";
+    return;
+  }
+  if (pwNew.value.length < 6) {
+    pwError.value = "Nowe hasło musi mieć co najmniej 6 znaków.";
+    return;
+  }
+  if (pwNew.value !== pwConfirm.value) {
+    pwError.value = "Hasła nie są identyczne.";
+    return;
+  }
+
+  isSavingPassword.value = true;
+  try {
+    const email = userProfile.value.email;
+    if (!email) throw new Error("Brak aktywnej sesji. Zaloguj się ponownie.");
+
+    // Verify current password using temporary client
+    const tempClient = createTemporarySupabaseClient();
+    const { error: verifyError } = await tempClient.auth.signInWithPassword({
+      email,
+      password: pwCurrent.value
+    });
+    await tempClient.auth.signOut();
+    if (verifyError) throw new Error("Bieżące hasło jest nieprawidłowe.");
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: pwNew.value
+    });
+    if (updateError) throw new Error(updateError.message);
+
+    pwSuccess.value = "Hasło zostało zmienione.";
+    pwCurrent.value = "";
+    pwNew.value = "";
+    pwConfirm.value = "";
+    setTimeout(() => {
+      closePasswordModal();
+    }, 1500);
+  } catch (e) {
+    pwError.value = e?.message || "Nie udało się zmienić hasła.";
+  } finally {
+    isSavingPassword.value = false;
+  }
+}
+
+function toggleEmailEdit() {
+  if (isSavingEmail.value) return;
+  showEmailEditor.value = !showEmailEditor.value;
+  if (!showEmailEditor.value) {
+    newEmail.value = userProfile.value.email || "";
   }
 }
 
@@ -337,5 +714,119 @@ async function handleLogout() {
   router.push("/login");
 }
 
+function cancelDeleteConfirm() {
+  if (isDeletingAccount.value) return;
+  showDeleteConfirm.value = false;
+  deletePassword.value = "";
+}
+
+function toggleDeleteConfirm() {
+  if (isDeletingAccount.value) return;
+  if (showDeleteConfirm.value) {
+    cancelDeleteConfirm();
+    return;
+  }
+  errorMessage.value = "";
+  successMessage.value = "";
+  showDeleteConfirm.value = true;
+}
+
+async function handleDeleteAccount() {
+  if (isDeletingAccount.value) return;
+
+  const password = String(deletePassword.value || "").trim();
+  if (!password) {
+    errorMessage.value = "Podaj hasło, aby usunąć konto.";
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Czy na pewno chcesz usunąć konto? Ta operacja usunie profil i dane konta bez możliwości cofnięcia."
+  );
+  if (!confirmed) return;
+
+  isDeletingAccount.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  try {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    const email = userProfile.value.email || session?.user?.email || "";
+    if (!email) {
+      throw new Error("Brak aktywnej sesji. Zaloguj się ponownie i spróbuj jeszcze raz.");
+    }
+
+    const tempClient = createTemporarySupabaseClient();
+    const { data: verificationData, error: passwordError } = await tempClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (passwordError) {
+      await tempClient.auth.signOut();
+      throw new Error("Nieprawidłowe hasło.");
+    }
+
+    const verifiedToken = verificationData?.session?.access_token;
+    if (!verifiedToken) {
+      await tempClient.auth.signOut();
+      throw new Error("Nie udało się potwierdzić sesji. Zaloguj się ponownie i spróbuj jeszcze raz.");
+    }
+
+    const response = await fetch(`${API_BASE}/api/account`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${verifiedToken}`
+      }
+    });
+
+    const body = await response.json().catch(() => ({}));
+    await tempClient.auth.signOut();
+    if (!response.ok) {
+      throw new Error(body?.error || "Nie udało się usunąć konta.");
+    }
+
+    await supabase.auth.signOut({ scope: "local" });
+    deletePassword.value = "";
+    showDeleteConfirm.value = false;
+    router.replace({ path: "/register", query: { deleted: "1" } });
+  } catch (error) {
+    errorMessage.value = error?.message || "Wystąpił błąd podczas usuwania konta.";
+  } finally {
+    isDeletingAccount.value = false;
+  }
+}
+
 onMounted(loadUserProfile);
 </script>
+
+<style scoped>
+/* overlay fade */
+.pw-modal-enter-active,
+.pw-modal-leave-active {
+  transition: opacity 0.15s ease;
+}
+.pw-modal-enter-from,
+.pw-modal-leave-to {
+  opacity: 0;
+}
+
+/* card scale */
+.pw-modal-enter-active .pw-modal-card {
+  animation: pwScaleIn 0.15s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.pw-modal-leave-active .pw-modal-card {
+  animation: pwScaleOut 0.12s ease-in both;
+}
+
+@keyframes pwScaleIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes pwScaleOut {
+  from { transform: scale(1);   opacity: 1; }
+  to   { transform: scale(0.6); opacity: 0; }
+}
+</style>
