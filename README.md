@@ -1,0 +1,26 @@
+
+# Lesson Planning and Management (Vue)
+
+Projekt został przeniesiony z React do Vue z zachowaniem designu i podłączeniem funkcjonalności:
+- przygotowanie materiałów (TXT/PDF/JPG/PNG + OCR),
+- generowanie i edycja planu,
+- lekcja live z mikrofonem i semantycznym pokryciem punktów,
+- prezentacja nieomówionych punktów,
+- archiwum, notatka końcowa, QR,
+- panel admina i licencje.
+
+## Stack
+- Frontend: Vue 3 + Vite + Vue Router
+- Backend: Express API
+
+## Uruchomienie
+1. `npm install`
+2. Skopiuj `.env.example` do `.env.local` (opcjonalnie).
+3. Ustaw `OPENROUTER_API_KEY` w `.env.local` (OCR, plan, coverage, notatka).
+4. Jeśli chcesz używać Whisper STT, ustaw `OPENAI_API_KEY`.
+5. `npm run dev`
+
+Adresy:
+- Frontend: `http://localhost:5173`
+- API: `http://localhost:3001`
+  

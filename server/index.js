@@ -1,0 +1,514 @@
+import express from "express";
+import cors from "cors";
+import multer from "multer";
+import { randomUUID } from "crypto";
+import OpenAI from "openai";
+import { toFile } from "openai/uploads";
+
+const app = express();
+const upload = multer();
+const port = 3001;
+
+const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "openai/gpt-4o-mini";
+const OPENROUTER_VISION_MODEL =
+  process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
+const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
+const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
+const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+  : null;
+
+app.use(cors());
+app.use(express.json({ limit: "15mb" }));
+
+const db = {
+  schools: new Map(),
+  users: new Map(),
+  licenses: new Map(),
+  lessons: new Map(),
+  costs: new Map()
+};
+
+const defaultSchoolId = "school-default";
+const defaultLicenseId = "license-default";
+const defaultTeacherId = "teacher-default";
+const defaultAdminId = "admin-default";
+
+db.schools.set(defaultSchoolId, { id: defaultSchoolId, name: "Demo School", licenseId: defaultLicenseId });
+db.licenses.set(defaultLicenseId, {
+  id: defaultLicenseId,
+  schoolId: defaultSchoolId,
+  key: process.env.DEMO_LICENSE_KEY || "DEMO-LESSON-001",
+  maxActiveUsers: 30,
+  expiresAt: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+  demoMode: true
+});
+db.users.set(defaultTeacherId, {
+  id: defaultTeacherId,
+  schoolId: defaultSchoolId,
+  role: "teacher",
+  email: "teacher@example.com",
+  name: "Demo Teacher"
+});
+db.users.set(defaultAdminId, {
+  id: defaultAdminId,
+  schoolId: defaultSchoolId,
+  role: "school_admin",
+  email: "admin@example.com",
+  name: "School Admin"
+});
+
+function normalize(text) {
+  return (text || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fallbackGeneratePlan(rawText) {
+  const lines = (rawText || "")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^[\-\*\d\.\)\s]+/, "").trim())
+    .filter(Boolean);
+  const blocks = [];
+  let current = "";
+  for (const line of lines) {
+    const breakPoint = line.length < 40 || /^[A-ZĄĆĘŁŃÓŚŹŻ]/.test(line) || /^temat\s*[:\-]/i.test(line);
+    if (breakPoint && current) {
+      blocks.push(current.trim());
+      current = line;
+    } else {
+      current = `${current} ${line}`.trim();
+    }
+  }
+  if (current) blocks.push(current.trim());
+  return blocks.slice(0, 12).map((block, idx) => ({
+    id: randomUUID(),
+    title: (block.split(/[.:;-]/)[0] || `Temat ${idx + 1}`).slice(0, 80),
+    keywords: normalize(block).split(" ").filter((w) => w.length > 3).slice(0, 5),
+    description: block.slice(0, 400),
+    status: "pending",
+    priority: idx + 1
+  }));
+}
+
+function partToOpenRouterContent(part) {
+  if (part.text) {
+    return { type: "text", text: part.text };
+  }
+  if (part.inlineData?.data && part.inlineData?.mimeType) {
+    return {
+      type: "image_url",
+      image_url: {
+        url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+      }
+    };
+  }
+  return { type: "text", text: "" };
+}
+
+async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts }) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OpenRouter API key is missing.");
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: parts.map(partToOpenRouterContent)
+        }
+      ]
+    })
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} ${text}`);
+  }
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  return text.trim();
+}
+
+function parseJsonFromModel(text) {
+  const cleaned = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  return JSON.parse(cleaned);
+}
+
+async function generatePlanWithLLM(rawText) {
+  if (!rawText?.trim()) return [];
+  try {
+    const prompt = `
+Zamien material lekcyjny na plan lekcji.
+Zwróć WYŁĄCZNIE JSON array (max 12 elementów), każdy element:
+{ "title": string, "keywords": string[], "description": string, "priority": number }
+Zasady:
+- język polski
+- title krótki i konkretny
+- keywords 3-6 haseł
+- description max 350 znaków
+Material:
+${rawText.slice(0, 20000)}
+`.trim();
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }]
+    });
+    const parsed = parseJsonFromModel(out);
+    if (!Array.isArray(parsed)) throw new Error("Invalid plan JSON");
+    return parsed.slice(0, 12).map((item, idx) => ({
+      id: randomUUID(),
+      title: String(item.title || `Temat ${idx + 1}`).slice(0, 80),
+      keywords: Array.isArray(item.keywords) ? item.keywords.map(String).slice(0, 8) : [],
+      description: String(item.description || "").slice(0, 400),
+      status: "pending",
+      priority: Number(item.priority || idx + 1)
+    }));
+  } catch {
+    return fallbackGeneratePlan(rawText);
+  }
+}
+
+async function calculateCoverageWithLLM(plan, transcripts) {
+  const transcript = (transcripts || []).map((t) => t.text).join(" ").slice(0, 25000);
+  if (!plan?.length || !transcript.trim()) return plan || [];
+  try {
+    const prompt = `
+Masz plan lekcji i transkrypcję. Oznacz dla każdego punktu status:
+- discussed (omówione),
+- skipped (częściowo wspomniane),
+- pending (nieomówione).
+Zwróć WYŁĄCZNIE JSON array: [{ "id": string, "status": "pending"|"skipped"|"discussed" }].
+Plan:
+${JSON.stringify(plan.map((p) => ({ id: p.id, title: p.title, keywords: p.keywords, description: p.description })))}
+Transkrypcja:
+${transcript}
+`.trim();
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }]
+    });
+    const statuses = parseJsonFromModel(out);
+    const statusById = new Map((Array.isArray(statuses) ? statuses : []).map((x) => [x.id, x.status]));
+    return plan.map((item) => ({
+      ...item,
+      status: ["pending", "skipped", "discussed"].includes(statusById.get(item.id))
+        ? statusById.get(item.id)
+        : item.status
+    }));
+  } catch {
+    const normalized = normalize(transcript);
+    return plan.map((item) => {
+      const hits = (item.keywords || []).filter((keyword) => normalized.includes(normalize(keyword))).length;
+      const threshold = Math.max(1, Math.ceil((item.keywords || []).length / 2));
+      const status = hits >= threshold ? "discussed" : hits > 0 ? "skipped" : "pending";
+      return { ...item, status };
+    });
+  }
+}
+
+async function generateFinalNoteWithLLM(lesson) {
+  const transcript = (lesson.transcripts || []).map((x) => x.text).join(" ").slice(0, 20000);
+  const prompt = `
+Utwórz kompletną "Złotą Notatkę" po lekcji.
+Sekcje:
+1) Tytuł i przedmiot
+2) Co zostało omówione
+3) Czego nie omówiono (z planu)
+4) Krótkie podsumowanie dla ucznia
+Format: HTML (bez <html>, bez <body>, tylko treść artykułu).
+Dane:
+Tytuł: ${lesson.title}
+Przedmiot: ${lesson.subject}
+Plan: ${JSON.stringify(lesson.plan || [])}
+Transkrypcja: ${transcript}
+`.trim();
+  try {
+    return await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: prompt }] });
+  } catch {
+    const missing = (lesson.plan || []).filter((p) => p.status !== "discussed");
+    return `
+      <article>
+        <h1>Zlota Notatka: ${lesson.title}</h1>
+        <h2>Plan i pokrycie</h2>
+        <ul>${(lesson.plan || []).map((p) => `<li><b>${p.title}</b> - status: ${p.status}</li>`).join("")}</ul>
+        <h2>Nieomowione punkty</h2>
+        <ul>${missing.map((p) => `<li><b>${p.title}</b>: ${p.description}</li>`).join("") || "<li>Brak</li>"}</ul>
+      </article>
+    `;
+  }
+}
+
+function addCost(lessonId, provider, amountPLN) {
+  const events = db.costs.get(lessonId) || [];
+  events.push({ id: randomUUID(), lessonId, provider, amountPLN, at: new Date().toISOString() });
+  db.costs.set(lessonId, events);
+}
+
+function getCostSummary(lessonId) {
+  const limit = SESSION_LIMIT_PLN;
+  const events = db.costs.get(lessonId) || [];
+  const total = events.reduce((acc, item) => acc + item.amountPLN, 0);
+  return { total, limit, safeMode: total >= limit, exceeded: total >= limit };
+}
+
+function checkLicenseForSchool(schoolId) {
+  const school = db.schools.get(schoolId);
+  if (!school) return { allowed: false, reason: "School not found" };
+  const license = db.licenses.get(school.licenseId);
+  if (!license) return { allowed: false, reason: "License not found" };
+  if (new Date(license.expiresAt).getTime() < Date.now()) return { allowed: false, reason: "License expired" };
+  return { allowed: true, reason: "ok", license };
+}
+
+async function extractTextFromFile(file) {
+  if (file.mimetype === "text/plain") return file.buffer.toString("utf8").trim();
+  if (file.mimetype === "application/pdf") {
+    // Dynamic import avoids the broken ESM entry path in some pdf-parse setups.
+    const pdfParseModule = await import("pdf-parse/lib/pdf-parse.js");
+    const pdfParse = pdfParseModule.default || pdfParseModule;
+    const parsed = await pdfParse(file.buffer);
+    return (parsed.text || "").trim();
+  }
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+    const out = await callOpenRouter({
+      model: OPENROUTER_VISION_MODEL,
+      parts: [
+        { text: "Wyciagnij caly czytelny tekst z obrazu. Zwróć wyłącznie czysty tekst." },
+        {
+          inlineData: {
+            mimeType: file.mimetype,
+            data: file.buffer.toString("base64")
+          }
+        }
+      ]
+    });
+    return out.trim();
+  }
+  throw new Error("Unsupported file type");
+}
+
+app.post("/api/lessons", async (req, res) => {
+  const { title, subject, month, rawText = "" } = req.body || {};
+  if (!title || !subject || !month) return res.status(400).json({ error: "Missing fields" });
+  const lesson = {
+    id: randomUUID(),
+    schoolId: defaultSchoolId,
+    teacherId: defaultTeacherId,
+    title,
+    subject,
+    month,
+    date: new Date().toISOString().split("T")[0],
+    status: "draft",
+    sourceFiles: [],
+    plan: rawText ? await generatePlanWithLLM(rawText) : [],
+    transcripts: []
+  };
+  if (lesson.plan.length) lesson.status = "ready";
+  db.lessons.set(lesson.id, lesson);
+  return res.status(201).json({ lesson });
+});
+
+app.get("/api/lessons", (_req, res) => {
+  res.json({ lessons: [...db.lessons.values()] });
+});
+
+app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
+  try {
+    const lesson = db.lessons.get(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+
+    let extractedText = (req.body.rawText || "").trim();
+    if (!extractedText && req.file) {
+      extractedText = await extractTextFromFile(req.file);
+      lesson.sourceFiles.push({
+        id: randomUUID(),
+        lessonId: lesson.id,
+        fileName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        extractedText,
+        createdAt: new Date().toISOString()
+      });
+    }
+    if (!extractedText) return res.status(400).json({ error: "No file or rawText provided" });
+
+    lesson.plan = await generatePlanWithLLM(extractedText);
+    if (!lesson.plan.length) return res.status(400).json({ error: "Could not derive topics from material." });
+    lesson.status = "ready";
+    addCost(lesson.id, "gemini", 0.2);
+    db.lessons.set(lesson.id, lesson);
+    return res.json({ lesson });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.put("/api/lessons/:lessonId/plan", (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  lesson.plan = req.body.plan || [];
+  lesson.status = "ready";
+  db.lessons.set(lesson.id, lesson);
+  return res.json({ lesson });
+});
+
+app.post("/api/lessons/:lessonId/live/start", (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const check = checkLicenseForSchool(lesson.schoolId);
+  if (!check.allowed) return res.status(403).json({ error: check.reason });
+  lesson.status = "live";
+  lesson.startedAt = new Date().toISOString();
+  db.lessons.set(lesson.id, lesson);
+  return res.json({ lesson });
+});
+
+app.post("/api/lessons/:lessonId/transcript", (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const { text, startedAtMs = 0, language = "pl" } = req.body || {};
+  if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
+
+  lesson.transcripts.push({
+    id: randomUUID(),
+    lessonId: lesson.id,
+    text: String(text),
+    language,
+    startedAtMs,
+    createdAt: new Date().toISOString()
+  });
+  addCost(lesson.id, "deepgram", 0.03);
+  db.lessons.set(lesson.id, lesson);
+  return res.json({ ok: true });
+});
+
+app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
+  db.lessons.set(lesson.id, lesson);
+  const missing = lesson.plan.filter((item) => item.status !== "discussed");
+  return res.json({ plan: lesson.plan, missing });
+});
+
+app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const html = await generateFinalNoteWithLLM(lesson);
+  const noteId = randomUUID();
+  const baseUrl = req.body.baseUrl || "http://localhost:5173";
+  lesson.finalNote = {
+    id: noteId,
+    lessonId: lesson.id,
+    html,
+    publicPath: `/share/${noteId}`,
+    shareUrl: `${baseUrl}/share/${noteId}`,
+    createdAt: new Date().toISOString()
+  };
+  lesson.status = "finished";
+  lesson.finishedAt = new Date().toISOString();
+  db.lessons.set(lesson.id, lesson);
+  addCost(lesson.id, "gemini", 0.12);
+  return res.json({ finalNote: lesson.finalNote });
+});
+
+app.get("/api/lessons/:lessonId/costs", (req, res) => {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  return res.json(getCostSummary(lesson.id));
+});
+
+app.get("/api/share/:noteId", (req, res) => {
+  const lesson = [...db.lessons.values()].find((x) => x.finalNote?.id === req.params.noteId);
+  if (!lesson?.finalNote) return res.status(404).json({ error: "Not found" });
+  return res.json({ finalNote: lesson.finalNote });
+});
+
+app.get("/api/admin", (_req, res) => {
+  return res.json({
+    schools: [...db.schools.values()],
+    users: [...db.users.values()],
+    licenses: [...db.licenses.values()]
+  });
+});
+
+app.get("/api/license/check", (req, res) => {
+  const schoolId = String(req.query.schoolId || defaultSchoolId);
+  const result = checkLicenseForSchool(schoolId);
+  return res.status(result.allowed ? 200 : 403).json(result);
+});
+
+app.post("/api/transcribe", upload.single("file"), async (req, res) => {
+  try {
+    const lessonId = String(req.body.lessonId || "");
+    if (!lessonId || !db.lessons.has(lessonId)) {
+      return res.status(400).json({ error: "Valid lessonId is required." });
+    }
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "Audio file is required." });
+    }
+
+    const summary = getCostSummary(lessonId);
+    if (summary.total >= SESSION_LIMIT_PLN) {
+      return res.status(402).json({
+        error: "Budget exceeded",
+        message: "Limit kosztu sesji został osiągnięty."
+      });
+    }
+
+    if (!openai) {
+      return res.status(500).json({ error: "OPENAI_API_KEY is missing for Whisper STT." });
+    }
+    const file = await toFile(req.file.buffer, req.file.originalname || "audio.webm", {
+      type: req.file.mimetype || "audio/webm"
+    });
+    const transcription = await openai.audio.transcriptions.create({
+      file,
+      model: "whisper-1",
+      language: "pl",
+      response_format: "verbose_json"
+    });
+
+    const durationSec = Number(transcription.duration || 0);
+    const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
+    const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
+    addCost(lessonId, "openai", fragmentCost);
+
+    const text = String(transcription.text || "").trim();
+    return res.json({
+      text,
+      durationSec,
+      cost: getCostSummary(lessonId).total,
+      limitReached: getCostSummary(lessonId).exceeded
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Whisper transcription failed: ${error.message}` });
+  }
+});
+
+app.get("/api/health", (_req, res) => {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  return res.json({
+    ok: true,
+    service: "lesson-planning-api",
+    aiProvider: "openrouter+openai-whisper",
+    textModel: OPENROUTER_TEXT_MODEL,
+    visionModel: OPENROUTER_VISION_MODEL,
+    sttModel: "whisper-1",
+    whisperEnabled: Boolean(openai),
+    openRouterEnabled: Boolean(apiKey)
+  });
+});
+
+app.listen(port, () => {
+  console.log(`API listening at http://localhost:${port}`);
+});

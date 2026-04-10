@@ -1,0 +1,85 @@
+Plik: pages/api/transcribe.js (lub app/api/transcribe/route.js)
+JavaScript
+import { IncomingForm } from 'formidable';
+import fs from 'fs';
+import OpenAI from 'openai';
+
+// Konfiguracja modelu STT
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Stałe kosztowe (przykład dla Whisper API: $0.006 / min)
+const USD_TO_PLN = 4.0; 
+const PRICE_PER_SEC_PLN = (0.006 / 60) * USD_TO_PLN;
+const SESSION_LIMIT_PLN = 3.50;
+
+// Symulacja bazy danych w pamięci (w produkcji użyj np. Redis/Supabase)
+let currentSessionCost = 0;
+
+export const config = {
+  api: {
+    bodyParser: false, // Wyłączamy wbudowany body poświęcony plikom
+  },
+};
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // 1. Strażnik Budżetu - szybkie sprawdzenie przed procesowaniem
+  if (currentSessionCost >= SESSION_LIMIT_PLN) {
+    return res.status(402).json({ 
+      error: 'Budget exceeded', 
+      message: 'Limit 3.50 PLN na lekcję został wyczerpany. Przejdź do trybu offline.' 
+    });
+  }
+
+  const form = new IncomingForm();
+
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error parsing upload' });
+    }
+
+    const audioFile = files.file[0]; // Pobranie pliku z FormData
+    const filePath = audioFile.filepath;
+
+    try {
+      // 2. Przesłanie do modelu STT
+      const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: "whisper-1",
+        language: "pl",
+        response_format: "verbose_json",
+      });
+
+      // 3. Obliczenie kosztu tego konkretnego fragmentu
+      const duration = transcription.duration; // Długość audio w sekundach
+      const fragmentCost = duration * PRICE_PER_SEC_PLN;
+      
+      currentSessionCost += fragmentCost;
+
+      // 4. Logowanie w konsoli serwera dla monitoringu
+      console.log(`--- Segment lekcji ---`);
+      console.log(`Tekst: ${transcription.text}`);
+      console.log(`Czas: ${duration.toFixed(2)}s | Koszt: ${fragmentCost.toFixed(4)} PLN`);
+      console.log(`Suma sesji: ${currentSessionCost.toFixed(2)} / ${SESSION_LIMIT_PLN} PLN`);
+
+      // 5. Usunięcie pliku tymczasowego z serwera
+      fs.unlinkSync(filePath);
+
+      // 6. Odpowiedź do frontendu
+      res.status(200).json({
+        text: transcription.text,
+        cost: currentSessionCost,
+        limitReached: currentSessionCost >= SESSION_LIMIT_PLN
+      });
+
+    } catch (error) {
+      console.error('STT Error:', error);
+      res.status(500).json({ error: 'Transcription failed' });
+    }
+  });
+}
