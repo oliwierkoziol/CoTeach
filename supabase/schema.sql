@@ -27,8 +27,25 @@ create table if not exists public.lesson_cost_events (
 create index if not exists lessons_teacher_id_idx on public.lessons (teacher_id);
 create index if not exists lesson_cost_events_lesson_id_idx on public.lesson_cost_events (lesson_id);
 
+create table if not exists public.final_notes (
+  id uuid primary key,
+  lesson_id uuid not null unique references public.lessons (id) on delete cascade,
+  teacher_id uuid not null,
+  title text,
+  description text,
+  html text not null,
+  public_path text,
+  share_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists final_notes_teacher_id_idx on public.final_notes (teacher_id);
+create index if not exists final_notes_lesson_id_idx on public.final_notes (lesson_id);
+
 alter table public.lessons enable row level security;
 alter table public.lesson_cost_events enable row level security;
+alter table public.final_notes enable row level security;
 
 drop policy if exists "lessons_select_own" on public.lessons;
 drop policy if exists "lessons_insert_own" on public.lessons;
@@ -49,6 +66,16 @@ create policy "costs_select_own" on public.lesson_cost_events for select using (
 create policy "costs_insert_own" on public.lesson_cost_events for insert with check (
   exists (select 1 from public.lessons l where l.id = lesson_id and l.teacher_id = auth.uid())
 );
+
+drop policy if exists "final_notes_select_own" on public.final_notes;
+drop policy if exists "final_notes_insert_own" on public.final_notes;
+drop policy if exists "final_notes_update_own" on public.final_notes;
+drop policy if exists "final_notes_delete_own" on public.final_notes;
+
+create policy "final_notes_select_own" on public.final_notes for select using (auth.uid() = teacher_id);
+create policy "final_notes_insert_own" on public.final_notes for insert with check (auth.uid() = teacher_id);
+create policy "final_notes_update_own" on public.final_notes for update using (auth.uid() = teacher_id);
+create policy "final_notes_delete_own" on public.final_notes for delete using (auth.uid() = teacher_id);
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,

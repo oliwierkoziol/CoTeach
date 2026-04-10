@@ -106,6 +106,24 @@ export function useLessonStore() {
     return data.finalNote;
   }
 
+  async function updateFinalNote(lessonId, payload) {
+    const data = await api(`/api/lessons/${lessonId}/final-note`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    state.lesson = data.lesson;
+    state.lessons = state.lessons.map((lesson) => (lesson.id === data.lesson.id ? data.lesson : lesson));
+    return data.lesson;
+  }
+
+  async function deleteFinalNote(lessonId) {
+    const data = await api(`/api/lessons/${lessonId}/final-note`, { method: "DELETE" });
+    state.lesson = data.lesson;
+    state.lessons = state.lessons.map((lesson) => (lesson.id === data.lesson.id ? data.lesson : lesson));
+    return data.lesson;
+  }
+
   async function fetchLessons() {
     const data = await api("/api/lessons");
     state.lessons = data.lessons || [];
@@ -129,6 +147,8 @@ export function useLessonStore() {
     sendTranscript,
     refreshCoverage,
     finalizeLesson,
+    updateFinalNote,
+    deleteFinalNote,
     fetchLessons,
     fetchAdmin,
     fetchSharedNote

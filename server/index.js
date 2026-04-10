@@ -119,6 +119,36 @@ function lessonToRow(lesson) {
   };
 }
 
+function rowToFinalNote(row) {
+  return {
+    id: row.id,
+    lessonId: row.lesson_id,
+    teacherId: row.teacher_id,
+    title: row.title || "",
+    description: row.description || "",
+    html: row.html || "",
+    publicPath: row.public_path || "",
+    shareUrl: row.share_url || "",
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  };
+}
+
+function finalNoteToRow(finalNote, teacherId) {
+  return {
+    id: finalNote.id,
+    lesson_id: finalNote.lessonId,
+    teacher_id: teacherId,
+    title: String(finalNote.title || ""),
+    description: String(finalNote.description || ""),
+    html: String(finalNote.html || ""),
+    public_path: String(finalNote.publicPath || ""),
+    share_url: String(finalNote.shareUrl || ""),
+    created_at: finalNote.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
 async function persistLesson(lesson) {
   if (!supabase) return;
   const { error } = await supabase.from("lessons").upsert(lessonToRow(lesson), { onConflict: "id" });
@@ -128,6 +158,36 @@ async function persistLesson(lesson) {
 async function persistLessonSafe(lesson) {
   try {
     await persistLesson(lesson);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function persistFinalNote(finalNote, teacherId) {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from("final_notes")
+    .upsert(finalNoteToRow(finalNote, teacherId), { onConflict: "lesson_id" });
+  if (error) throw new Error(`Supabase final note upsert failed: ${error.message}`);
+}
+
+async function persistFinalNoteSafe(finalNote, teacherId) {
+  try {
+    await persistFinalNote(finalNote, teacherId);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function removeFinalNote(lessonId) {
+  if (!supabase) return;
+  const { error } = await supabase.from("final_notes").delete().eq("lesson_id", lessonId);
+  if (error) throw new Error(`Supabase final note delete failed: ${error.message}`);
+}
+
+async function removeFinalNoteSafe(lessonId) {
+  try {
+    await removeFinalNote(lessonId);
   } catch (error) {
     console.error(error.message);
   }
@@ -169,6 +229,18 @@ async function loadCostEventsFromSupabase() {
   }
 }
 
+async function loadFinalNotesFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("final_notes").select("*");
+  if (error) throw new Error(`Supabase final notes load failed: ${error.message}`);
+  for (const row of data || []) {
+    const lesson = db.lessons.get(row.lesson_id);
+    if (!lesson) continue;
+    lesson.finalNote = rowToFinalNote(row);
+    db.lessons.set(lesson.id, lesson);
+  }
+}
+
 async function bootstrapPersistence() {
   if (!supabase) {
     console.log("Supabase disabled: in-memory only.");
@@ -176,6 +248,7 @@ async function bootstrapPersistence() {
   }
   await loadLessonsFromSupabase();
   await loadCostEventsFromSupabase();
+  await loadFinalNotesFromSupabase();
   console.log(`Supabase: loaded ${db.lessons.size} lessons.`);
 }
 
@@ -613,7 +686,51 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   db.lessons.set(lesson.id, lesson);
   addCost(lesson.id, "gemini", 0.12);
   await persistLessonSafe(lesson);
+  await persistFinalNoteSafe(lesson.finalNote, lesson.teacherId);
   return res.json({ finalNote: lesson.finalNote });
+});
+
+app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
+
+  const title = String(req.body?.title || "").trim();
+  const description = String(req.body?.description || "").trim();
+  const html = String(req.body?.html || "").trim();
+
+  if (!html) {
+    return res.status(400).json({ error: "Final note HTML is required" });
+  }
+
+  lesson.finalNote = {
+    ...lesson.finalNote,
+    title,
+    description,
+    html,
+    updatedAt: new Date().toISOString()
+  };
+
+  db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
+  await persistFinalNoteSafe(lesson.finalNote, lesson.teacherId);
+  return res.json({ lesson, finalNote: lesson.finalNote });
+});
+
+app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
+  const teacherId = await resolveRequestUser(req, res);
+  if (!teacherId) return;
+  const lesson = getOwnedLesson(req.params.lessonId, teacherId);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
+
+  lesson.finalNote = null;
+  db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
+  await removeFinalNoteSafe(lesson.id);
+  return res.json({ lesson });
 });
 
 app.get("/api/lessons/:lessonId/costs", async (req, res) => {

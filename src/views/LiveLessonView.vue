@@ -205,6 +205,7 @@ const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
 let apiPingTimer = null;
+const MAX_TRANSCRIPTION_ITEMS = 200;
 
 const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
@@ -300,8 +301,9 @@ async function beginMic() {
   rec.onresult = async (event) => {
     const finals = [];
     const interim = [];
+    const startIndex = Number.isInteger(event.resultIndex) ? event.resultIndex : 0;
 
-    for (let i = 0; i < event.results.length; i += 1) {
+    for (let i = startIndex; i < event.results.length; i += 1) {
       const result = event.results[i];
       const alternatives = Array.from(result || []);
       const text = alternatives.map((a) => a?.transcript || "").join(" ").trim();
@@ -319,6 +321,9 @@ async function beginMic() {
       const finalText = finals.join(" ").trim();
       lastFinalCaption.value = finalText;
       transcription.value.push(finalText);
+      if (transcription.value.length > MAX_TRANSCRIPTION_ITEMS) {
+        transcription.value.splice(0, transcription.value.length - MAX_TRANSCRIPTION_ITEMS);
+      }
       interimCaption.value = "";
 
       // Fire and forget to keep UI captions responsive.
