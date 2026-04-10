@@ -8,6 +8,7 @@ import AdminView from "../views/AdminView.vue";
 import ShareView from "../views/ShareView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
+import ProfileView from "../views/ProfileView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,6 +21,7 @@ const router = createRouter({
     { path: "/admin", component: AdminView },
     { path: "/login", component: LoginView },
     { path: "/register", component: RegisterView },
+    { path: "/profile", component: ProfileView },
     { path: "/share/:noteId", component: ShareView }
   ]
 });

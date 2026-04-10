@@ -30,10 +30,11 @@
         <div v-if="isAuthenticated" class="relative">
           <button
             @click="toggleProfileMenu"
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-slate-600 text-sm font-bold text-white shadow-lg hover:shadow-xl transition hover:from-blue-600 hover:to-slate-700"
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-slate-600 text-sm font-bold text-white shadow-lg hover:shadow-xl transition hover:from-blue-600 hover:to-slate-700 overflow-hidden"
             :title="userEmail"
           >
-            {{ userInitials }}
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Avatar" class="w-full h-full object-cover" />
+            <span v-else>{{ userInitials }}</span>
           </button>
 
           <!-- Dropdown Menu -->
@@ -72,6 +73,7 @@ import { supabase } from "../supabase";
 const router = useRouter();
 const isAuthenticated = ref(false);
 const userEmail = ref("");
+const userAvatarUrl = ref("");
 const showProfileMenu = ref(false);
 
 const userInitials = computed(() => {
@@ -90,17 +92,69 @@ const updateSession = async () => {
   if (data.session) {
     isAuthenticated.value = true;
     userEmail.value = data.session.user?.email || "";
+    
+    // Load user profile with avatar
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", data.session.user.id)
+      .single();
+    
+    if (profile?.avatar_url) {
+      userAvatarUrl.value = profile.avatar_url;
+    }
   } else {
     isAuthenticated.value = false;
     userEmail.value = "";
+    userAvatarUrl.value = "";
   }
 };
 
 onMounted(async () => {
   await updateSession();
-  supabase.auth.onAuthStateChange((_event, session) => {
+  
+  supabase.auth.onAuthStateChange(async (_event, session) => {
     isAuthenticated.value = !!session;
     userEmail.value = session?.user?.email || "";
+    
+    if (session?.user?.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (profile?.avatar_url) {
+        userAvatarUrl.value = profile.avatar_url;
+      } else {
+        userAvatarUrl.value = "";
+      }
+
+      // Subscribe to real-time updates for avatar changes
+      const subscription = supabase
+        .channel(`profiles:${session.user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${session.user.id}`,
+          },
+          (payload) => {
+            if (payload.new?.avatar_url) {
+              userAvatarUrl.value = payload.new.avatar_url;
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } else {
+      userAvatarUrl.value = "";
+    }
   });
 });
 
