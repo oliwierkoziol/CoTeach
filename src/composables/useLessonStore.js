@@ -14,7 +14,6 @@ const state = reactive({
 });
 
 async function api(path, options = {}) {
-  const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
   const headers = new Headers(options.headers || {});
   if (token) {
