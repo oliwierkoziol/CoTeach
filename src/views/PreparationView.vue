@@ -27,8 +27,8 @@
               <input v-model="title" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="np. Fotosynteza" />
             </div>
             <div>
-              <label class="text-sm">Data lekcji</label>
-              <input v-model="lessonDate" type="date" class="w-full border rounded-lg px-3 py-2 mt-1" />
+              <label class="text-sm">Miesiąc</label>
+              <input v-model="month" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="np. Kwiecień" />
             </div>
           </div>
 
@@ -115,13 +115,9 @@ const router = useRouter();
 const { state, createLesson, uploadLessonMaterial, savePlan } = useLessonStore();
 const lesson = computed(() => state.lesson);
 
-function getTodayIsoDate() {
-  return new Date().toISOString().split("T")[0];
-}
-
 const subject = ref("");
 const title = ref("");
-const lessonDate = ref(getTodayIsoDate());
+const month = ref(new Date().toLocaleString("pl-PL", { month: "long" }));
 const rawText = ref("");
 const uploadMethod = ref("text");
 const selectedFile = ref(null);
@@ -147,7 +143,7 @@ async function handleGenerate() {
     const created = await createLesson({
       subject: subject.value,
       title: title.value,
-      date: lessonDate.value || getTodayIsoDate(),
+      month: month.value,
       rawText: uploadMethod.value === "text" ? rawText.value : ""
     });
     await uploadLessonMaterial(created.id, {

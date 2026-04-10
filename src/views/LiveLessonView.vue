@@ -167,14 +167,6 @@ import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
 
-function normalizeBaseUrl(url) {
-  return String(url || "").trim().replace(/\/$/, "");
-}
-
-const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL);
-const RESOLVED_API_BASE = API_BASE || "http://localhost:3001";
-const PUBLIC_APP_URL = normalizeBaseUrl(import.meta.env.VITE_PUBLIC_APP_URL) || window.location.origin;
-
 const route = useRoute();
 const router = useRouter();
 const { state, startLive, sendTranscript, refreshCoverage, finalizeLesson, fetchLessons } = useLessonStore();
@@ -400,7 +392,7 @@ async function beginWhisperMode() {
       const token = authData?.session?.access_token;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await fetch(`${RESOLVED_API_BASE}/api/transcribe`, {
+      const response = await fetch("http://localhost:3001/api/transcribe", {
         method: "POST",
         headers,
         body: form
@@ -493,7 +485,7 @@ function stopMicMeter() {
 
 async function checkApiHealth() {
   try {
-    const response = await fetch(`${RESOLVED_API_BASE}/api/health`);
+    const response = await fetch("http://localhost:3001/api/health");
     apiStatus.value = response.ok ? "online" : "offline";
   } catch {
     apiStatus.value = "offline";
@@ -543,7 +535,7 @@ function goPresentation() {
 
 async function finalizeNow() {
   if (!state.lesson) return;
-  const note = await finalizeLesson(state.lesson.id, PUBLIC_APP_URL);
+  const note = await finalizeLesson(state.lesson.id, window.location.origin);
   router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
 }
 </script>
