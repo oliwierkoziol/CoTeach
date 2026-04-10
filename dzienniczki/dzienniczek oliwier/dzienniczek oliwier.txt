@@ -1,0 +1,13 @@
+Dzienniczek - Oliwier Kozioł
+
+9 Kwietnia
+- wyznaczyliśmy zadania do ukończenia
+- wstępnie określiliśmy funkcjonalności aplikacji
+- utworzyliśmy repozytorium Git
+- utworzyliśmy pierwszy prototyp aplikacji
+
+10 Kwietnia
+- przemyśleliśmy ogólny wygląd aplikacji
+- stworzyłem design aplikacji na Figmie
+- zacząłem podłączać API do aplikacji
+
