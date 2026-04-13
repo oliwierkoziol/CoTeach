@@ -20,6 +20,48 @@
       </div>
 
       <div class="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground transition hover:bg-muted/60"
+          :title="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
+          :aria-label="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
+          @click="toggleTheme"
+        >
+          <svg
+            v-if="isDark"
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+          </svg>
+          <svg
+            v-else
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3a7 7 0 1 0 9 9a9 9 0 1 1 -9 -9" />
+          </svg>
+        </button>
         <RouterLink
           to="/profile"
             class="flex items-center rounded-full p-0.5 text-foreground ring-2 ring-transparent transition hover:ring-border"
@@ -96,50 +138,6 @@
         </template>
       </nav>
 
-      <div class="mt-3 flex items-center border-t border-border pt-3">
-        <button
-          type="button"
-          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground transition hover:bg-muted/60"
-          :title="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
-          :aria-label="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
-          @click="toggleTheme"
-        >
-          <svg
-            v-if="isDark"
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-          <svg
-            v-else
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 3a7 7 0 1 0 9 9a9 9 0 1 1 -9 -9" />
-          </svg>
-        </button>
-      </div>
     </aside>
 
     <main class="min-h-screen min-w-0 pt-[4.2rem] md:pl-[220px]">

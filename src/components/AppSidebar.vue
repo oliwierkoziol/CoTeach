@@ -8,6 +8,37 @@
         <span class="truncate text-base font-semibold tracking-tight text-sidebar-foreground">CoTeach</span>
       </div>
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar text-sidebar-foreground transition hover:bg-sidebar-accent/60"
+          :title="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
+          :aria-label="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
+          @click="toggleTheme"
+        >
+          <svg
+            v-if="isDark"
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="4"></circle>
+            <path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+          </svg>
+          <svg
+            v-else
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c.35 0 .69.02 1.03.07a7 7 0 0 0 8.76 8.72c.01.34 0 .67 0 1z"></path>
+          </svg>
+        </button>
         <RouterLink
           to="/profile"
           custom
@@ -32,36 +63,6 @@
             <span class="truncate">{{ userDisplayName }}</span>
           </a>
         </RouterLink>
-        <button
-          type="button"
-          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sidebar-border text-sidebar-foreground/80 transition hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          :title="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
-          @click="toggleTheme"
-        >
-          <svg
-            v-if="isDark"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="4"></circle>
-            <path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
-          </svg>
-          <svg
-            v-else
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c.35 0 .69.02 1.03.07a7 7 0 0 0 8.76 8.72c.01.34 0 .67 0 1z"></path>
-          </svg>
-        </button>
       </div>
     </div>
   </div>
