@@ -1,40 +1,73 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center px-4 py-10">
-    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-slate-900">Rejestracja</h1>
-        <p class="mt-2 text-slate-500">Utwórz konto i rozpocznij pracę z CoTeach.</p>
+  <div class="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-2">
+    <div
+      class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-card via-sidebar to-background p-10 text-foreground lg:flex"
+    >
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,oklch(0.74_0.12_195/0.15),transparent_55%)]" />
+      <div class="relative">
+        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">CoTeach</p>
+        <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">Załóż konto i od razu planuj lekcje.</h2>
       </div>
+      <p class="relative text-sm text-muted-foreground">Ten sam układ: panel nawigacji po lewej po zalogowaniu.</p>
+    </div>
 
-      <form @submit.prevent="handleRegister" class="space-y-5">
-        <label class="block text-sm font-medium text-slate-700">
-          Imię i nazwisko
-          <input v-model="name" type="text" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="Jan Kowalski" />
-        </label>
+    <div class="flex items-center justify-center px-4 py-12 sm:px-8">
+      <div class="w-full max-w-md">
+        <div class="mb-8 lg:hidden">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">CoTeach</p>
+          <h1 class="mt-2 text-2xl font-bold text-foreground">Rejestracja</h1>
+        </div>
+        <div class="mb-8 hidden lg:block">
+          <h1 class="text-2xl font-bold text-foreground">Rejestracja</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Formularz po prawej — lewa kolumna to tylko podgląd marki.</p>
+        </div>
 
-        <label class="block text-sm font-medium text-slate-700">
-          Email
-          <input v-model="email" type="email" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="twoj@email.com" />
-        </label>
+        <form @submit.prevent="handleRegister" class="space-y-5">
+          <label class="block text-sm font-semibold text-foreground">
+            Imię i nazwisko
+            <input
+              v-model="name"
+              type="text"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="Jan Kowalski"
+            />
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
+            Email
+            <input
+              v-model="email"
+              type="email"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="twoj@email.com"
+            />
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
+            Hasło
+            <input
+              v-model="password"
+              type="password"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="••••••••"
+            />
+          </label>
+          <button
+            type="submit"
+            class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+          >
+            Zarejestruj się
+          </button>
+        </form>
 
-        <label class="block text-sm font-medium text-slate-700">
-          Hasło
-          <input v-model="password" type="password" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="••••••••" />
-        </label>
+        <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {{ errorMessage }}
+        </div>
+        <div v-if="infoMessage" class="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+          {{ infoMessage }}
+        </div>
 
-        <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-white font-semibold hover:bg-indigo-700 transition">Zarejestruj się</button>
-      </form>
-
-      <div v-if="errorMessage" class="mt-4 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-        {{ errorMessage }}
-      </div>
-
-      <div v-if="infoMessage" class="mt-4 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
-        {{ infoMessage }}
-      </div>
-
-      <div class="mt-6 text-center text-sm text-slate-600">
-        Masz już konto? <RouterLink to="/login" class="font-semibold text-indigo-600 hover:underline">Zaloguj się</RouterLink>
       </div>
     </div>
   </div>
@@ -56,11 +89,13 @@ const infoMessage = ref("");
 
 async function upsertProfileRow({ id, email, fullName }) {
   if (!id) return;
+  const teacherId = `teacher-${crypto.randomUUID()}`;
   await supabase.from("profiles").upsert(
     {
       id,
       email: email || null,
       full_name: fullName || null,
+      teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }
@@ -103,7 +138,7 @@ async function handleRegister() {
     } catch {
       // Keep registration successful even if profile upsert is temporarily unavailable.
     }
-    router.push("/");
+    router.push("/dashboard");
     return;
   }
 

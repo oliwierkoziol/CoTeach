@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
@@ -14,8 +15,9 @@ const app = express();
 const upload = multer();
 const port = Number(process.env.PORT || 3001);
 
-const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "openai/gpt-4o-mini";
+const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
@@ -30,6 +32,15 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_notatki_przedmiotowej.txt"),
+  "utf8"
+);
+const PLAN_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_planu_lekcji_json.txt"),
+  "utf8"
+);
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
@@ -48,7 +59,8 @@ const db = {
   users: new Map(),
   licenses: new Map(),
   lessons: new Map(),
-  costs: new Map()
+  costs: new Map(),
+  notes: new Map()
 };
 
 const defaultSchoolId = "school-default";
@@ -100,6 +112,24 @@ function parseJsonArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizePlanPoint(point, index = 0) {
+  const normalizedStatus = ["pending", "skipped", "discussed"].includes(point?.status)
+    ? point.status
+    : "pending";
+  return {
+    id: point?.id || `p-${index + 1}`,
+    title: String(point?.title || "Punkt").trim() || "Punkt",
+    description: String(point?.description || "").trim(),
+    keywords: Array.isArray(point?.keywords) ? point.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean) : [],
+    status: normalizedStatus,
+    manualApproved: Boolean(point?.manualApproved) || normalizedStatus === "discussed-manual"
+  };
+}
+
+function normalizePlanArray(plan) {
+  return (Array.isArray(plan) ? plan : []).map((point, index) => normalizePlanPoint(point, index));
+}
+
 function normalizeLessonDate(dateInput) {
   const raw = String(dateInput || "").trim();
   if (!raw) return getTodayIsoDate();
@@ -107,6 +137,14 @@ function normalizeLessonDate(dateInput) {
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return getTodayIsoDate();
   return parsed.toISOString().split("T")[0];
+}
+
+function resolveLessonMonth(monthInput, isoDate) {
+  const rawMonth = String(monthInput || "").trim();
+  if (rawMonth) return rawMonth;
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return new Date().toLocaleString("pl-PL", { month: "long" });
+  return parsed.toLocaleString("pl-PL", { month: "long" });
 }
 
 function extractBearerToken(req) {
@@ -148,6 +186,61 @@ async function requireAdmin(req, res) {
   return true;
 }
 
+async function resolveTeacherContext(req, res) {
+  if (!supabase) {
+    return { teacherId: defaultTeacherId };
+  }
+  const user = await getRequestUser(req);
+  if (!user?.id) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("teacher_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    res.status(500).json({ error: `Nie udało się odczytać profilu: ${profileError.message}` });
+    return null;
+  }
+
+  let teacherId = String(profile?.teacher_id || "").trim();
+  if (!teacherId) {
+    teacherId = `teacher-${randomUUID()}`;
+    const { error: upsertError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email || null,
+        teacher_id: teacherId,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "id" }
+    );
+    if (upsertError) {
+      res.status(500).json({ error: `Nie udało się zapisać teacher_id: ${upsertError.message}` });
+      return null;
+    }
+  }
+
+  return { teacherId };
+}
+
+function getOwnedLessonOrRespond(req, res, teacherId) {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    res.status(404).json({ error: "Lesson not found" });
+    return null;
+  }
+  if (String(lesson.teacherId) !== String(teacherId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return null;
+  }
+  return lesson;
+}
+
 function rowToLesson(row) {
   return {
     id: row.id,
@@ -178,6 +271,20 @@ function rowToFinalNote(row) {
     html: row.html || "",
     publicPath: row.public_path || "",
     shareUrl: row.share_url || "",
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  };
+}
+
+function rowToSavedNote(row) {
+  return {
+    id: row.id,
+    teacherId: row.teacher_id,
+    title: row.title || "",
+    subject: row.subject || "",
+    classLevel: row.class_level || "",
+    content: row.content || "",
+    source: row.source || "manual",
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
   };
@@ -219,6 +326,20 @@ function finalNoteToRow(finalNote, teacherId) {
   };
 }
 
+function savedNoteToRow(note, teacherId) {
+  return {
+    id: note.id,
+    teacher_id: String(teacherId || defaultTeacherId),
+    title: String(note.title || ""),
+    subject: String(note.subject || ""),
+    class_level: String(note.classLevel || ""),
+    content: String(note.content || ""),
+    source: String(note.source || "manual"),
+    created_at: note.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
 async function persistLesson(lesson) {
   if (!supabase) return;
   const { error } = await supabase.from("lessons").upsert(lessonToRow(lesson), { onConflict: "id" });
@@ -244,6 +365,36 @@ async function persistFinalNote(finalNote, teacherId) {
 async function persistFinalNoteSafe(finalNote, teacherId) {
   try {
     await persistFinalNote(finalNote, teacherId);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function persistSavedNote(note, teacherId) {
+  if (!supabase || !note) return;
+  const { error } = await supabase
+    .from("saved_notes")
+    .upsert(savedNoteToRow(note, teacherId), { onConflict: "id" });
+  if (error) throw new Error(`Supabase saved note upsert failed: ${error.message}`);
+}
+
+async function persistSavedNoteSafe(note, teacherId) {
+  try {
+    await persistSavedNote(note, teacherId);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function removeSavedNote(noteId) {
+  if (!supabase) return;
+  const { error } = await supabase.from("saved_notes").delete().eq("id", noteId);
+  if (error) throw new Error(`Supabase saved note delete failed: ${error.message}`);
+}
+
+async function removeSavedNoteSafe(noteId) {
+  try {
+    await removeSavedNote(noteId);
   } catch (error) {
     console.error(error.message);
   }
@@ -285,6 +436,20 @@ async function loadFinalNotesFromSupabase() {
   }
 }
 
+async function loadSavedNotesFromSupabase() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from("saved_notes").select("*").order("updated_at", { ascending: false });
+    if (error) throw new Error(`Supabase saved notes load failed: ${error.message}`);
+    for (const row of data || []) {
+      const note = rowToSavedNote(row);
+      db.notes.set(note.id, note);
+    }
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
 function fallbackGeneratePlan(rawText) {
   const lines = String(rawText || "")
     .split(/\r?\n/)
@@ -323,9 +488,13 @@ function partToOpenRouterContent(part) {
   return { type: "text", text: "" };
 }
 
-async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts }) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OpenRouter API key is missing.");
+async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens }) {
+  const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing.");
+
+  const fallbackMaxTokens = Number.isFinite(OPENROUTER_MAX_TOKENS) ? Math.max(256, Math.min(OPENROUTER_MAX_TOKENS, 8192)) : 2000;
+  const requestedMaxTokens = Number.isFinite(Number(maxTokens)) ? Number(maxTokens) : fallbackMaxTokens;
+  const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -335,6 +504,7 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts }) {
     },
     body: JSON.stringify({
       model,
+      max_tokens: finalMaxTokens,
       messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
     })
   });
@@ -357,35 +527,92 @@ function parseJsonFromModel(text) {
   return JSON.parse(cleaned);
 }
 
+function parsePlanFromJsonText(rawText) {
+  const text = String(rawText || "").trim();
+  if (!text) return null;
+
+  let parsed;
+  try {
+    parsed = parseJsonFromModel(text);
+  } catch {
+    return null;
+  }
+
+  if (!Array.isArray(parsed) || !parsed.length) return [];
+
+  const normalized = parsed
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+
+      const title = String(item.tytul_sekcji || item.title || "").trim();
+      const description = String(item.streszczenie_sekcji || item.description || "").trim();
+      const rawKeywords = Array.isArray(item.keywords)
+        ? item.keywords
+        : typeof item.keywords === "string"
+          ? item.keywords.split(",")
+          : [];
+      const keywords = rawKeywords
+        .map((keyword) => String(keyword || "").trim())
+        .filter(Boolean)
+        .slice(0, 8);
+
+      if (!title && !description) return null;
+
+      return {
+        id: randomUUID(),
+        title: (title || `Temat ${index + 1}`).slice(0, 80),
+        keywords,
+        description: description.slice(0, 400),
+        status: "pending",
+        priority: Number(item.priority || index + 1)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+
+  return normalized;
+}
+
+function mapPlanItem(item, index) {
+  const title = String(item?.tytul_sekcji || item?.title || "").trim();
+  const description = String(item?.streszczenie_sekcji || item?.description || "").trim();
+  const rawKeywords = Array.isArray(item?.keywords)
+    ? item.keywords
+    : typeof item?.keywords === "string"
+      ? item.keywords.split(",")
+      : [];
+  const keywords = rawKeywords
+    .map((keyword) => String(keyword || "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  return {
+    id: randomUUID(),
+    title: (title || `Temat ${index + 1}`).slice(0, 80),
+    keywords,
+    description: description.slice(0, 400),
+    status: "pending",
+    priority: Number(item?.priority || index + 1)
+  };
+}
+
 async function generatePlanWithLLM(rawText) {
   if (!rawText?.trim()) return [];
+
+  const parsedFromJson = parsePlanFromJsonText(rawText);
+  if (parsedFromJson && parsedFromJson.length) {
+    return parsedFromJson;
+  }
+
   try {
-    const prompt = `
-Zamien material lekcyjny na plan lekcji.
-Zwróć WYŁĄCZNIE JSON array (max 12 elementów), każdy element:
-{ "title": string, "keywords": string[], "description": string, "priority": number }
-Zasady:
-- język polski
-- title krótki i konkretny
-- keywords 3-6 haseł
-- description max 350 znaków
-Material:
-${rawText.slice(0, 20000)}
-`.trim();
+    const prompt = PLAN_PROMPT_TEMPLATE.replace("[podaj tekst]", rawText.slice(0, 20000)).trim();
     const out = await callOpenRouter({
       model: OPENROUTER_TEXT_MODEL,
-      parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }]
+      parts: [{ text: prompt }]
     });
     const parsed = parseJsonFromModel(out);
     if (!Array.isArray(parsed)) throw new Error("Invalid plan JSON");
-    return parsed.slice(0, 12).map((item, index) => ({
-      id: randomUUID(),
-      title: String(item.title || `Temat ${index + 1}`).slice(0, 80),
-      keywords: Array.isArray(item.keywords) ? item.keywords.map(String).slice(0, 8) : [],
-      description: String(item.description || "").slice(0, 400),
-      status: "pending",
-      priority: Number(item.priority || index + 1)
-    }));
+    return parsed.slice(0, 12).map((item, index) => mapPlanItem(item, index));
   } catch {
     return fallbackGeneratePlan(rawText);
   }
@@ -409,15 +636,23 @@ ${transcript}
     const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }] });
     const statuses = parseJsonFromModel(out);
     const statusById = new Map((Array.isArray(statuses) ? statuses : []).map((item) => [item.id, item.status]));
-    return plan.map((item) => ({
-      ...item,
-      status: ["pending", "skipped", "discussed"].includes(statusById.get(item.id))
+    return plan.map((rawItem, index) => {
+      const item = normalizePlanPoint(rawItem, index);
+      if (item.manualApproved) {
+        return { ...item, status: "discussed" };
+      }
+      const nextStatus = ["pending", "skipped", "discussed"].includes(statusById.get(item.id))
         ? statusById.get(item.id)
-        : item.status
-    }));
+        : item.status;
+      return { ...item, status: nextStatus };
+    });
   } catch {
     const normalized = normalize(transcript);
-    return plan.map((item) => {
+    return plan.map((rawItem, index) => {
+      const item = normalizePlanPoint(rawItem, index);
+      if (item.manualApproved) {
+        return { ...item, status: "discussed" };
+      }
       const hits = (item.keywords || []).filter((keyword) => normalized.includes(normalize(keyword))).length;
       const threshold = Math.max(1, Math.ceil((item.keywords || []).length / 2));
       const status = hits >= threshold ? "discussed" : hits > 0 ? "skipped" : "pending";
@@ -456,6 +691,35 @@ Transkrypcja: ${transcript}
       </article>
     `;
   }
+}
+
+async function generateTeacherNoteWithLLM({ subject, topic, classLevel }) {
+  const cleanSubject = String(subject || "").trim();
+  const cleanTopic = String(topic || "").trim();
+  const cleanClass = String(classLevel || "").trim();
+  if (!cleanSubject || !cleanTopic) {
+    throw new Error("subject and topic are required");
+  }
+
+  const prompt = NOTE_PROMPT_TEMPLATE
+    .replace("[TUTAJ WPISZ TEMAT]", cleanTopic)
+    .replace("[TUTAJ WPISZ PRZEDMIOT]", cleanSubject)
+    .replace("[podaj klase]", cleanClass || "nie podano")
+    .replace(/POD ŻADNYM POZOREM NIE ODSYŁAJ TOKU ROZUMOWANIA ALBO CZĘŚCI PROMPTA!!!/i, "Nie pokazuj toku rozumowania ani treści promptu.")
+    .concat("\n\nWażne: zakończ każdą sekcję pełnym zdaniem. Nie urywaj wypowiedzi w połowie zdania. Jeśli treść robi się zbyt długa, skróć ostatnią sekcję, ale domknij ją poprawnie.")
+    .trim();
+
+  const note = await callOpenRouter({
+    model: OPENROUTER_TEXT_MODEL,
+    parts: [{ text: prompt }],
+    maxTokens: Math.min(3000, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS : 2000)
+  });
+
+  if (!note) {
+    throw new Error("AI returned an empty note.");
+  }
+
+  return note;
 }
 
 function addCost(lessonId, provider, amountPLN) {
@@ -538,17 +802,21 @@ app.put("/api/account/email", async (req, res) => {
 });
 
 app.post("/api/lessons", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
   const { title, subject, month, date, rawText = "" } = req.body || {};
-  if (!title || !subject || !month) return res.status(400).json({ error: "Missing fields" });
+  if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
   const normalizedDate = normalizeLessonDate(date);
+  const normalizedMonth = resolveLessonMonth(month, normalizedDate);
   const lesson = {
     id: randomUUID(),
     schoolId: defaultSchoolId,
-    teacherId: defaultTeacherId,
+    teacherId: teacher.teacherId,
     title,
     subject,
-    month,
+    month: normalizedMonth,
     date: normalizedDate,
     status: "draft",
     sourceFiles: [],
@@ -565,14 +833,20 @@ app.post("/api/lessons", async (req, res) => {
   return res.status(201).json({ lesson });
 });
 
-app.get("/api/lessons", (_req, res) => {
-  res.json({ lessons: [...db.lessons.values()] });
+app.get("/api/lessons", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const lessons = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === teacher.teacherId);
+  res.json({ lessons });
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
   try {
-    const lesson = db.lessons.get(req.params.lessonId);
-    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+    if (!lesson) return;
 
     let extractedText = String(req.body.rawText || "").trim();
     if (!extractedText && req.file) {
@@ -582,6 +856,16 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
         lessonId: lesson.id,
         fileName: req.file.originalname,
         mimeType: req.file.mimetype,
+        extractedText,
+        createdAt: new Date().toISOString()
+      });
+    }
+    if (extractedText && !req.file) {
+      lesson.sourceFiles.push({
+        id: randomUUID(),
+        lessonId: lesson.id,
+        fileName: "material-note.txt",
+        mimeType: "text/plain",
         extractedText,
         createdAt: new Date().toISOString()
       });
@@ -600,19 +884,132 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
   }
 });
 
+app.post("/api/notes/generate", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const subject = String(req.body?.subject || "").trim();
+    const topic = String(req.body?.topic || "").trim();
+    const classLevel = String(req.body?.classLevel || "").trim();
+    if (!subject || !topic) {
+      return res.status(400).json({ error: "Subject and topic are required." });
+    }
+
+    const note = await generateTeacherNoteWithLLM({ subject, topic, classLevel });
+    return res.json({ note });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Failed to generate note." });
+  }
+});
+
+app.get("/api/notes", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const notes = [...db.notes.values()]
+    .filter((note) => String(note.teacherId) === String(teacher.teacherId))
+    .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+  return res.json({ notes });
+});
+
+app.post("/api/notes", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const title = String(req.body?.title || "").trim();
+    const subject = String(req.body?.subject || "").trim();
+    const classLevel = String(req.body?.classLevel || "").trim();
+    const content = String(req.body?.content || "").trim();
+    const source = String(req.body?.source || "manual").trim() || "manual";
+
+    if (!title || !subject || !content) {
+      return res.status(400).json({ error: "Title, subject and content are required." });
+    }
+
+    const now = new Date().toISOString();
+    const note = {
+      id: randomUUID(),
+      teacherId: teacher.teacherId,
+      title,
+      subject,
+      classLevel,
+      content,
+      source,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    db.notes.set(note.id, note);
+    await persistSavedNoteSafe(note, teacher.teacherId);
+    return res.status(201).json({ note });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Failed to save note." });
+  }
+});
+
+app.delete("/api/notes/:noteId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const note = db.notes.get(req.params.noteId);
+  if (!note) {
+    return res.status(404).json({ error: "Note not found" });
+  }
+  if (String(note.teacherId) !== String(teacher.teacherId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  db.notes.delete(req.params.noteId);
+  await removeSavedNoteSafe(req.params.noteId);
+  return res.json({ ok: true, noteId: req.params.noteId });
+});
+
 app.put("/api/lessons/:lessonId/plan", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
-  lesson.plan = req.body.plan || [];
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
+  lesson.plan = normalizePlanArray(req.body.plan || []);
   lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({ lesson });
 });
 
+app.put("/api/lessons/:lessonId/plan/:pointId/manual", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
+
+  const pointId = String(req.params.pointId || "").trim();
+  if (!pointId) return res.status(400).json({ error: "Invalid point id" });
+
+  const approved = req.body?.approved !== false;
+  const normalizedPlan = normalizePlanArray(lesson.plan || []);
+  const nextPlan = normalizedPlan.map((point) => {
+    if (String(point.id) !== pointId) return point;
+    return {
+      ...point,
+      manualApproved: approved,
+      status: approved ? "discussed" : "pending"
+    };
+  });
+
+  const found = nextPlan.some((point) => String(point.id) === pointId);
+  if (!found) return res.status(404).json({ error: "Plan point not found" });
+
+  lesson.plan = nextPlan;
+  db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
+  const missing = lesson.plan.filter((item) => item.status !== "discussed");
+  return res.json({ lesson, missing });
+});
+
 app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const check = checkLicenseForSchool(lesson.schoolId);
   if (!check.allowed) return res.status(403).json({ error: check.reason });
   lesson.status = "live";
@@ -623,8 +1020,10 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
 
@@ -643,8 +1042,10 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
 });
 
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -653,8 +1054,10 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson);
   const noteId = randomUUID();
   const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
@@ -679,8 +1082,10 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
 });
 
 app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
   const title = String(req.body?.title || "").trim();
@@ -704,8 +1109,10 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
 });
 
 app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
   lesson.finalNote = null;
@@ -715,9 +1122,11 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   return res.json({ lesson });
 });
 
-app.get("/api/lessons/:lessonId/costs", (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+app.get("/api/lessons/:lessonId/costs", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   return res.json(getCostSummary(lesson.id));
 });
 
@@ -777,7 +1186,19 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
 
   const userId = req.params.userId;
 
-  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === String(userId));
+  const { data: targetProfile, error: targetProfileError } = await supabase
+    .from("profiles")
+    .select("teacher_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetProfileError) {
+    return res.status(500).json({ error: `Nie udało się pobrać teacher_id użytkownika: ${targetProfileError.message}` });
+  }
+
+  const targetTeacherId = String(targetProfile?.teacher_id || userId);
+
+  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === targetTeacherId);
   for (const lesson of lessonsToDelete) {
     db.lessons.delete(lesson.id);
     db.costs.delete(lesson.id);
@@ -788,7 +1209,7 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
     return res.status(500).json({ error: `Nie udało się usunąć profilu: ${profileDeleteError.message}` });
   }
 
-  const { error: lessonsDeleteError } = await supabase.from("lessons").delete().eq("teacher_id", userId);
+  const { error: lessonsDeleteError } = await supabase.from("lessons").delete().eq("teacher_id", targetTeacherId);
   if (lessonsDeleteError) {
     return res.status(500).json({ error: `Nie udało się usunąć lekcji użytkownika: ${lessonsDeleteError.message}` });
   }
@@ -809,10 +1230,15 @@ app.get("/api/license/check", (req, res) => {
 
 app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
     const lessonId = String(req.body.lessonId || "");
     const lesson = db.lessons.get(lessonId);
     if (!lessonId || !lesson) {
       return res.status(400).json({ error: "Valid lessonId is required." });
+    }
+    if (String(lesson.teacherId) !== teacher.teacherId) {
+      return res.status(403).json({ error: "Forbidden" });
     }
     if (!req.file?.buffer) {
       return res.status(400).json({ error: "Audio file is required." });
@@ -855,7 +1281,6 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   return res.json({
     ok: true,
     service: "lesson-planning-api",
@@ -864,13 +1289,14 @@ app.get("/api/health", (_req, res) => {
     visionModel: OPENROUTER_VISION_MODEL,
     sttModel: "whisper-1",
     whisperEnabled: Boolean(openai),
-    openRouterEnabled: Boolean(apiKey),
+    openRouterEnabled: Boolean(String(process.env.OPENROUTER_API_KEY || "").trim()),
     supabaseEnabled: Boolean(supabase)
   });
 });
 
 loadLessonsFromSupabase()
   .then(() => loadFinalNotesFromSupabase())
+  .then(() => loadSavedNotesFromSupabase())
   .catch((error) => {
     console.error(`Persistence bootstrap failed: ${error.message}`);
   })

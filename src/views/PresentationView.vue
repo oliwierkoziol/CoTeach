@@ -1,26 +1,26 @@
 <template>
-  <div v-if="isGenerating" class="fixed inset-0 bg-gradient-to-br from-purple-900 to-pink-900 flex items-center justify-center">
+  <div v-if="isGenerating" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900 to-pink-900 text-white">
     <div class="text-center text-white">
       <h2 class="text-3xl font-bold mb-2">Generuję Koło Ratunkowe...</h2>
       <p class="text-purple-200">Tworzę slajdy z nieomówionych punktów.</p>
     </div>
   </div>
 
-  <div v-else-if="!slides.length" class="fixed inset-0 bg-gradient-to-br from-green-900 to-emerald-900 flex items-center justify-center">
+  <div v-else-if="!slides.length" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-900 to-emerald-900 text-white">
     <div class="text-center text-white max-w-md">
       <h2 class="text-3xl font-bold mb-4">Wszystko Omówione!</h2>
       <p class="text-green-200 mb-6">Nie ma nieomówionych punktów.</p>
-      <button class="px-4 py-2 rounded-lg bg-white text-black" @click="$router.back()">Powrót do Lekcji</button>
+      <button class="rounded-lg bg-white px-4 py-2 text-black" @click="$router.back()">Powrót do Lekcji</button>
     </div>
   </div>
 
-  <div v-else class="fixed inset-0 bg-black">
-    <button class="absolute top-4 right-4 z-50 text-white bg-white/20 rounded-lg px-3 py-2" @click="$router.back()">X</button>
+  <div v-else class="fixed inset-0 bg-black text-white">
+    <button class="absolute right-4 top-4 z-50 rounded-lg bg-white/20 px-3 py-2 text-white" @click="$router.back()">X</button>
 
     <div class="h-full flex flex-col">
       <div class="flex-1 flex items-center justify-center p-12">
         <div class="max-w-5xl w-full">
-          <div class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl shadow-2xl p-12 text-white">
+          <div class="rounded-3xl bg-gradient-to-br from-purple-600 to-pink-600 p-12 text-white shadow-2xl">
             <div class="mb-8">
               <h1 class="text-5xl font-bold mb-4">{{ current.point.title }}</h1>
               <div class="flex flex-wrap gap-2">

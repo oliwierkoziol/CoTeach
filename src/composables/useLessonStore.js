@@ -12,6 +12,7 @@ const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://
 const state = reactive({
   lesson: null,
   lessons: [],
+  notes: [],
   error: "",
   info: "",
   missing: [],
@@ -128,6 +129,19 @@ export function useLessonStore() {
     return coverage;
   }
 
+  async function setManualPointApproval(lessonId, pointId, approved) {
+    const data = await api(`/api/lessons/${lessonId}/plan/${pointId}/manual`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved })
+    });
+    if (state.lesson) {
+      state.lesson = { ...state.lesson, plan: data.lesson?.plan || state.lesson.plan };
+    }
+    state.missing = data.missing || [];
+    return data.lesson;
+  }
+
   async function finalizeLesson(lessonId, baseUrl) {
     const data = await api(`/api/lessons/${lessonId}/finalize`, {
       method: "POST",
@@ -176,6 +190,38 @@ export function useLessonStore() {
     return api(`/api/share/${noteId}`);
   }
 
+  async function generateTeacherNote(payload) {
+    const data = await api("/api/notes/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return String(data.note || "");
+  }
+
+  async function saveTeacherNote(payload) {
+    const data = await api("/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (data?.note) {
+      state.notes = [data.note, ...state.notes.filter((note) => note.id !== data.note.id)];
+    }
+    return data.note;
+  }
+
+  async function deleteTeacherNote(noteId) {
+    await api(`/api/notes/${noteId}`, { method: "DELETE" });
+    state.notes = state.notes.filter((note) => note.id !== noteId);
+  }
+
+  async function fetchTeacherNotes() {
+    const data = await api("/api/notes");
+    state.notes = data.notes || [];
+    return state.notes;
+  }
+
   return {
     state,
     createLesson,
@@ -184,11 +230,16 @@ export function useLessonStore() {
     startLive,
     sendTranscript,
     refreshCoverage,
+    setManualPointApproval,
     finalizeLesson,
     updateFinalNote,
     deleteFinalNote,
     fetchLessons,
     fetchAdmin,
-    fetchSharedNote
+    fetchSharedNote,
+    generateTeacherNote,
+    saveTeacherNote,
+    deleteTeacherNote,
+    fetchTeacherNotes
   };
 }

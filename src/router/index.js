@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { supabase } from "../supabase.js";
+import LandingView from "../views/LandingView.vue";
 import DashboardView from "../views/DashboardView.vue";
 import PreparationView from "../views/PreparationView.vue";
 import LiveLessonView from "../views/LiveLessonView.vue";
@@ -11,6 +12,7 @@ import ShareView from "../views/ShareView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import ProfileView from "../views/ProfileView.vue";
+import NotesView from "../views/NotesView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,9 +20,11 @@ const router = createRouter({
     return { top: 0, left: 0, behavior: "auto" };
   },
   routes: [
-    { path: "/", component: DashboardView },
+    { path: "/", component: LandingView },
+    { path: "/dashboard", component: DashboardView },
     { path: "/profile", component: ProfileView },
     { path: "/preparation", component: PreparationView },
+    { path: "/notes", component: NotesView },
     { path: "/live-lesson/:lessonId?", component: LiveLessonView },
     { path: "/presentation/:lessonId", component: PresentationView },
     { path: "/archive", component: ArchiveView },
@@ -40,27 +44,44 @@ const supabaseConfigured =
     ).trim()
   );
 
+const AUTH_GUARD_TIMEOUT_MS = 4000;
+
+async function getSessionWithTimeout() {
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => resolve({ timedOut: true, session: null }), AUTH_GUARD_TIMEOUT_MS);
+  });
+
+  const sessionPromise = supabase.auth
+    .getSession()
+    .then(({ data }) => ({ timedOut: false, session: data.session }))
+    .catch(() => ({ timedOut: true, session: null }));
+
+  return Promise.race([sessionPromise, timeoutPromise]);
+}
+
 router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
+  if (to.path === "/") return true;
   if (to.path.startsWith("/share/")) return true;
   if (to.path === "/login" || to.path === "/register") return true;
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return { path: "/login", query: { redirect: to.fullPath } };
 
-  if (to.path.startsWith("/admin")) return true;
+  const { timedOut, session } = await getSessionWithTimeout();
+  if (timedOut) return true;
+  if (!session) return { path: "/login", query: { redirect: to.fullPath } };
 
-  const {
-    data: profile,
-    error: blockedCheckError
-  } = await supabase
+  const { data: profile, error: blockedCheckError } = await supabase
     .from("profiles")
-    .select("blocked")
-    .eq("id", data.session.user.id)
+    .select("blocked, admin")
+    .eq("id", session.user.id)
     .maybeSingle();
 
   if (!blockedCheckError && profile?.blocked === true) {
     await supabase.auth.signOut({ scope: "local" });
     return { path: "/login", query: { blocked: "1" } };
+  }
+
+  if (to.path.startsWith("/admin") && profile?.admin !== true) {
+    return { path: "/dashboard" };
   }
 
   return true;
