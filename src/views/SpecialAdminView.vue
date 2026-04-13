@@ -1,134 +1,221 @@
 <template>
-  <div class="min-h-screen bg-background py-8 text-foreground">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center gap-4 mb-8">
-        <RouterLink to="/dashboard" class="rounded-lg border border-border bg-card px-3 py-2">←</RouterLink>
+  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
+    <div class="mx-auto max-w-7xl space-y-6">
+      <header class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">Zarządzanie użytkownikami</h1>
-          <p class="text-gray-600">Panel sterowania admina</p>
+          <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Panel admina</p>
+          <h1 class="text-3xl font-bold text-foreground">Dashboard admina</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Statystyki lekcji, pokrycie i zarządzanie kontami.</p>
         </div>
-      </div>
-
-      <!-- Users table -->
-      <div class="rounded-xl border border-border bg-card">
-        <div class="flex items-center justify-between px-6 py-4 border-b">
-          <h2 class="font-semibold text-foreground">Użytkownicy ({{ users.length }})</h2>
-          <button
-            @click="loadUsers"
-            :disabled="isLoading"
-            class="text-sm text-primary hover:opacity-80 disabled:opacity-40"
+        <div class="flex flex-wrap gap-2">
+          <RouterLink
+            to="/admin/cost-calculator"
+            class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40"
           >
-            Odśwież
+            Kalkulator kosztów
+          </RouterLink>
+          <button
+            type="button"
+            class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+            :disabled="isLoading"
+            @click="loadDashboard"
+          >
+            {{ isLoading ? "Odświeżanie..." : "Odśwież" }}
           </button>
         </div>
+      </header>
 
-        <div v-if="isLoading" class="px-6 py-12 text-center text-muted-foreground text-sm">Ładowanie…</div>
-        <div v-else-if="loadError" class="px-6 py-12 text-center text-destructive text-sm">{{ loadError }}</div>
-        <div v-else-if="users.length === 0" class="px-6 py-12 text-center text-muted-foreground text-sm">Brak użytkowników.</div>
+      <div v-if="loadError" class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        {{ loadError }}
+      </div>
+
+      <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article class="rounded-2xl border border-border bg-card p-5">
+          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Przeprowadzone lekcje</p>
+          <p class="mt-2 text-3xl font-black text-foreground">{{ stats.finishedLessons }}</p>
+        </article>
+        <article class="rounded-2xl border border-border bg-card p-5">
+          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Wszystkie lekcje</p>
+          <p class="mt-2 text-3xl font-black text-foreground">{{ stats.totalLessons }}</p>
+        </article>
+        <article class="rounded-2xl border border-border bg-card p-5">
+          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Konta użytkowników</p>
+          <p class="mt-2 text-3xl font-black text-foreground">{{ stats.usersCount }}</p>
+        </article>
+      </section>
+
+      <section class="rounded-2xl border border-border bg-card p-6">
+        <h2 class="mb-4 text-lg font-semibold text-foreground">Pokrycie według przedmiotów</h2>
+        <div v-if="!coverageBySubject.length" class="text-sm text-muted-foreground">Brak danych pokrycia.</div>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="bg-muted text-muted-foreground uppercase text-xs">
-                <th class="px-6 py-3 text-left font-medium">Imię i nazwisko</th>
-                <th class="px-6 py-3 text-left font-medium">E-mail</th>
-                <th class="px-6 py-3 text-left font-medium">Data rejestracji</th>
-                <th class="px-6 py-3 text-left font-medium">Admin</th>
-                <th class="px-6 py-3 text-left font-medium">Status</th>
-                <th class="px-6 py-3 text-left font-medium"></th>
+              <tr class="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                <th class="px-3 py-2 font-medium">Przedmiot</th>
+                <th class="px-3 py-2 font-medium">Lekcje</th>
+                <th class="px-3 py-2 font-medium">Omówione / Wszystkie</th>
+                <th class="px-3 py-2 font-medium">Pokrycie</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
-              <tr v-for="user in users" :key="user.id" class="hover:bg-muted/40">
-                <td class="px-6 py-4 font-medium text-foreground">
-                  {{ user.full_name || "—" }}
-                </td>
-                <td class="px-6 py-4 text-muted-foreground">{{ user.email || "—" }}</td>
-                <td class="px-6 py-4 text-muted-foreground">
-                  {{ user.created_at ? new Date(user.created_at).toLocaleDateString("pl-PL") : "—" }}
-                </td>
-                <td class="px-6 py-4">
-                  <span
-                    :class="user.admin ? 'bg-green-500/10 text-green-700 dark:text-green-300' : 'bg-muted text-muted-foreground'"
-                    class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  >
-                    {{ user.admin ? "Tak" : "Nie" }}
+            <tbody>
+              <tr v-for="item in coverageBySubject" :key="item.subject" class="border-b border-border/60">
+                <td class="px-3 py-3 font-medium text-foreground">{{ item.subject }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ item.lessons }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ item.discussedPoints }} / {{ item.totalPoints }}</td>
+                <td class="px-3 py-3">
+                  <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                    {{ item.coveragePercent }}%
                   </span>
-                </td>
-                <td class="px-6 py-4">
-                  <span
-                    :class="user.blocked ? 'bg-red-500/10 text-red-700 dark:text-red-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'"
-                    class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  >
-                    {{ user.blocked ? "Zablokowane" : "Aktywne" }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap space-x-3">
-                  <button
-                    @click="toggleBlock(user, !user.blocked)"
-                    :disabled="actionUserId === user.id"
-                    class="text-amber-600 hover:text-amber-700 text-sm font-medium disabled:opacity-40"
-                  >
-                    {{ user.blocked ? "Odblokuj" : "Zablokuj" }}
-                  </button>
-                  <button
-                    @click="confirmDelete(user)"
-                    :disabled="actionUserId === user.id"
-                    class="text-red-500 hover:text-red-700 text-sm font-medium"
-                  >
-                    Usuń
-                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div v-if="actionError" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <section class="rounded-2xl border border-border bg-card">
+        <div class="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 class="text-lg font-semibold text-foreground">Konta użytkowników ({{ users.length }})</h2>
+        </div>
+
+        <div v-if="!users.length" class="px-6 py-10 text-sm text-muted-foreground">Brak kont.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+                <th class="px-6 py-3 font-medium">Imię i nazwisko</th>
+                <th class="px-6 py-3 font-medium">E-mail</th>
+                <th class="px-6 py-3 font-medium">Status</th>
+                <th class="px-6 py-3 font-medium">Licencja</th>
+                <th class="px-6 py-3 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr v-for="user in users" :key="user.id" class="hover:bg-muted/30">
+                <td class="px-6 py-4 font-medium text-foreground">{{ user.full_name || "—" }}</td>
+                <td class="px-6 py-4 text-muted-foreground">{{ user.email || "—" }}</td>
+                <td class="px-6 py-4">
+                  <span
+                    :class="user.blocked ? 'bg-red-500/10 text-red-700 dark:text-red-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'"
+                    class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                  >
+                    {{ user.blocked ? "Zablokowane" : "Aktywne" }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-muted-foreground">
+                  <span v-if="user.license">do {{ formatDate(user.license.expiresAt) }}</span>
+                  <span v-else>Brak</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      class="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+                      :disabled="actionUserId === user.id"
+                      @click="toggleBlock(user, !user.blocked)"
+                    >
+                      {{ user.blocked ? "Odblokuj" : "Zablokuj" }}
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                      @click="openModify(user)"
+                    >
+                      Modyfikuj
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div v-if="actionError" class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         {{ actionError }}
       </div>
     </div>
 
-    <!-- Delete confirmation modal -->
     <Teleport to="body">
-      <Transition name="del-modal">
-        <div
-          v-if="userToDelete"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          @click.self="userToDelete = null"
-        >
-          <div class="rounded-2xl bg-card p-8 shadow-xl w-full max-w-sm mx-4">
-            <h3 class="mb-2 text-lg font-semibold text-foreground">Usuń użytkownika</h3>
-            <p class="mb-1 text-sm text-muted-foreground">
-              Czy na pewno chcesz usunąć konto użytkownika:
-            </p>
-            <p class="mb-1 text-sm font-semibold text-foreground">
-              {{ userToDelete.full_name || "—" }}
-            </p>
-            <p class="mb-6 text-sm text-muted-foreground">{{ userToDelete.email }}</p>
-            <p class="mb-6 text-xs text-destructive">Ta operacja jest nieodwracalna. Wszystkie dane konta zostaną usunięte.</p>
+      <div
+        v-if="editUser"
+        class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+        @click.self="closeModify"
+      >
+        <div class="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
+          <h3 class="text-xl font-bold text-foreground">Modyfikuj konto</h3>
+          <p class="mt-1 text-sm text-muted-foreground">{{ editUser.full_name || editUser.email || editUser.id }}</p>
 
-            <div v-if="deleteError" class="text-red-500 text-sm mb-4">{{ deleteError }}</div>
+          <div class="mt-5 space-y-4">
+            <label class="block text-sm text-muted-foreground">
+              E-mail
+              <input
+                v-model="editEmail"
+                type="email"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                placeholder="email@domena.pl"
+              />
+            </label>
 
-            <div class="flex gap-3 justify-end">
-              <button
-                @click="userToDelete = null"
-                :disabled="isDeleting"
-                class="rounded-lg border border-border px-4 py-2 text-sm text-foreground transition hover:bg-muted/50 disabled:opacity-40"
-              >
-                Anuluj
-              </button>
-              <button
-                @click="executeDelete"
-                :disabled="isDeleting"
-                class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-              >
-                {{ isDeleting ? "Usuwanie…" : "Usuń konto" }}
-              </button>
+            <label class="block text-sm text-muted-foreground">
+              Nowe hasło
+              <input
+                v-model="editPassword"
+                type="password"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                placeholder="Pozostaw puste, aby nie zmieniać"
+              />
+            </label>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label class="block text-sm text-muted-foreground">
+                Licencja (dni)
+                <input
+                  v-model.number="licenseDays"
+                  type="number"
+                  min="1"
+                  class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                />
+              </label>
+              <label class="block text-sm text-muted-foreground">
+                Limit aktywnych użytkowników
+                <input
+                  v-model.number="licenseMaxUsers"
+                  type="number"
+                  min="1"
+                  class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                />
+              </label>
             </div>
           </div>
+
+          <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40"
+              @click="closeModify"
+            >
+              Zamknij
+            </button>
+            <button
+              type="button"
+              class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+              :disabled="isSubmitting"
+              @click="saveUserChanges"
+            >
+              {{ isSubmitting ? "Zapisywanie..." : "Zapisz konto" }}
+            </button>
+            <button
+              type="button"
+              class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+              :disabled="isSubmitting"
+              @click="grantLicense"
+            >
+              {{ isSubmitting ? "Nadawanie..." : "Przyznaj licencję" }}
+            </button>
+          </div>
         </div>
-      </Transition>
+      </div>
     </Teleport>
   </div>
 </template>
@@ -148,16 +235,6 @@ async function getAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const users = ref([]);
-const isLoading = ref(false);
-const loadError = ref("");
-
-const userToDelete = ref(null);
-const isDeleting = ref(false);
-const deleteError = ref("");
-const actionUserId = ref("");
-const actionError = ref("");
-
 async function readApiPayload(res) {
   const contentType = String(res.headers.get("content-type") || "").toLowerCase();
   if (contentType.includes("application/json")) {
@@ -167,14 +244,39 @@ async function readApiPayload(res) {
   return { error: text?.slice(0, 180) || "Serwer zwrócił nieprawidłową odpowiedź." };
 }
 
-async function loadUsers() {
+const isLoading = ref(false);
+const loadError = ref("");
+const actionError = ref("");
+const actionUserId = ref("");
+
+const stats = ref({ totalLessons: 0, finishedLessons: 0, usersCount: 0 });
+const coverageBySubject = ref([]);
+const users = ref([]);
+
+const editUser = ref(null);
+const editEmail = ref("");
+const editPassword = ref("");
+const licenseDays = ref(30);
+const licenseMaxUsers = ref(1);
+const isSubmitting = ref(false);
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("pl-PL");
+}
+
+async function loadDashboard() {
   isLoading.value = true;
   loadError.value = "";
   try {
     const headers = await getAuthHeader();
-    const res = await fetch(`${API_BASE}/api/admin/users`, { headers });
+    const res = await fetch(`${API_BASE}/api/admin/dashboard`, { headers });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać użytkowników.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać danych dashboardu.");
+    stats.value = data.stats || { totalLessons: 0, finishedLessons: 0, usersCount: 0 };
+    coverageBySubject.value = data.coverageBySubject || [];
     users.value = data.users || [];
   } catch (e) {
     loadError.value = e.message;
@@ -183,73 +285,106 @@ async function loadUsers() {
   }
 }
 
-function confirmDelete(user) {
-  userToDelete.value = user;
-  deleteError.value = "";
-}
-
-async function executeDelete() {
-  if (!userToDelete.value) return;
-  isDeleting.value = true;
-  deleteError.value = "";
-  try {
-    const headers = await getAuthHeader();
-    const res = await fetch(`${API_BASE}/api/admin/users/${userToDelete.value.id}`, {
-      method: "DELETE",
-      headers
-    });
-    const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udało się usunąć użytkownika.");
-    users.value = users.value.filter((u) => u.id !== userToDelete.value.id);
-    userToDelete.value = null;
-  } catch (e) {
-    deleteError.value = e.message;
-  } finally {
-    isDeleting.value = false;
-  }
-}
-
 async function toggleBlock(user, blocked) {
+  const shouldProceed = window.confirm(
+    blocked
+      ? `Na pewno chcesz zablokować konto ${user.email || user.full_name || user.id}?`
+      : `Na pewno chcesz odblokować konto ${user.email || user.full_name || user.id}?`
+  );
+  if (!shouldProceed) return;
+
   actionUserId.value = user.id;
   actionError.value = "";
-
   try {
     const headers = await getAuthHeader();
     headers["Content-Type"] = "application/json";
-
     const res = await fetch(`${API_BASE}/api/admin/users/${user.id}/block`, {
       method: "PATCH",
       headers,
       body: JSON.stringify({ blocked })
     });
-
     const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się zmienić statusu konta.");
-
-    users.value = users.value.map((u) => (u.id === user.id ? { ...u, blocked } : u));
-  } catch (error) {
-    actionError.value = error.message;
+    users.value = users.value.map((item) => (item.id === user.id ? { ...item, blocked } : item));
+  } catch (e) {
+    actionError.value = e.message;
   } finally {
     actionUserId.value = "";
   }
 }
 
-onMounted(loadUsers);
-</script>
+function openModify(user) {
+  editUser.value = user;
+  editEmail.value = String(user.email || "");
+  editPassword.value = "";
+  licenseDays.value = 30;
+  licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
+  actionError.value = "";
+}
 
-<style scoped>
-.del-modal-enter-active {
-  animation: delFadeIn 150ms ease;
+function closeModify() {
+  editUser.value = null;
+  editEmail.value = "";
+  editPassword.value = "";
 }
-.del-modal-leave-active {
-  animation: delFadeOut 120ms ease;
+
+async function saveUserChanges() {
+  if (!editUser.value) return;
+  isSubmitting.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+
+    const payload = {
+      email: String(editEmail.value || "").trim(),
+      password: String(editPassword.value || "").trim()
+    };
+
+    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(payload)
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się zapisać zmian konta.");
+
+    await loadDashboard();
+    closeModify();
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isSubmitting.value = false;
+  }
 }
-@keyframes delFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+
+async function grantLicense() {
+  if (!editUser.value) return;
+  isSubmitting.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+
+    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}/license`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        days: Number(licenseDays.value || 30),
+        maxActiveUsers: Number(licenseMaxUsers.value || 1)
+      })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się przyznać licencji.");
+
+    await loadDashboard();
+    closeModify();
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isSubmitting.value = false;
+  }
 }
-@keyframes delFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-</style>
+
+onMounted(loadDashboard);
+</script>

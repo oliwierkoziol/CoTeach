@@ -28,7 +28,13 @@
             </div>
             <div>
               <label class="text-sm text-muted-foreground">Klasa</label>
-              <select v-model="classLevel" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25">
+              <select
+                v-model="classLevel"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                @focus="expandSelectOnMobile"
+                @blur="collapseSelect"
+                @change="collapseSelect"
+              >
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
             </div>
@@ -237,6 +243,16 @@ watch(selectedNoteId, (noteId) => {
 
 function onFile(event) {
   selectedFile.value = event.target.files?.[0] || null;
+}
+
+function expandSelectOnMobile(event) {
+  const isMobile = window.matchMedia("(max-width: 640px)").matches;
+  if (!isMobile) return;
+  event.target.size = 8;
+}
+
+function collapseSelect(event) {
+  event.target.size = 1;
 }
 
 async function handleGenerate() {

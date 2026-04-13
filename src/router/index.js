@@ -1,18 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { supabase } from "../supabase.js";
-import LandingView from "../views/LandingView.vue";
-import DashboardView from "../views/DashboardView.vue";
-import PreparationView from "../views/PreparationView.vue";
-import LiveLessonView from "../views/LiveLessonView.vue";
-import PresentationView from "../views/PresentationView.vue";
-import ArchiveView from "../views/ArchiveView.vue";
-import AdminView from "../views/AdminView.vue";
-import SpecialAdminView from "../views/SpecialAdminView.vue";
-import ShareView from "../views/ShareView.vue";
-import LoginView from "../views/LoginView.vue";
-import RegisterView from "../views/RegisterView.vue";
-import ProfileView from "../views/ProfileView.vue";
-import NotesView from "../views/NotesView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,19 +7,21 @@ const router = createRouter({
     return { top: 0, left: 0, behavior: "auto" };
   },
   routes: [
-    { path: "/", component: LandingView },
-    { path: "/dashboard", component: DashboardView },
-    { path: "/profile", component: ProfileView },
-    { path: "/preparation", component: PreparationView },
-    { path: "/notes", component: NotesView },
-    { path: "/live-lesson/:lessonId?", component: LiveLessonView },
-    { path: "/presentation/:lessonId", component: PresentationView },
-    { path: "/archive", component: ArchiveView },
-    { path: "/admin", component: AdminView },
-    { path: "/admin/users", component: SpecialAdminView },
-    { path: "/login", component: LoginView },
-    { path: "/register", component: RegisterView },
-    { path: "/share/:noteId", component: ShareView }
+    { path: "/", component: () => import("../views/LandingView.vue") },
+    { path: "/dashboard", component: () => import("../views/DashboardView.vue") },
+    { path: "/profile", component: () => import("../views/ProfileView.vue") },
+    { path: "/preparation", component: () => import("../views/PreparationView.vue") },
+    { path: "/notes", component: () => import("../views/NotesView.vue") },
+    { path: "/live-lesson/:lessonId?", component: () => import("../views/LiveLessonView.vue") },
+    { path: "/presentation/:lessonId", component: () => import("../views/PresentationView.vue") },
+    { path: "/archive", component: () => import("../views/ArchiveView.vue") },
+    { path: "/admin", component: () => import("../views/AdminView.vue") },
+    { path: "/admin/dashboard", component: () => import("../views/SpecialAdminView.vue") },
+    { path: "/admin/cost-calculator", component: () => import("../views/AdminCostCalculatorView.vue") },
+    { path: "/admin/users", component: () => import("../views/SpecialAdminView.vue") },
+    { path: "/login", component: () => import("../views/LoginView.vue") },
+    { path: "/register", component: () => import("../views/RegisterView.vue") },
+    { path: "/share/:noteId", component: () => import("../views/ShareView.vue") }
   ]
 });
 

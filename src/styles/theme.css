@@ -40,11 +40,15 @@
   --sidebar-accent-foreground: oklch(0.25 0.03 265);
   --sidebar-border: oklch(0.89 0.01 250);
   --sidebar-ring: oklch(0.6 0.1 205);
+  --brand-logo-filter: brightness(0) saturate(100%) invert(31%) sepia(34%) saturate(1836%) hue-rotate(198deg) brightness(96%) contrast(94%);
 }
 
 .logo {
   width: auto;
   height: auto;
+  filter: var(--brand-logo-filter);
+  opacity: 1;
+  transition: filter 0.2s ease;
 }
 
 .dark {
@@ -84,6 +88,7 @@
   --sidebar-accent-foreground: oklch(0.95 0.02 95);
   --sidebar-border: oklch(0.24 0.035 265);
   --sidebar-ring: oklch(0.74 0.12 195);
+  --brand-logo-filter: brightness(0) saturate(100%) invert(77%) sepia(21%) saturate(2113%) hue-rotate(191deg) brightness(102%) contrast(98%);
 }
 
 @theme inline {

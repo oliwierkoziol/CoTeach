@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background text-foreground transition-colors">
     <header
-        class="fixed inset-x-0 top-0 z-[56] flex h-[4.2rem] items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
@@ -14,8 +14,10 @@
             <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <RouterLink to="/dashboard" class="flex min-w-0 items-center gap-2 no-underline">
-            <span class="truncate text-[20px] font-semibold tracking-tight text-primary">CoTeach</span>
+        <RouterLink to="/dashboard" class="flex min-w-0 items-center no-underline">
+          <div class="flex h-10 w-[170px] items-center overflow-hidden sm:h-12 sm:w-[220px]">
+            <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-12" />
+          </div>
         </RouterLink>
       </div>
 
@@ -86,7 +88,7 @@
 
     <aside
       :class="[
-          'fixed bottom-0 left-0 top-[4.2rem] z-[55] flex w-[min(17.5rem,calc(100vw-3rem))] flex-col border-r border-border bg-card px-3 py-4 transition-transform duration-200 md:w-[220px] md:translate-x-0',
+          'fixed bottom-0 left-0 top-16 z-[55] flex w-[min(17.5rem,calc(100vw-3rem))] flex-col border-r border-border bg-card px-3 py-4 transition-transform duration-200 md:w-[220px] md:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -140,8 +142,13 @@
 
     </aside>
 
-    <main class="min-h-screen min-w-0 pt-[4.2rem] md:pl-[220px]">
-      <div class="min-h-[calc(100vh-4.2rem)]">
+    <main class="min-h-screen min-w-0 pt-16 md:pl-[220px]">
+      <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
+        <div class="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
+          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+        </div>
+      </div>
+      <div class="min-h-[calc(100vh-4rem)]">
         <slot />
       </div>
     </main>
@@ -154,6 +161,13 @@ import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useTheme } from "../composables/useTheme";
+
+defineProps({
+  licenseWarning: {
+    type: Boolean,
+    default: false
+  }
+});
 
 function createStrokeIcon(name, childrenFn) {
   return {
@@ -221,6 +235,11 @@ const IconSparkles = createStrokeIcon("IconSparkles", () => [
   h("path", { d: "M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" }),
 ]);
 
+const IconShield = createStrokeIcon("IconShield", () => [
+  h("path", { d: "M12 3l7 3v6c0 5-3.5 8-7 9c-3.5-1-7-4-7-9V6z" }),
+  h("path", { d: "M9.5 12.5l1.8 1.8 3.2-3.2" }),
+]);
+
 const route = useRoute();
 const router = useRouter();
 const open = ref(false);
@@ -229,6 +248,7 @@ const { isDark, toggleTheme } = useTheme();
 
 const displayName = ref("");
 const avatarUrl = ref("");
+const isAdmin = ref(false);
 
 const presentationHref = computed(() => {
   const id = state.lesson?.id || state.lessons[0]?.id || "demo";
@@ -242,14 +262,22 @@ const liveLessonTo = computed(() => {
   return id ? `/live-lesson/${id}` : "/live-lesson";
 });
 
-const navItems = computed(() => [
-  { kind: "link", key: "start", to: "/dashboard", label: "Panel startowy", icon: IconGrid, exact: true },
-  { kind: "link", key: "prep", to: "/preparation", label: "Materiały do lekcji", icon: IconFileUp, exact: false },
-  { kind: "link", key: "notes", to: "/notes", label: "Generator notatek", icon: IconSparkles, exact: false },
-  { kind: "link", key: "live", to: liveLessonTo.value, label: "Lekcja na żywo", icon: IconMonitorPlay, exact: false },
-  { kind: "presentation", key: "pres" },
-  { kind: "link", key: "monitoring", to: "/archive", label: "Monitoring", icon: IconChart, exact: false },
-]);
+const navItems = computed(() => {
+  const items = [
+    { kind: "link", key: "start", to: "/dashboard", label: "Panel startowy", icon: IconGrid, exact: true },
+    { kind: "link", key: "prep", to: "/preparation", label: "Materiały do lekcji", icon: IconFileUp, exact: false },
+    { kind: "link", key: "notes", to: "/notes", label: "Generator notatek", icon: IconSparkles, exact: false },
+    { kind: "link", key: "live", to: liveLessonTo.value, label: "Lekcja na żywo", icon: IconMonitorPlay, exact: false },
+    { kind: "presentation", key: "pres" },
+    { kind: "link", key: "monitoring", to: "/archive", label: "Monitoring", icon: IconChart, exact: false },
+  ];
+
+  if (isAdmin.value) {
+    items.push({ kind: "link", key: "admin-dashboard", to: "/admin/dashboard", label: "Dashboard admina", icon: IconShield, exact: false });
+  }
+
+  return items;
+});
 
 const userInitials = computed(() => {
   const n = displayName.value || "";
@@ -296,14 +324,16 @@ async function loadHeaderUser() {
   if (!user) {
     displayName.value = "";
     avatarUrl.value = "";
+    isAdmin.value = false;
     return;
   }
 
-  const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url, admin").eq("id", user.id).maybeSingle();
 
   const name = String(profile?.full_name || user.user_metadata?.full_name || "").trim();
   displayName.value = name || user.email?.split("@")[0] || "Użytkownik";
   avatarUrl.value = profile?.avatar_url || "";
+  isAdmin.value = profile?.admin === true;
 }
 
 let authSub = null;
