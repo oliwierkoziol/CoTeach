@@ -1,8 +1,10 @@
 <template>
-  <div class="fixed inset-x-0 top-0 z-[56] h-14 border-b border-sidebar-border bg-sidebar px-4">
+  <div class="fixed inset-x-0 top-0 z-[56] h-[4.5rem] border-b border-sidebar-border bg-sidebar px-4">
     <div class="flex h-full items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
-        <img src="../assets/logo.svg" alt="Logo" class="h-7 w-auto object-contain opacity-95 logo" />
+        <div class="flex h-12 items-center">
+          <img src="../assets/logo.svg" alt="Logo" class="max-h-11 w-auto object-contain opacity-95 logo" />
+        </div>
         <span class="truncate text-base font-semibold tracking-tight text-sidebar-foreground">CoTeach</span>
       </div>
       <div class="flex items-center gap-2">
@@ -84,7 +86,7 @@
 
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-14 text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:static md:translate-x-0 md:shadow-none',
+      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-[4.5rem] text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:translate-x-0 md:shadow-none',
       open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
     ]"
   >
@@ -113,17 +115,27 @@
         </a>
       </RouterLink>
     </nav>
+    <div class="p-3 pt-2">
+      <button
+        type="button"
+        class="flex w-full items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 px-3 py-2.5 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
+        @click="handleLogout"
+      >
+        Wyloguj
+      </button>
+    </div>
   </aside>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useTheme } from "../composables/useTheme";
 
 const route = useRoute();
+const router = useRouter();
 const open = ref(false);
 const { isDark, toggleTheme } = useTheme();
 
@@ -230,5 +242,11 @@ onUnmounted(() => {
 function onNav(navigate) {
   open.value = false;
   navigate();
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  open.value = false;
+  await router.push("/login");
 }
 </script>

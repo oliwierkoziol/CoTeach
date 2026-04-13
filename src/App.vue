@@ -7,7 +7,7 @@
     <RouterView v-else-if="presentationMode" />
     <div v-else class="flex min-h-screen">
       <AppSidebar />
-      <main class="min-h-screen min-w-0 flex-1 overflow-x-hidden pt-14">
+      <main class="min-h-screen min-w-0 flex-1 overflow-x-hidden pt-[4.5rem] md:ml-[260px]">
         <RouterView />
       </main>
     </div>
