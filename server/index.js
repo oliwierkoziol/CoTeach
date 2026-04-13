@@ -12,7 +12,15 @@ import { toFile } from "openai/uploads";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 const app = express();
-const upload = multer();
+
+const MB = 1024 * 1024;
+const UPLOAD_LIMITS = {
+  licensed: { maxUploads: 30, maxFileSizeBytes: 50 * MB },
+  unlicensed: { maxUploads: 3, maxFileSizeBytes: 5 * MB }
+};
+
+// Hard cap for multipart parsing in memory. Per-user limits are checked in route handlers.
+const upload = multer({ limits: { fileSize: UPLOAD_LIMITS.licensed.maxFileSizeBytes } });
 const port = Number(process.env.PORT || 3001);
 
 const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
@@ -188,7 +196,7 @@ async function requireAdmin(req, res) {
 
 async function resolveTeacherContext(req, res) {
   if (!supabase) {
-    return { teacherId: defaultTeacherId };
+    return { teacherId: defaultTeacherId, userId: defaultTeacherId };
   }
   const user = await getRequestUser(req);
   if (!user?.id) {
@@ -225,7 +233,46 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
-  return { teacherId };
+  return { teacherId, userId: user.id };
+}
+
+function getActiveUserLicense(userId) {
+  if (!userId) return null;
+  const now = Date.now();
+  const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === userId);
+  if (!assignedLicense) return null;
+  const expiresAtMs = new Date(assignedLicense.expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs < now) return null;
+  return assignedLicense;
+}
+
+function getUserUploadPolicy(userId) {
+  const activeLicense = getActiveUserLicense(userId);
+  return activeLicense ? UPLOAD_LIMITS.licensed : UPLOAD_LIMITS.unlicensed;
+}
+
+function requireActiveLicenseForTeacher(teacher, res, featureName = "Funkcja AI") {
+  const activeLicense = getActiveUserLicense(teacher?.userId);
+  if (activeLicense) return activeLicense;
+  res.status(403).json({
+    code: "LICENSE_REQUIRED",
+    error: `${featureName} wymaga aktywnej licencji.`
+  });
+  return null;
+}
+
+function countUserFileUploads(teacherId) {
+  const teacherLessons = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === String(teacherId));
+  return teacherLessons.reduce((count, lesson) => {
+    const files = Array.isArray(lesson.sourceFiles) ? lesson.sourceFiles : [];
+    const lessonCount = files.filter((file) => {
+      if (file?.uploadType === "file") return true;
+      // Legacy fallback for older records that do not have uploadType.
+      if (!file?.uploadType && file?.fileName && file.fileName !== "material-note.txt") return true;
+      return false;
+    }).length;
+    return count + lessonCount;
+  }, 0);
 }
 
 function getOwnedLessonOrRespond(req, res, teacherId) {
@@ -736,6 +783,25 @@ function getCostSummary(lessonId) {
   return { total, limit, safeMode: total >= limit, exceeded: total >= limit };
 }
 
+function getDashboardCostStats(lessons) {
+  const variableCostTotal = lessons.reduce((sum, lesson) => {
+    const costEvents = db.costs.get(lesson.id) || [];
+    return sum + costEvents.reduce((lessonSum, event) => lessonSum + Number(event.amountPLN || 0), 0);
+  }, 0);
+
+  const lessonsCount = lessons.length;
+  const averageModelApiCostPerLesson = lessonsCount > 0 ? variableCostTotal / lessonsCount : 0;
+  const lessonBaseFee = 0.5;
+
+  return {
+    variableCostTotal,
+    lessonsCount,
+    averageModelApiCostPerLesson,
+    lessonBaseFee,
+    averageLessonCost: averageModelApiCostPerLesson + lessonBaseFee
+  };
+}
+
 function checkLicenseForSchool(schoolId) {
   const school = db.schools.get(schoolId);
   if (!school) return { allowed: false, reason: "School not found" };
@@ -808,6 +874,8 @@ app.post("/api/lessons", async (req, res) => {
   const { title, subject, month, date, rawText = "" } = req.body || {};
   if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
+  const activeLicense = getActiveUserLicense(teacher.userId);
+
   const normalizedDate = normalizeLessonDate(date);
   const normalizedMonth = resolveLessonMonth(month, normalizedDate);
   const lesson = {
@@ -820,12 +888,24 @@ app.post("/api/lessons", async (req, res) => {
     date: normalizedDate,
     status: "draft",
     sourceFiles: [],
-    plan: rawText ? await generatePlanWithLLM(rawText) : [],
+    plan: rawText && activeLicense ? await generatePlanWithLLM(rawText) : [],
     transcripts: [],
     finalNote: null,
     startedAt: null,
     finishedAt: null
   };
+
+  if (rawText && !activeLicense) {
+    lesson.sourceFiles.push({
+      id: randomUUID(),
+      lessonId: lesson.id,
+      fileName: "material-note.txt",
+      mimeType: "text/plain",
+      uploadType: "text",
+      extractedText: String(rawText || "").trim(),
+      createdAt: new Date().toISOString()
+    });
+  }
 
   if (lesson.plan.length) lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
@@ -848,14 +928,30 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
     const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
     if (!lesson) return;
 
+    const uploadPolicy = getUserUploadPolicy(teacher.userId);
+
     let extractedText = String(req.body.rawText || "").trim();
     if (!extractedText && req.file) {
+      if (req.file.size > uploadPolicy.maxFileSizeBytes) {
+        const limitMb = Math.round(uploadPolicy.maxFileSizeBytes / MB);
+        return res.status(413).json({ error: `Plik jest zbyt duży. Maksymalny rozmiar to ${limitMb} MB.` });
+      }
+
+      const uploadsUsed = countUserFileUploads(teacher.teacherId);
+      if (uploadsUsed >= uploadPolicy.maxUploads) {
+        return res.status(403).json({
+          error: `Osiągnięto limit uploadów (${uploadPolicy.maxUploads}).`
+        });
+      }
+
       extractedText = await extractTextFromFile(req.file);
       lesson.sourceFiles.push({
         id: randomUUID(),
         lessonId: lesson.id,
         fileName: req.file.originalname,
+        sizeBytes: req.file.size,
         mimeType: req.file.mimetype,
+        uploadType: "file",
         extractedText,
         createdAt: new Date().toISOString()
       });
@@ -866,11 +962,22 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
         lessonId: lesson.id,
         fileName: "material-note.txt",
         mimeType: "text/plain",
+        uploadType: "text",
         extractedText,
         createdAt: new Date().toISOString()
       });
     }
     if (!extractedText) return res.status(400).json({ error: "No file or rawText provided" });
+
+    if (!getActiveUserLicense(teacher.userId)) {
+      db.lessons.set(lesson.id, lesson);
+      await persistLessonSafe(lesson);
+      return res.json({
+        lesson,
+        aiDisabled: true,
+        message: "Na koncie bez aktywnej licencji AI jest wyłączone. Materiał został zapisany bez generowania planu."
+      });
+    }
 
     lesson.plan = await generatePlanWithLLM(extractedText);
     if (!lesson.plan.length) return res.status(400).json({ error: "Could not derive topics from material." });
@@ -884,10 +991,18 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
   }
 });
 
+app.use((error, _req, res, next) => {
+  if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "Plik jest zbyt duży. Maksymalny rozmiar to 50 MB." });
+  }
+  return next(error);
+});
+
 app.post("/api/notes/generate", async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie notatki AI")) return;
     const subject = String(req.body?.subject || "").trim();
     const topic = String(req.body?.topic || "").trim();
     const classLevel = String(req.body?.classLevel || "").trim();
@@ -1008,10 +1123,9 @@ app.put("/api/lessons/:lessonId/plan/:pointId/manual", async (req, res) => {
 app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  if (!requireActiveLicenseForTeacher(teacher, res, "Rozpoczęcie lekcji")) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
   if (!lesson) return;
-  const check = checkLicenseForSchool(lesson.schoolId);
-  if (!check.allowed) return res.status(403).json({ error: check.reason });
   lesson.status = "live";
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
@@ -1044,6 +1158,7 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  if (!requireActiveLicenseForTeacher(teacher, res, "Analiza pokrycia")) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
   if (!lesson) return;
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
@@ -1056,6 +1171,7 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
 app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji i notatki końcowej")) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
   if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson);
@@ -1157,7 +1273,86 @@ app.get("/api/admin/users", async (req, res) => {
     return res.status(500).json({ error: `Nie udało się pobrać użytkowników: ${error.message}` });
   }
 
-  return res.json({ users: data || [] });
+  const users = (data || []).map((user) => {
+    const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === user.id) || null;
+    return {
+      ...user,
+      license: assignedLicense
+        ? {
+            id: assignedLicense.id,
+            key: assignedLicense.key,
+            expiresAt: assignedLicense.expiresAt,
+            maxActiveUsers: assignedLicense.maxActiveUsers
+          }
+        : null
+    };
+  });
+
+  return res.json({ users });
+});
+
+app.get("/api/admin/dashboard", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+
+  const lessons = [...db.lessons.values()];
+  const finishedLessons = lessons.filter((lesson) => lesson.status === "finished");
+  const costStats = getDashboardCostStats(lessons);
+
+  const coverageMap = new Map();
+  for (const lesson of lessons) {
+    const subject = String(lesson.subject || "Nieznany przedmiot").trim() || "Nieznany przedmiot";
+    const stats = coverageMap.get(subject) || { subject, lessons: 0, totalPoints: 0, discussedPoints: 0 };
+    stats.lessons += 1;
+    const plan = Array.isArray(lesson.plan) ? lesson.plan : [];
+    stats.totalPoints += plan.length;
+    stats.discussedPoints += plan.filter((point) => point?.status === "discussed").length;
+    coverageMap.set(subject, stats);
+  }
+
+  const coverageBySubject = [...coverageMap.values()]
+    .map((item) => ({
+      ...item,
+      coveragePercent: item.totalPoints > 0 ? Math.round((item.discussedPoints / item.totalPoints) * 100) : 0
+    }))
+    .sort((a, b) => b.lessons - a.lessons);
+
+  let users = [];
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, admin, blocked, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: `Nie udało się pobrać użytkowników: ${error.message}` });
+    }
+
+    users = (data || []).map((user) => {
+      const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === user.id) || null;
+      return {
+        ...user,
+        license: assignedLicense
+          ? {
+              id: assignedLicense.id,
+              key: assignedLicense.key,
+              expiresAt: assignedLicense.expiresAt,
+              maxActiveUsers: assignedLicense.maxActiveUsers
+            }
+          : null
+      };
+    });
+  }
+
+  return res.json({
+    stats: {
+      totalLessons: lessons.length,
+      finishedLessons: finishedLessons.length,
+      usersCount: users.length
+    },
+    costStats,
+    coverageBySubject,
+    users
+  });
 });
 
 app.patch("/api/admin/users/:userId/block", async (req, res) => {
@@ -1178,6 +1373,80 @@ app.patch("/api/admin/users/:userId/block", async (req, res) => {
 
   if (!data) return res.status(404).json({ error: "Użytkownik nie istnieje." });
   return res.json({ user: data });
+});
+
+app.patch("/api/admin/users/:userId", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const userId = req.params.userId;
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").trim();
+
+  const authPayload = {};
+  if (email) authPayload.email = email;
+  if (password) authPayload.password = password;
+
+  if (!Object.keys(authPayload).length) {
+    return res.status(400).json({ error: "Podaj email lub hasło do aktualizacji." });
+  }
+
+  const { data, error } = await supabase.auth.admin.updateUserById(userId, authPayload);
+  if (error) {
+    return res.status(500).json({ error: `Nie udało się zaktualizować konta: ${error.message}` });
+  }
+
+  if (email) {
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ email, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+    if (profileError) {
+      return res.status(500).json({ error: `Nie udało się zaktualizować profilu: ${profileError.message}` });
+    }
+  }
+
+  return res.json({ user: { id: userId, email: data?.user?.email || email || null } });
+});
+
+app.patch("/api/admin/users/:userId/license", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+
+  const userId = req.params.userId;
+  const days = Number(req.body?.days || 30);
+  const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
+
+  if (!Number.isFinite(days) || days < 1) {
+    return res.status(400).json({ error: "Nieprawidłowa liczba dni licencji." });
+  }
+
+  if (!Number.isFinite(maxActiveUsers) || maxActiveUsers < 1) {
+    return res.status(400).json({ error: "Nieprawidłowy limit aktywnych użytkowników." });
+  }
+
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const licenseId = `license-user-${userId}`;
+
+  const existing = db.licenses.get(licenseId);
+  const license = {
+    id: licenseId,
+    key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+    maxActiveUsers,
+    expiresAt,
+    demoMode: false,
+    assignedUserId: userId
+  };
+
+  db.licenses.set(licenseId, license);
+
+  return res.json({
+    license: {
+      id: license.id,
+      key: license.key,
+      expiresAt: license.expiresAt,
+      maxActiveUsers: license.maxActiveUsers
+    }
+  });
 });
 
 app.delete("/api/admin/users/:userId", async (req, res) => {
@@ -1228,10 +1497,34 @@ app.get("/api/license/check", (req, res) => {
   return res.status(result.allowed ? 200 : 403).json(result);
 });
 
+app.get("/api/account/license-status", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const activeLicense = getActiveUserLicense(teacher.userId);
+  const uploadPolicy = getUserUploadPolicy(teacher.userId);
+  const uploadsUsed = countUserFileUploads(teacher.teacherId);
+
+  return res.json({
+    hasActiveLicense: Boolean(activeLicense),
+    license: activeLicense
+      ? {
+          id: activeLicense.id,
+          key: activeLicense.key,
+          expiresAt: activeLicense.expiresAt,
+          maxActiveUsers: activeLicense.maxActiveUsers
+        }
+      : null,
+    uploadPolicy,
+    uploadsUsed
+  });
+});
+
 app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Transkrypcja AI")) return;
     const lessonId = String(req.body.lessonId || "");
     const lesson = db.lessons.get(lessonId);
     if (!lessonId || !lesson) {
