@@ -28,7 +28,13 @@
             </div>
             <div>
               <label class="text-sm text-muted-foreground">Klasa</label>
-              <select v-model="classLevel" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25">
+              <select
+                v-model="classLevel"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                @focus="expandSelectOnMobile"
+                @blur="collapseSelect"
+                @change="collapseSelect"
+              >
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
             </div>
@@ -94,11 +100,22 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
 import { useLessonStore } from "../composables/useLessonStore";
 
-pdfMake.vfs = pdfFonts.vfs;
+let pdfMakeInstance = null;
+
+async function getPdfMake() {
+  if (pdfMakeInstance) return pdfMakeInstance;
+  const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+    import("pdfmake/build/pdfmake"),
+    import("pdfmake/build/vfs_fonts"),
+  ]);
+  const pdfMake = pdfMakeModule.default || pdfMakeModule;
+  const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+  pdfMake.vfs = pdfFonts.vfs;
+  pdfMakeInstance = pdfMake;
+  return pdfMake;
+}
 
 const { state, generateTeacherNote, saveTeacherNote, deleteTeacherNote, fetchTeacherNotes } = useLessonStore();
 const classOptions = [
@@ -225,7 +242,17 @@ function sanitizeFileName(value) {
     .slice(0, 80) || "notatka";
 }
 
-function downloadNotePdf(note = null) {
+function expandSelectOnMobile(event) {
+  const isMobile = window.matchMedia("(max-width: 640px)").matches;
+  if (!isMobile) return;
+  event.target.size = 8;
+}
+
+function collapseSelect(event) {
+  event.target.size = 1;
+}
+
+async function downloadNotePdf(note = null) {
   const noteTitle = String(note?.title || title.value || "Notatka").trim();
   const noteSubject = String(note?.subject || subject.value || "").trim();
   const noteClass = String(note?.classLevel || classLevel.value || "").trim();
@@ -285,6 +312,11 @@ function downloadNotePdf(note = null) {
   };
 
   const fileName = `${sanitizeFileName(noteTitle)}.pdf`;
-  pdfMake.createPdf(docDefinition).download(fileName);
+  try {
+    const pdfMake = await getPdfMake();
+    pdfMake.createPdf(docDefinition).download(fileName);
+  } catch (e) {
+    error.value = e?.message || "Nie udało się przygotować pliku PDF.";
+  }
 }
 </script>

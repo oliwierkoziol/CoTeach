@@ -1,11 +1,10 @@
 <template>
-  <div class="fixed inset-x-0 top-0 z-[56] h-[4.5rem] border-b border-sidebar-border bg-sidebar px-4">
+  <div class="fixed inset-x-0 top-0 z-[56] h-16 border-b border-sidebar-border bg-sidebar px-4">
     <div class="flex h-full items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="flex h-12 items-center">
-          <img src="../assets/logo.svg" alt="Logo" class="max-h-11 w-auto object-contain opacity-95 logo" />
+        <div class="flex h-40 items-center">
+          <img src="/logo.svg" alt="Logo" class="h-40 w-auto object-contain opacity-95 logo" />
         </div>
-        <span class="truncate text-base font-semibold tracking-tight text-sidebar-foreground">CoTeach</span>
       </div>
       <div class="flex items-center gap-2">
         <button
@@ -87,7 +86,7 @@
 
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-[4.5rem] text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:translate-x-0 md:shadow-none',
+      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-16 text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:translate-x-0 md:shadow-none',
       open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
     ]"
   >

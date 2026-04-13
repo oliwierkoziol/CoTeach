@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background text-foreground transition-colors">
     <header
-        class="fixed inset-x-0 top-0 z-[56] flex h-[4.2rem] items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
@@ -14,8 +14,10 @@
             <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <RouterLink to="/dashboard" class="flex min-w-0 items-center gap-2 no-underline">
-            <span class="truncate text-[20px] font-semibold tracking-tight text-primary">CoTeach</span>
+        <RouterLink to="/dashboard" class="flex min-w-0 items-center no-underline">
+          <div class="flex h-10 w-[170px] items-center overflow-hidden sm:h-12 sm:w-[220px]">
+            <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-12" />
+          </div>
         </RouterLink>
       </div>
 
@@ -86,7 +88,7 @@
 
     <aside
       :class="[
-          'fixed bottom-0 left-0 top-[4.2rem] z-[55] flex w-[min(17.5rem,calc(100vw-3rem))] flex-col border-r border-border bg-card px-3 py-4 transition-transform duration-200 md:w-[220px] md:translate-x-0',
+          'fixed bottom-0 left-0 top-16 z-[55] flex w-[min(17.5rem,calc(100vw-3rem))] flex-col border-r border-border bg-card px-3 py-4 transition-transform duration-200 md:w-[220px] md:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -140,8 +142,8 @@
 
     </aside>
 
-    <main class="min-h-screen min-w-0 pt-[4.2rem] md:pl-[220px]">
-      <div class="min-h-[calc(100vh-4.2rem)]">
+    <main class="min-h-screen min-w-0 pt-16 md:pl-[220px]">
+      <div class="min-h-[calc(100vh-4rem)]">
         <slot />
       </div>
     </main>
