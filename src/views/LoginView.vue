@@ -1,61 +1,25 @@
 <template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-2">
-    <div
-      class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-sidebar via-background to-card p-10 text-foreground lg:flex"
-    >
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,oklch(0.74_0.12_195/0.18),transparent_50%)]" />
-      <div class="relative">
-        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">CoTeach</p>
-        <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">Lekcje, plan i archiwum w jednym panelu.</h2>
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-900">Logowanie</h1>
+        <p class="mt-2 text-slate-500">Zaloguj się, aby kontynuować pracę z CoTeach.</p>
       </div>
-      <p class="relative text-sm text-muted-foreground">Zaloguj się, żeby wrócić do pracy.</p>
-    </div>
 
-    <div class="flex items-center justify-center px-4 py-12 sm:px-8">
-      <div class="w-full max-w-md">
-        <div class="mb-8 lg:hidden">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">CoTeach</p>
-          <h1 class="mt-2 text-2xl font-bold text-foreground">Logowanie</h1>
-        </div>
-        <div class="mb-8 hidden lg:block">
-          <h1 class="text-2xl font-bold text-foreground">Logowanie</h1>
-          <p class="mt-1 text-sm text-muted-foreground">Kontynuuj w panelu po prawej stronie layoutu.</p>
-        </div>
+      <form @submit.prevent="handleLogin" class="space-y-5">
+        <label class="block text-sm font-medium text-slate-700">
+          Email
+          <input v-model="email" type="email" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="twoj@email.com" />
+        </label>
 
-        <form @submit.prevent="handleLogin" class="space-y-5">
-          <label class="block text-sm font-semibold text-foreground">
-            Email
-            <input
-              v-model="email"
-              type="email"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="twoj@email.com"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            Hasło
-            <input
-              v-model="password"
-              type="password"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="••••••••"
-            />
-          </label>
-          <button
-            type="submit"
-            class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-          >
-            Zaloguj się
-          </button>
-        </form>
+        <label class="block text-sm font-medium text-slate-700">
+          Hasło
+          <input v-model="password" type="password" required class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="••••••••" />
+        </label>
 
-        <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {{ errorMessage }}
-        </div>
+        <button type="submit" class="w-full rounded-2xl bg-blue-600 px-4 py-3 text-white font-semibold hover:bg-blue-700 transition">Zaloguj się</button>
+      </form>
 
-<<<<<<< Updated upstream
       <div v-if="errorMessage" class="mt-4 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
         {{ errorMessage }}
       </div>
@@ -70,12 +34,6 @@
 
       <div class="mt-6 text-center text-sm text-slate-600">
         Nie masz konta? <RouterLink to="/register" class="font-semibold text-blue-600 hover:underline">Zarejestruj się</RouterLink>
-=======
-        <p class="mt-8 text-center text-sm text-muted-foreground">
-          Nie masz konta?
-          <RouterLink to="/register" class="font-semibold text-primary hover:underline">Zarejestruj się</RouterLink>
-        </p>
->>>>>>> Stashed changes
       </div>
     </div>
   </div>
@@ -85,14 +43,10 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
-<<<<<<< Updated upstream
 import blockedImage from "../assets/czarek.jpg";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const route = useRoute();
-=======
-
->>>>>>> Stashed changes
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");

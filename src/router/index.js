@@ -40,26 +40,10 @@ const supabaseConfigured =
     ).trim()
   );
 
-const AUTH_GUARD_TIMEOUT_MS = 4000;
-
-async function getSessionWithTimeout() {
-  const timeoutPromise = new Promise((resolve) => {
-    setTimeout(() => resolve({ timedOut: true, session: null }), AUTH_GUARD_TIMEOUT_MS);
-  });
-
-  const sessionPromise = supabase.auth
-    .getSession()
-    .then(({ data }) => ({ timedOut: false, session: data.session }))
-    .catch(() => ({ timedOut: true, session: null }));
-
-  return Promise.race([sessionPromise, timeoutPromise]);
-}
-
 router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
   if (to.path.startsWith("/share/")) return true;
   if (to.path === "/login" || to.path === "/register") return true;
-<<<<<<< Updated upstream
   const { data } = await supabase.auth.getSession();
   if (!data.session) return { path: "/login", query: { redirect: to.fullPath } };
 
@@ -79,12 +63,6 @@ router.beforeEach(async (to) => {
     return { path: "/login", query: { blocked: "1" } };
   }
 
-=======
-
-  const { timedOut, session } = await getSessionWithTimeout();
-  if (timedOut) return true;
-  if (!session) return { path: "/login", query: { redirect: to.fullPath } };
->>>>>>> Stashed changes
   return true;
 });
 

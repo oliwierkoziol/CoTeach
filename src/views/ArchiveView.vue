@@ -1,61 +1,50 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-7xl">
-      <header class="mb-8">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
-        <h1 class="text-3xl font-bold text-foreground">Archiwum lekcji</h1>
-        <p class="mt-1 text-sm text-muted-foreground">Archiwizacja i dystrybucja notatek</p>
-      </header>
+  <div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 py-8">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+          <RouterLink to="/" class="border rounded-lg px-3 py-2 bg-white">←</RouterLink>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Archiwum Lekcji</h1>
+            <p class="text-gray-600">Archiwizacja i dystrybucja notatek</p>
+          </div>
+        </div>
+      </div>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
-          <div class="rounded-2xl border border-border bg-card p-4">
-            <input
-              v-model="searchQuery"
-              class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Szukaj według przedmiotu lub tytułu..."
-            />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="bg-white rounded-xl border p-4">
+            <input v-model="searchQuery" class="w-full border rounded-lg px-3 py-2" placeholder="Szukaj według przedmiotu lub tytułu..." />
           </div>
 
-          <div v-if="!filteredLessons.length" class="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">
+          <div v-if="!filteredLessons.length" class="bg-white rounded-xl border p-10 text-center text-gray-500">
             Brak zarchiwizowanych lekcji.
           </div>
 
-<<<<<<< Updated upstream
           <div v-for="lesson in filteredLessons" :key="lesson.id" class="bg-white rounded-xl border p-4 cursor-pointer hover:border-orange-300" @click="selectLesson(lesson)">
             <div class="flex items-start justify-between">
-=======
-          <div
-            v-for="lesson in filteredLessons"
-            :key="lesson.id"
-            class="cursor-pointer rounded-2xl border border-border bg-card p-4 transition hover:border-primary/40"
-            @click="selected = lesson"
-          >
-            <div class="flex items-start justify-between gap-2">
->>>>>>> Stashed changes
               <div>
-                <h3 class="font-medium text-foreground">{{ lesson.title }}</h3>
-                <p class="mt-1 text-sm text-muted-foreground">
+                <h3 class="font-medium">{{ lesson.title }}</h3>
+                <p class="text-sm text-gray-600 mt-1">
                   {{ lesson.subject }} • {{ lesson.date }} • {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }} punktów
                 </p>
               </div>
-              <span class="shrink-0 rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">{{ lesson.month }}</span>
+              <span class="text-xs px-2 py-1 rounded bg-gray-100">{{ lesson.month }}</span>
             </div>
           </div>
         </div>
 
         <div class="space-y-6">
-          <div class="rounded-2xl border border-border bg-card p-6">
-            <h3 class="mb-2 font-semibold text-foreground">Moduły archiwum</h3>
-            <ul class="space-y-1 text-sm text-muted-foreground">
+          <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6">
+            <h3 class="font-semibold mb-2">Moduły archiwum</h3>
+            <ul class="text-sm space-y-1">
               <li>Generator złotej notatki</li>
               <li>Cloud storage i QR</li>
-              <li>Struktura przedmiot / miesiąc</li>
+              <li>Struktura przedmiot/miesiąc</li>
               <li>Archiwizacja ZIP</li>
             </ul>
           </div>
 
-<<<<<<< Updated upstream
           <div v-if="selected?.finalNote" class="bg-white rounded-xl border p-6 space-y-4">
             <div class="flex items-center justify-between gap-3">
               <h3 class="font-semibold">Złota Notatka</h3>
@@ -92,18 +81,6 @@
 
           <div v-else-if="selected" class="bg-white rounded-xl border p-6 text-sm text-gray-600">
             Dla tej lekcji nie ma jeszcze notatki końcowej.
-=======
-          <div v-if="selected?.finalNote" class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h3 class="font-semibold text-foreground">Złota notatka</h3>
-            <a class="break-all text-sm text-primary underline" :href="selected.finalNote.shareUrl" target="_blank" rel="noopener">{{ selected.finalNote.shareUrl }}</a>
-            <img
-              :src="`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(selected.finalNote.shareUrl)}`"
-              alt="Kod QR"
-              width="220"
-              height="220"
-              class="rounded-lg border border-border"
-            />
->>>>>>> Stashed changes
           </div>
         </div>
       </div>
