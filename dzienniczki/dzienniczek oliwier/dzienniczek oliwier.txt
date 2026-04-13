@@ -11,3 +11,11 @@ Dzienniczek - Oliwier Kozioł
 - stworzyłem design aplikacji na Figmie
 - zacząłem podłączać API do aplikacji
 
+11 Kwietnia
+- zmieniłem strukturę aplikacji przy uzyciu designu z Figmy
+- usprawniłem stronę do generowania notatek przy użyciu AI
+- usprawniłem strukturę repozytorium GitHub
+- przerobiłem system wybierania notatek do lekcji
+- usprawniłem system tworzenia nowych lekcji na żywo
+
+
