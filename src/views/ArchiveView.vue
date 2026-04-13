@@ -21,18 +21,8 @@
             Brak zarchiwizowanych lekcji.
           </div>
 
-<<<<<<< Updated upstream
           <div v-for="lesson in filteredLessons" :key="lesson.id" class="bg-white rounded-xl border p-4 cursor-pointer hover:border-orange-300" @click="selectLesson(lesson)">
             <div class="flex items-start justify-between">
-=======
-          <div
-            v-for="lesson in filteredLessons"
-            :key="lesson.id"
-            class="cursor-pointer rounded-2xl border border-border bg-card p-4 transition hover:border-primary/40"
-            @click="selected = lesson"
-          >
-            <div class="flex items-start justify-between gap-2">
->>>>>>> Stashed changes
               <div>
                 <h3 class="font-medium text-foreground">{{ lesson.title }}</h3>
                 <p class="mt-1 text-sm text-muted-foreground">
@@ -55,7 +45,6 @@
             </ul>
           </div>
 
-<<<<<<< Updated upstream
           <div v-if="selected?.finalNote" class="bg-white rounded-xl border p-6 space-y-4">
             <div class="flex items-center justify-between gap-3">
               <h3 class="font-semibold">Złota Notatka</h3>
@@ -92,18 +81,6 @@
 
           <div v-else-if="selected" class="bg-white rounded-xl border p-6 text-sm text-gray-600">
             Dla tej lekcji nie ma jeszcze notatki końcowej.
-=======
-          <div v-if="selected?.finalNote" class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h3 class="font-semibold text-foreground">Złota notatka</h3>
-            <a class="break-all text-sm text-primary underline" :href="selected.finalNote.shareUrl" target="_blank" rel="noopener">{{ selected.finalNote.shareUrl }}</a>
-            <img
-              :src="`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(selected.finalNote.shareUrl)}`"
-              alt="Kod QR"
-              width="220"
-              height="220"
-              class="rounded-lg border border-border"
-            />
->>>>>>> Stashed changes
           </div>
         </div>
       </div>

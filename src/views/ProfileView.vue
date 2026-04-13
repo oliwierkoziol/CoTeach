@@ -37,7 +37,6 @@
 
         <div class="space-y-6">
           <div>
-<<<<<<< Updated upstream
             <label class="block text-sm font-semibold text-slate-700 mb-2">Imię i nazwisko</label>
             <div class="flex gap-2">
               <input
@@ -111,30 +110,6 @@
               >
                 Edytuj
               </button>
-=======
-            <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
-            <input
-              v-model.trim="userProfile.full_name"
-              type="text"
-              autocomplete="name"
-              class="w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Jan Kowalski"
-            />
-            <button
-              type="button"
-              class="mt-3 w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
-              :disabled="isSavingName"
-              @click.prevent="saveFullName"
-            >
-              {{ isSavingName ? "Zapisywanie…" : "Zapisz imię i nazwisko" }}
-            </button>
-          </div>
-
-          <div>
-            <label class="mb-2 block text-sm font-semibold text-foreground">Email</label>
-            <div class="border-b border-border pb-2 text-lg text-foreground">
-              {{ userProfile.email || "Brak danych" }}
->>>>>>> Stashed changes
             </div>
           </div>
 
@@ -306,12 +281,8 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
-<<<<<<< Updated upstream
 import { createTemporarySupabaseClient, supabase } from "../supabase";
-=======
-import { supabase } from "../supabase";
 import { clearLessonStoreAuthCache } from "../composables/useLessonStore";
->>>>>>> Stashed changes
 
 const router = useRouter();
 

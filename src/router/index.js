@@ -59,32 +59,23 @@ router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
   if (to.path.startsWith("/share/")) return true;
   if (to.path === "/login" || to.path === "/register") return true;
-<<<<<<< Updated upstream
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return { path: "/login", query: { redirect: to.fullPath } };
+
+  const { timedOut, session } = await getSessionWithTimeout();
+  if (timedOut) return true;
+  if (!session) return { path: "/login", query: { redirect: to.fullPath } };
 
   if (to.path.startsWith("/admin")) return true;
 
-  const {
-    data: profile,
-    error: blockedCheckError
-  } = await supabase
+  const { data: profile, error: blockedCheckError } = await supabase
     .from("profiles")
     .select("blocked")
-    .eq("id", data.session.user.id)
+    .eq("id", session.user.id)
     .maybeSingle();
 
   if (!blockedCheckError && profile?.blocked === true) {
     await supabase.auth.signOut({ scope: "local" });
     return { path: "/login", query: { blocked: "1" } };
   }
-
-=======
-
-  const { timedOut, session } = await getSessionWithTimeout();
-  if (timedOut) return true;
-  if (!session) return { path: "/login", query: { redirect: to.fullPath } };
->>>>>>> Stashed changes
   return true;
 });
 

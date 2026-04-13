@@ -116,11 +116,7 @@ async function handleRegister() {
     password: password.value,
     options: {
       data: {
-<<<<<<< Updated upstream
         full_name: fullName
-=======
-        full_name: name.value
->>>>>>> Stashed changes
       }
     }
   });
