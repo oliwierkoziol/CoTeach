@@ -1,123 +1,60 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-6xl">
-      <header class="mb-10">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Panel</p>
-        <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Witaj, {{ displayName }}</h1>
-        <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Nawigacja jest po lewej — tutaj masz skróty i podsumowanie.
+  <div class="px-4 py-6 sm:px-5 text-foreground">
+    <div class="mx-auto max-w-none">
+      <header class="mb-5">
+        <h1 class="text-[44px] font-bold tracking-tight text-foreground">
+          Witaj, {{ displayName }}
+        </h1>
+        <p class="mt-1 text-[22px] text-muted-foreground">
+          Aby utworzyć nową lekcję, kliknij przycisk po lewej.
         </p>
       </header>
 
-      <div class="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-2xl border border-border bg-card p-5">
-          <p class="text-xs font-medium text-muted-foreground">Lekcje</p>
-          <p class="mt-2 text-2xl font-bold text-primary">{{ lessonsCount }}</p>
-          <p class="mt-1 text-xs text-muted-foreground">w aplikacji</p>
-        </div>
-        <div class="rounded-2xl border border-border bg-card p-5">
-          <p class="text-xs font-medium text-muted-foreground">Średni czas</p>
-          <p class="mt-2 text-2xl font-bold text-foreground">42 min</p>
-          <p class="mt-1 text-xs text-muted-foreground">orientacyjnie</p>
-        </div>
-        <div class="rounded-2xl border border-border bg-card p-5">
-          <p class="text-xs font-medium text-muted-foreground">Realizacja planu</p>
-          <p class="mt-2 text-2xl font-bold text-primary">{{ completionRate }}%</p>
-          <p class="mt-1 text-xs text-muted-foreground">średnio omówionych punktów</p>
-        </div>
-      </div>
-
-<<<<<<< Updated upstream
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div class="bg-white/80 backdrop-blur border border-blue-200 rounded-xl p-6">
-          <div class="text-sm text-gray-600 flex items-center justify-between">
-            <span>Lekcje w tym miesiącu</span>
-            <span class="text-blue-600">◍</span>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
+          <div class="flex items-start justify-between gap-2">
+            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden="true">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </span>
+            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Aktualne</span>
           </div>
-          <div class="text-2xl font-bold text-blue-600 mt-2">{{ lessonsCount }}</div>
-          <p class="text-xs text-gray-500 mt-1">+3 od ostatniego miesiąca</p>
+          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Lekcje</p>
+          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">{{ lessonsCount }}</p>
         </div>
-        <div class="bg-white/80 backdrop-blur border border-green-200 rounded-xl p-6">
-          <div class="text-sm text-gray-600 flex items-center justify-between">
-            <span>Średni czas lekcji</span>
-            <span class="text-green-600">◌</span>
+
+        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
+          <div class="flex items-start justify-between gap-2">
+            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden="true">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Estymacja</span>
           </div>
-          <div class="text-2xl font-bold text-green-600 mt-2">42 min</div>
-          <p class="text-xs text-gray-500 mt-1">Optymalna długość</p>
+          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Średni czas</p>
+          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">42 min</p>
         </div>
-        <div class="bg-white/80 backdrop-blur border border-purple-200 rounded-xl p-6">
-          <div class="text-sm text-gray-600 flex items-center justify-between">
-            <span>Efektywność realizacji</span>
-            <span class="text-purple-600">⌁</span>
+
+        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
+          <div class="flex items-start justify-between gap-2">
+            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300" aria-hidden="true">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </span>
+            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Postęp</span>
           </div>
-          <div class="text-3xl font-bold text-purple-600 mt-2">{{ completionRate }}%</div>
-          <p class="text-xs text-gray-500 mt-1">Punktów planu omówionych</p>
+          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Realizacja planu</p>
+          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">{{ completionRate }}%</p>
+          <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              class="h-full rounded-full bg-primary/80 transition-all duration-500"
+              :style="{ width: `${Math.min(100, completionRate)}%` }"
+            />
+          </div>
         </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-blue-600 hover:shadow-xl transition-all">
-          <h3 class="text-1xl font-bold mb-2">Przygotuj Materiały</h3>
-          <p class="text-blue-200 mb-4 flex-1">Upload plików, OCR pisma odręcznego, generowanie planu lekcji z AI</p>
-          <RouterLink to="/preparation" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Rozpocznij Przygotowanie</button>
-          </RouterLink>
-        </div>
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-green-600 hover:shadow-xl transition-all">
-          <h3 class="text-1xl font-bold mb-2">Lekcja na Żywo</h3>
-          <p class="text-green-200 mb-4 flex-1">Monitoring w czasie rzeczywistym, transkrypcja audio, śledzenie postępu</p>
-          <RouterLink to="/live-lesson" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Rozpocznij Lekcję</button>
-          </RouterLink>
-        </div>
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-purple-600 hover:shadow-xl transition-all">
-          <h3 class="text-1xl font-bold mb-2">Koło Ratunkowe</h3>
-          <p class="text-purple-200 mb-4 flex-1">Auto-prezentacja nieomówionych tematów z grafikami AI</p>
-          <RouterLink :to="presentationLink" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Generuj Prezentację</button>
-          </RouterLink>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-orange-600 hover:shadow-xl transition-all">
-          <h3 class="text-1xl font-bold mb-2">Archiwum</h3>
-          <p class="text-orange-200 mb-4 flex-1">Złote notatki, kody QR, organizacja według przedmiot/miesiąc</p>
-          <RouterLink to="/archive" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Przeglądaj Archiwum</button>
-          </RouterLink>
-        </div>
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-gray-800 hover:shadow-xl transition-all">
-          <h3 class="text-1xl font-bold mb-2">Administracja</h3>
-          <p class="text-gray-400 mb-4 flex-1">Licencje, monitoring kosztów API, tryb demo</p>
-          <RouterLink to="/admin" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Panel Administracyjny</button>
-          </RouterLink>
-        </div>
-      </div>
-
-      <div v-if="isAdmin" class="grid grid-cols-1 mb-8">
-        <div class="rounded-2xl p-6 flex flex-col h-full min-h-[11rem] text-white bg-gray-900 hover:shadow-xl transition-all border border-gray-700">
-          <h3 class="text-1xl font-bold mb-2">Panel sterowania admina</h3>
-          <p class="text-gray-400 mb-4 flex-1">Zarządzanie kontami użytkowników, uprawnienia i ustawienia platformy</p>
-          <RouterLink to="/admin/users" class="mt-auto">
-            <button class="w-full bg-white/90 text-black text-sm font-medium py-2 rounded-md hover:cursor-pointer">Otwórz Panel Admina</button>
-          </RouterLink>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 rounded-xl p-6">
-        <h3 class="text-yellow-900 font-semibold text-lg mb-2">💡 Tryb Demo - Wersja Prototypowa</h3>
-        <p class="text-yellow-700 text-sm">
-          Ta aplikacja działa w trybie frontend-only z symulowanymi odpowiedziami API. W wersji produkcyjnej wymagane
-          będzie połączenie z Deepgram (transkrypcja), Gemini (OCR i analiza) oraz cloud storage dla notatek.
-=======
-      <div class="rounded-2xl border border-border border-primary/25 bg-primary/5 p-5">
-        <h2 class="text-sm font-semibold text-foreground">Tryb demo</h2>
-        <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Aplikacja może działać z symulowanymi odpowiedziami API. Produkcja: Deepgram, Gemini, storage na notatki.
->>>>>>> Stashed changes
-        </p>
       </div>
     </div>
   </div>
@@ -133,7 +70,6 @@ const route = useRoute();
 const { state, fetchLessons } = useLessonStore();
 
 const displayName = ref("użytkowniku");
-const isAdmin = ref(false);
 
 async function loadDisplayName() {
   const {
@@ -145,13 +81,7 @@ async function loadDisplayName() {
     return;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  isAdmin.value = profile?.admin === true;
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
 
   const profileName = String(profile?.full_name || "").trim();
   if (profileName) {
@@ -165,7 +95,7 @@ async function loadDisplayName() {
     return;
   }
 
-  displayName.value = "użytkowniku";
+  displayName.value = user.email?.split("@")[0] || "użytkowniku";
 }
 
 onMounted(async () => {
@@ -175,7 +105,7 @@ onMounted(async () => {
 watch(
   () => route.path,
   (path) => {
-    if (path === "/") loadDisplayName();
+    if (path === "/dashboard") loadDisplayName();
   }
 );
 

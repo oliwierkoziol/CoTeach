@@ -1,11 +1,44 @@
 <template>
-  <div class="fixed inset-x-0 top-0 z-[56] h-14 border-b border-sidebar-border bg-sidebar px-4">
+  <div class="fixed inset-x-0 top-0 z-[56] h-[4.5rem] border-b border-sidebar-border bg-sidebar px-4">
     <div class="flex h-full items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
-        <img src="../assets/logo.svg" alt="Logo" class="h-7 w-auto object-contain opacity-95 logo" />
+        <div class="flex h-12 items-center">
+          <img src="../assets/logo.svg" alt="Logo" class="max-h-11 w-auto object-contain opacity-95 logo" />
+        </div>
         <span class="truncate text-base font-semibold tracking-tight text-sidebar-foreground">CoTeach</span>
       </div>
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar text-sidebar-foreground transition hover:bg-sidebar-accent/60"
+          :title="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
+          :aria-label="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
+          @click="toggleTheme"
+        >
+          <svg
+            v-if="isDark"
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="4"></circle>
+            <path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+          </svg>
+          <svg
+            v-else
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c.35 0 .69.02 1.03.07a7 7 0 0 0 8.76 8.72c.01.34 0 .67 0 1z"></path>
+          </svg>
+        </button>
         <RouterLink
           to="/profile"
           custom
@@ -27,39 +60,9 @@
               <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="" class="h-full w-full object-cover" />
               <span v-else>{{ userInitials }}</span>
             </span>
-            <span class="truncate">Profil</span>
+            <span class="truncate">{{ userDisplayName }}</span>
           </a>
         </RouterLink>
-        <button
-          type="button"
-          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sidebar-border text-sidebar-foreground/80 transition hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          :title="isDark ? 'Tryb dzienny' : 'Tryb nocny'"
-          @click="toggleTheme"
-        >
-          <svg
-            v-if="isDark"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="4"></circle>
-            <path stroke-linecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
-          </svg>
-          <svg
-            v-else
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3c.35 0 .69.02 1.03.07a7 7 0 0 0 8.76 8.72c.01.34 0 .67 0 1z"></path>
-          </svg>
-        </button>
       </div>
     </div>
   </div>
@@ -84,7 +87,7 @@
 
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-14 text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:static md:translate-x-0 md:shadow-none',
+      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-[4.5rem] text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:translate-x-0 md:shadow-none',
       open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
     ]"
   >
@@ -113,17 +116,27 @@
         </a>
       </RouterLink>
     </nav>
+    <div class="p-3 pt-2">
+      <button
+        type="button"
+        class="flex w-full items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 px-3 py-2.5 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
+        @click="handleLogout"
+      >
+        Wyloguj
+      </button>
+    </div>
   </aside>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useTheme } from "../composables/useTheme";
 
 const route = useRoute();
+const router = useRouter();
 const open = ref(false);
 const { isDark, toggleTheme } = useTheme();
 
@@ -131,6 +144,8 @@ const { state, fetchLessons } = useLessonStore();
 
 const userEmail = ref("");
 const userAvatarUrl = ref("");
+const userFullName = ref("");
+const isAdmin = ref(false);
 const sessionUserId = ref("");
 
 let authListener = null;
@@ -142,14 +157,21 @@ const presentationLink = computed(() => {
   return `/presentation/${id}`;
 });
 
-const items = computed(() => [
-  { to: "/", label: "Start", short: "◆", exact: true },
-  { to: "/preparation", label: "Przygotowanie", short: "1", exact: false },
-  { to: "/live-lesson", label: "Lekcja na żywo", short: "2", exact: false },
-  { to: presentationLink.value, label: "Prezentacja", short: "3", exact: false },
-  { to: "/archive", label: "Archiwum", short: "4", exact: false },
-  { to: "/admin", label: "Administracja", short: "5", exact: false },
-]);
+const items = computed(() => {
+  const baseItems = [
+    { to: "/", label: "Start", short: "◆", exact: true },
+    { to: "/preparation", label: "Przygotowanie", short: "1", exact: false },
+    { to: "/live-lesson", label: "Lekcja na żywo", short: "2", exact: false },
+    { to: presentationLink.value, label: "Prezentacja", short: "3", exact: false },
+    { to: "/archive", label: "Archiwum", short: "4", exact: false },
+  ];
+
+  if (isAdmin.value) {
+    baseItems.push({ to: "/admin/users", label: "Panel sterowania admina", short: "A", exact: false });
+  }
+
+  return baseItems;
+});
 
 const userInitials = computed(() => {
   if (!userEmail.value) return "U";
@@ -159,27 +181,40 @@ const userInitials = computed(() => {
   return (initials || userEmail.value[0]).substring(0, 2);
 });
 
-async function loadUserAvatar(userId) {
+const userDisplayName = computed(() => {
+  const fullName = String(userFullName.value || "").trim();
+  if (fullName) return fullName;
+  return "Profil";
+});
+
+async function loadUserProfile(userId) {
   if (!userId) {
     userAvatarUrl.value = "";
+    userFullName.value = "";
+    isAdmin.value = false;
     return;
   }
   const { data: profile } = await supabase
     .from("profiles")
-    .select("avatar_url")
+    .select("avatar_url, full_name, admin")
     .eq("id", userId)
     .maybeSingle();
   userAvatarUrl.value = profile?.avatar_url || "";
+  userFullName.value = String(profile?.full_name || "").trim();
+  isAdmin.value = profile?.admin === true;
 }
 
 function applySession(session) {
   if (session?.user) {
     userEmail.value = session.user.email || "";
+    userFullName.value = String(session.user.user_metadata?.full_name || "").trim();
     sessionUserId.value = session.user.id;
-    return loadUserAvatar(session.user.id);
+    return loadUserProfile(session.user.id);
   }
   userEmail.value = "";
   userAvatarUrl.value = "";
+  userFullName.value = "";
+  isAdmin.value = false;
   sessionUserId.value = "";
   return Promise.resolve();
 }
@@ -205,7 +240,7 @@ watch(
     if (!sessionUserId.value) return;
     clearTimeout(routeDebounceTimer);
     routeDebounceTimer = setTimeout(() => {
-      void loadUserAvatar(sessionUserId.value).catch(console.error);
+      void loadUserProfile(sessionUserId.value).catch(console.error);
     }, 250);
   }
 );
@@ -219,5 +254,11 @@ onUnmounted(() => {
 function onNav(navigate) {
   open.value = false;
   navigate();
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  open.value = false;
+  await router.push("/login");
 }
 </script>

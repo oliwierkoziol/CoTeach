@@ -68,10 +68,6 @@
           {{ infoMessage }}
         </div>
 
-        <p class="mt-8 text-center text-sm text-muted-foreground">
-          Masz już konto?
-          <RouterLink to="/login" class="font-semibold text-primary hover:underline">Zaloguj się</RouterLink>
-        </p>
       </div>
     </div>
   </div>
@@ -93,11 +89,13 @@ const infoMessage = ref("");
 
 async function upsertProfileRow({ id, email, fullName }) {
   if (!id) return;
+  const teacherId = `teacher-${crypto.randomUUID()}`;
   await supabase.from("profiles").upsert(
     {
       id,
       email: email || null,
       full_name: fullName || null,
+      teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }
@@ -116,11 +114,7 @@ async function handleRegister() {
     password: password.value,
     options: {
       data: {
-<<<<<<< Updated upstream
         full_name: fullName
-=======
-        full_name: name.value
->>>>>>> Stashed changes
       }
     }
   });
@@ -144,7 +138,7 @@ async function handleRegister() {
     } catch {
       // Keep registration successful even if profile upsert is temporarily unavailable.
     }
-    router.push("/");
+    router.push("/dashboard");
     return;
   }
 

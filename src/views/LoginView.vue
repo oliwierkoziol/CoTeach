@@ -55,27 +55,14 @@
           {{ errorMessage }}
         </div>
 
-<<<<<<< Updated upstream
-      <div v-if="errorMessage" class="mt-4 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-        {{ errorMessage }}
-      </div>
+        <div v-if="shouldShowBlockedImage" class="mt-4 flex justify-center">
+          <img
+            :src="blockedImage"
+            alt="Konto zablokowane"
+            class="h-40 w-40 object-contain"
+          />
+        </div>
 
-      <div v-if="shouldShowBlockedImage" class="mt-4 flex justify-center">
-        <img
-          :src="blockedImage"
-          alt="Konto zablokowane"
-          class="w-40 h-40 object-contain"
-        />
-      </div>
-
-      <div class="mt-6 text-center text-sm text-slate-600">
-        Nie masz konta? <RouterLink to="/register" class="font-semibold text-blue-600 hover:underline">Zarejestruj się</RouterLink>
-=======
-        <p class="mt-8 text-center text-sm text-muted-foreground">
-          Nie masz konta?
-          <RouterLink to="/register" class="font-semibold text-primary hover:underline">Zarejestruj się</RouterLink>
-        </p>
->>>>>>> Stashed changes
       </div>
     </div>
   </div>
@@ -85,14 +72,12 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
-<<<<<<< Updated upstream
+
 import blockedImage from "../assets/czarek.jpg";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const route = useRoute();
-=======
 
->>>>>>> Stashed changes
 const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
@@ -130,11 +115,20 @@ async function syncProfileAfterLogin(session) {
   const fullName =
     pending && pending.email === authEmail && pending.full_name ? pending.full_name : metadataName;
 
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("teacher_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const teacherId = String(existingProfile?.teacher_id || "").trim() || `teacher-${crypto.randomUUID()}`;
+
   await supabase.from("profiles").upsert(
     {
       id: user.id,
       email: authEmail || null,
       full_name: fullName || null,
+      teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }
@@ -188,7 +182,7 @@ async function handleLogin() {
     // Login should still succeed even if profile sync fails transiently.
   }
 
-  window.location.assign("/");
+  window.location.assign("/dashboard");
 }
 
 onMounted(() => {

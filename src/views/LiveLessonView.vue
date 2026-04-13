@@ -83,6 +83,18 @@
                 </div>
                 <span v-if="point.status === 'discussed'" class="text-emerald-400">✓</span>
               </div>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
+                  :class="point.manualApproved ? 'border-amber-600 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-400/50 dark:bg-amber-500/20 dark:text-amber-100 dark:hover:bg-amber-500/30' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 hover:bg-emerald-500/20 dark:text-emerald-100 dark:hover:bg-emerald-500/30'"
+                  :disabled="manualUpdateLoadingId === point.id"
+                  @click="toggleManualApproval(point)"
+                >
+                  {{ manualUpdateLoadingId === point.id ? "Aktualizuję..." : point.manualApproved ? "Cofnij ręczne zatwierdzenie" : "Zatwierdź ręcznie" }}
+                </button>
+                <span v-if="point.manualApproved" class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-100">Ręcznie zatwierdzone</span>
+              </div>
             </div>
           </div>
 
@@ -243,7 +255,7 @@ const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://
 
 const route = useRoute();
 const router = useRouter();
-const { state, startLive, sendTranscript, refreshCoverage, finalizeLesson, fetchLessons } = useLessonStore();
+const { state, startLive, sendTranscript, refreshCoverage, setManualPointApproval, finalizeLesson, fetchLessons } = useLessonStore();
 
 const isRecording = ref(false);
 const recognition = ref(null);
@@ -270,6 +282,7 @@ const transcription = ref([]);
 const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
+const manualUpdateLoadingId = ref("");
 let apiPingTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
@@ -611,5 +624,19 @@ async function finalizeNow() {
   if (!state.lesson) return;
   const note = await finalizeLesson(state.lesson.id, window.location.origin);
   router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
+}
+
+async function toggleManualApproval(point) {
+  if (!state.lesson?.id || !point?.id) return;
+  try {
+    error.value = "";
+    manualUpdateLoadingId.value = point.id;
+    const nextApproved = !Boolean(point.manualApproved);
+    await setManualPointApproval(state.lesson.id, point.id, nextApproved);
+  } catch (e) {
+    error.value = e.message || "Nie udało się zaktualizować statusu podtematu.";
+  } finally {
+    manualUpdateLoadingId.value = "";
+  }
 }
 </script>

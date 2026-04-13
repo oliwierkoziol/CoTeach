@@ -23,12 +23,22 @@
               <input v-model="subject" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Biologia" />
             </div>
             <div>
-              <label class="text-sm text-muted-foreground">Tytuł lekcji</label>
+              <label class="text-sm text-muted-foreground">Temat lekcji</label>
               <input v-model="title" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Fotosynteza" />
             </div>
             <div>
-              <label class="text-sm text-muted-foreground">Miesiąc</label>
-              <input v-model="month" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Kwiecień" />
+              <label class="text-sm text-muted-foreground">Klasa</label>
+              <select v-model="classLevel" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25">
+                <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-muted-foreground">Data lekcji</label>
+              <input
+                v-model="dateInput"
+                type="date"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              />
             </div>
           </div>
 
@@ -41,7 +51,7 @@
                 :class="uploadMethod === 'text' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted/50'"
                 @click="uploadMethod = 'text'"
               >
-                Tekst
+                Notatka
               </button>
               <button
                 type="button"
@@ -54,10 +64,21 @@
             </div>
 
             <div v-if="uploadMethod === 'text'">
+              <label class="mb-2 block text-sm text-muted-foreground">Wybierz zapisaną notatkę albo wklej własną</label>
+              <select
+                v-if="state.notes.length"
+                v-model="selectedNoteId"
+                class="mb-3 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              >
+                <option value="">-- wybierz zapisaną notatkę --</option>
+                <option v-for="note in state.notes" :key="note.id" :value="note.id">
+                  {{ note.title }} • {{ note.subject }} • {{ note.classLevel || 'brak klasy' }}
+                </option>
+              </select>
               <textarea
                 v-model="rawText"
                 class="min-h-[260px] w-full rounded-xl border border-border bg-input-background p-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                placeholder="Wklej notatki..."
+                placeholder="Wklej notatkę lub wybierz ją z listy powyżej..."
               />
             </div>
             <div v-else class="rounded-xl border-2 border-dashed border-border p-8 text-center">
@@ -72,7 +93,7 @@
               :disabled="isGenerating"
               @click="handleGenerate"
             >
-              {{ isGenerating ? "Przetwarzam..." : "Generuj plan lekcji z AI" }}
+              {{ isGenerating ? "Przetwarzam..." : "Generuj plan lekcji z notatki" }}
             </button>
           </div>
         </div>
@@ -80,9 +101,9 @@
         <div class="rounded-2xl border border-border bg-card/80 p-6">
           <h3 class="mb-3 font-semibold text-foreground">Jak to działa?</h3>
           <ol class="list-decimal space-y-2 pl-4 text-sm text-muted-foreground">
-            <li>Wklej tekst lub prześlij plik.</li>
-            <li>OCR odczyta treść (PDF/JPG/PNG).</li>
-            <li>AI wygeneruje plan lekcji.</li>
+            <li>Wybierz zapisaną notatkę albo wklej własną.</li>
+            <li>OCR odczyta treść pliku, jeśli go prześlesz.</li>
+            <li>AI zamieni notatkę na JSON planu lekcji.</li>
             <li>Popraw punkty przed lekcją na żywo.</li>
           </ol>
         </div>
@@ -110,6 +131,10 @@
         </div>
 
         <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
+          <div v-if="sourceNote" class="rounded-xl border border-border bg-muted/20 p-4">
+            <h3 class="mb-2 text-sm font-semibold text-foreground">Notatka źródłowa</h3>
+            <textarea :value="sourceNote" readonly class="min-h-[120px] w-full rounded-lg border border-border bg-input-background p-3 text-sm text-foreground" />
+          </div>
           <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-border p-4">
             <div class="mb-2 flex items-center gap-2">
               <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs text-muted-foreground">{{ idx + 1 }}</span>
@@ -134,25 +159,81 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 
 const router = useRouter();
-const { state, createLesson, uploadLessonMaterial, savePlan } = useLessonStore();
+const { state, createLesson, uploadLessonMaterial, savePlan, fetchTeacherNotes } = useLessonStore();
 const lesson = computed(() => state.lesson);
+const classOptions = [
+  "1 Szkoła Podstawowa",
+  "2 Szkoła Podstawowa",
+  "3 Szkoła Podstawowa",
+  "4 Szkoła Podstawowa",
+  "5 Szkoła Podstawowa",
+  "6 Szkoła Podstawowa",
+  "7 Szkoła Podstawowa",
+  "8 Szkoła Podstawowa",
+  "1 Szkoła Średnia",
+  "2 Szkoła Średnia",
+  "3 Szkoła Średnia",
+  "4 Szkoła Średnia",
+  "5 Szkoła Średnia",
+  "Szkolenie firmowe",
+  "Szkolenie wewnętrzne",
+  "Warsztat",
+  "Konsultacje",
+  "Inny typ notatki"
+];
+
+function displayToIso(inputDate) {
+  const raw = String(inputDate || "").trim();
+  if (!raw) return new Date().toISOString().split("T")[0];
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return new Date().toISOString().split("T")[0];
+  return parsed.toISOString().split("T")[0];
+}
 
 const subject = ref("");
 const title = ref("");
-const month = ref(new Date().toLocaleString("pl-PL", { month: "long" }));
+const classLevel = ref(classOptions[0]);
+const dateInput = ref(new Date().toISOString().split("T")[0]);
 const rawText = ref("");
 const uploadMethod = ref("text");
 const selectedFile = ref(null);
+const selectedNoteId = ref("");
 const isGenerating = ref(false);
 const isSaving = ref(false);
 
 const error = ref("");
 const info = ref("");
+
+const sourceNote = computed(() => {
+  const files = Array.isArray(lesson.value?.sourceFiles) ? lesson.value.sourceFiles : [];
+  const latest = [...files].reverse().find((item) => String(item?.extractedText || "").trim());
+  return String(latest?.extractedText || "").trim();
+});
+
+const selectedNote = computed(() => state.notes.find((note) => note.id === selectedNoteId.value) || null);
+
+onMounted(async () => {
+  await fetchTeacherNotes();
+});
+
+watch(selectedNoteId, (noteId) => {
+  if (!noteId) return;
+  const note = state.notes.find((item) => item.id === noteId);
+  if (!note) return;
+  subject.value = String(note.subject || subject.value || "");
+  title.value = String(note.title || title.value || "");
+  classLevel.value = String(note.classLevel || classLevel.value || classOptions[0]);
+  rawText.value = String(note.content || "");
+  uploadMethod.value = "text";
+});
 
 function onFile(event) {
   selectedFile.value = event.target.files?.[0] || null;
@@ -167,11 +248,16 @@ async function handleGenerate() {
       error.value = "Wypełnij nazwę przedmiotu i tytuł lekcji.";
       return;
     }
+    const normalizedDate = displayToIso(dateInput.value);
+    dateInput.value = normalizedDate;
+    const lessonMonth = new Date(`${normalizedDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" });
+
     const created = await createLesson({
       subject: subject.value,
       title: title.value,
-      month: month.value,
-      rawText: uploadMethod.value === "text" ? rawText.value : ""
+      month: lessonMonth,
+      date: normalizedDate,
+      rawText: ""
     });
     await uploadLessonMaterial(created.id, {
       rawText: uploadMethod.value === "text" ? rawText.value : "",
