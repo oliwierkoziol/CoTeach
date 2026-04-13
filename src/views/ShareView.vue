@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-4xl mx-auto px-4">
-      <h1 class="text-2xl font-bold mb-4">Udostępniona Notatka</h1>
-      <div v-if="html" class="bg-white rounded-xl border p-6" v-html="html" />
-      <div v-else class="bg-white rounded-xl border p-6 text-gray-500">Notatka nie istnieje.</div>
-      <RouterLink to="/" class="inline-block mt-4 text-blue-600 underline">Powrót do dashboardu</RouterLink>
+  <div class="min-h-[calc(100vh-3.5rem)] px-4 py-10 sm:px-6">
+    <div class="mx-auto max-w-3xl">
+      <h1 class="mb-6 text-2xl font-bold text-foreground">Udostępniona notatka</h1>
+      <div v-if="html" class="rounded-2xl border border-border bg-card p-6 text-card-foreground [&_a]:text-primary" v-html="html" />
+      <div v-else class="rounded-2xl border border-border bg-card p-6 text-muted-foreground">Notatka nie istnieje.</div>
+      <RouterLink to="/login" class="mt-6 inline-block text-sm font-semibold text-primary hover:underline"> Zaloguj się do CoTeach </RouterLink>
     </div>
   </div>
 </template>

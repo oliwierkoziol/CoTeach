@@ -1,44 +1,132 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 py-8">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <RouterLink to="/" class="border rounded-lg px-3 py-2 bg-white">←</RouterLink>
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">Lekcja na Żywo</h1>
-            <p class="text-gray-600">Monitoring na żywo i analiza postępu</p>
-          </div>
+  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
+    <div class="mx-auto max-w-7xl">
+      <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <header>
+          <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
+          <h1 class="text-3xl font-bold text-foreground">Lekcja na żywo</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Monitoring i analiza postępu</p>
+        </header>
+        <div class="flex shrink-0 gap-2">
+          <button
+            v-if="!isRecording"
+            type="button"
+            class="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            @click="startSession"
+          >
+            Rozpocznij lekcję
+          </button>
+          <button
+            v-else
+            type="button"
+            class="rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:opacity-90"
+            @click="stopSession"
+          >
+            Zatrzymaj
+          </button>
         </div>
-        <button v-if="!isRecording" class="px-4 py-2 rounded-lg bg-green-600 text-white" @click="startSession">Rozpocznij Lekcję</button>
-        <button v-else class="px-4 py-2 rounded-lg bg-red-600 text-white" @click="stopSession">Zatrzymaj</button>
       </div>
 
-      <div v-if="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 p-4">{{ error }}</div>
-      <div v-if="info" class="mb-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 p-4">{{ info }}</div>
+      <div v-if="error" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{{ error }}</div>
+      <div v-if="info" class="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">{{ info }}</div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
-          <div class="bg-white rounded-xl border p-6" :class="isRecording ? 'border-green-500 bg-green-50' : ''">
-            <div class="flex items-center justify-between">
-              <div class="font-semibold">{{ isRecording ? "Nagrywanie aktywne" : "Oczekiwanie..." }}</div>
-              <div class="text-sm">{{ elapsedLabel }} | {{ costLabel }}</div>
+      <div class="mb-6 rounded-2xl border border-border bg-card p-6">
+        <div class="mb-2 flex justify-between text-sm text-muted-foreground">
+          <span>{{ discussedCount }} z {{ points.length }} punktów omówionych</span>
+          <span>{{ progress }}%</span>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div class="h-2 rounded-full bg-emerald-500 transition-all" :style="{ width: `${progress}%` }" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="space-y-6 lg:col-span-2">
+          <div
+            class="rounded-2xl border border-border bg-card p-6"
+            :class="isRecording ? 'border-emerald-500/50 bg-emerald-500/5' : ''"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div class="font-semibold text-foreground">{{ isRecording ? "Nagrywanie aktywne" : "Oczekiwanie..." }}</div>
+              <div class="text-sm text-muted-foreground">{{ elapsedLabel }} | {{ costLabel }}</div>
             </div>
           </div>
 
-          <div class="bg-white rounded-xl border p-6 space-y-4">
-            <h2 class="text-lg font-semibold">Panel Mikrofonu i Napisów</h2>
-            <div class="rounded-lg border p-3 text-sm" :class="sttStatus === 'listening' ? 'bg-green-50 border-green-200 text-green-800' : sttStatus === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-700'">
+          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
+            <h2 class="text-lg font-semibold text-foreground">Napisy na żywo</h2>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="rounded-xl border border-border bg-muted/30 p-3">
+                <div class="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Napisy live (w trakcie)</div>
+                <p class="min-h-[48px] text-sm text-foreground">{{ interimCaption || "..." }}</p>
+              </div>
+              <div class="rounded-xl border border-border bg-muted/30 p-3">
+                <div class="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Ostatnia pełna wypowiedź</div>
+                <p class="min-h-[48px] text-sm text-foreground">{{ lastFinalCaption || "..." }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3 rounded-2xl border border-border bg-card p-6">
+            <h2 class="text-lg font-semibold text-foreground">Plan lekcji</h2>
+            <div
+              v-for="(point, index) in points"
+              :key="point.id"
+              class="rounded-xl border-2 p-4"
+              :class="point.status === 'discussed' ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-border bg-card'"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-medium text-foreground">{{ index + 1 }}. {{ point.title }}</div>
+                  <div class="mt-2 flex flex-wrap gap-1">
+                    <span v-for="k in point.keywords" :key="k" class="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{{ k }}</span>
+                  </div>
+                </div>
+                <span v-if="point.status === 'discussed'" class="text-emerald-400">✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="transcription.length" class="rounded-2xl border border-border bg-card p-6">
+            <h2 class="mb-3 text-lg font-semibold text-foreground">Transkrypcja na żywo</h2>
+            <div class="max-h-[300px] space-y-2 overflow-y-auto rounded-xl bg-muted/30 p-4 text-sm text-foreground">
+              <div v-for="(text, idx) in transcription.slice(-10)" :key="idx">{{ text }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
+            <h2 class="text-lg font-semibold text-foreground">Ustawienia mikrofonu</h2>
+            <div
+              class="rounded-xl border p-3 text-sm"
+              :class="
+                sttStatus === 'listening'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                  : sttStatus === 'error'
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                    : 'border-border bg-muted/30 text-foreground'
+              "
+            >
               STT status: <strong>{{ sttStatusLabel }}</strong>
             </div>
-            <div class="rounded-lg border p-3 text-sm" :class="apiStatus === 'online' ? 'bg-green-50 border-green-200 text-green-800' : apiStatus === 'offline' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-700'">
+            <div
+              class="rounded-xl border p-3 text-sm"
+              :class="
+                apiStatus === 'online'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                  : apiStatus === 'offline'
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                    : 'border-border bg-muted/30 text-foreground'
+              "
+            >
               API status: <strong>{{ apiStatusLabel }}</strong>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label class="text-sm text-gray-600 block mb-1">Urządzenie mikrofonu</label>
+                <label class="mb-1 block text-sm text-muted-foreground">Urządzenie mikrofonu</label>
                 <select
                   v-model="selectedMicId"
-                  class="w-full border rounded-lg px-3 py-2"
+                  class="w-full rounded-xl border border-border bg-input-background px-3 py-2 text-foreground"
                   :disabled="isRecording"
                 >
                   <option value="">Domyślny mikrofon systemowy</option>
@@ -46,63 +134,55 @@
                     {{ d.label || `Mikrofon ${d.deviceId.slice(0, 6)}` }}
                   </option>
                 </select>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="mt-1 text-xs text-muted-foreground">
                   Uwaga: rozpoznawanie mowy przeglądarki zwykle używa domyślnego mikrofonu systemu.
                 </p>
               </div>
               <div>
-                <label class="text-sm text-gray-600 block mb-1">Silnik STT</label>
-                <select v-model="sttEngine" class="w-full border rounded-lg px-3 py-2" :disabled="isRecording || micTestActive">
+                <label class="mb-1 block text-sm text-muted-foreground">Silnik STT</label>
+                <select
+                  v-model="sttEngine"
+                  class="w-full rounded-xl border border-border bg-input-background px-3 py-2 text-foreground"
+                  :disabled="isRecording || micTestActive"
+                >
                   <option value="browser">Przeglądarka (Web Speech)</option>
                   <option value="whisper">Whisper (OpenAI API)</option>
                 </select>
-                <p class="text-xs text-gray-500 mt-1">
-                  Whisper wysyła fragmenty audio do backendu i transkrybuje przez OpenAI.
-                </p>
+                <p class="mt-1 text-xs text-muted-foreground">Whisper wysyła audio do backendu i transkrybuje przez OpenAI.</p>
               </div>
               <div>
-                <label class="text-sm text-gray-600 block mb-1">Poziom mikrofonu</label>
-                <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div class="h-3 bg-blue-600 transition-all duration-100" :style="{ width: `${micLevel}%` }" />
+                <label class="mb-1 block text-sm text-muted-foreground">Poziom mikrofonu</label>
+                <div class="h-3 w-full overflow-hidden rounded-full bg-muted">
+                  <div class="h-3 rounded-full bg-primary transition-all duration-100" :style="{ width: `${micLevel}%` }" />
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Sygnał wejściowy: {{ Math.round(micLevel) }}%</p>
+                <p class="mt-1 text-xs text-muted-foreground">Sygnał wejściowy: {{ Math.round(micLevel) }}%</p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label class="text-sm text-gray-600 block mb-1">Wzmocnienie mikrofonu (podgląd)</label>
+                <label class="mb-1 block text-sm text-muted-foreground">Wzmocnienie mikrofonu (podgląd)</label>
                 <input v-model.number="micGain" type="range" min="0.5" max="2" step="0.1" class="w-full" />
-                <p class="text-xs text-gray-500 mt-1">x{{ micGain.toFixed(1) }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">x{{ micGain.toFixed(1) }}</p>
               </div>
               <div>
-                <label class="text-sm text-gray-600 block mb-1">Czułość napisów live</label>
+                <label class="mb-1 block text-sm text-muted-foreground">Czułość napisów live</label>
                 <input v-model.number="captionSensitivity" type="range" min="1" max="12" step="1" class="w-full" />
-                <p class="text-xs text-gray-500 mt-1">Minimum długości fragmentu: {{ captionSensitivity }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">Minimum długości fragmentu: {{ captionSensitivity }}</p>
               </div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="rounded-lg bg-gray-50 border p-3">
-                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Napisy live (w trakcie)</div>
-                <p class="text-sm min-h-[48px]">{{ interimCaption || "..." }}</p>
-              </div>
-              <div class="rounded-lg bg-gray-50 border p-3">
-                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Ostatnia pełna wypowiedź</div>
-                <p class="text-sm min-h-[48px]">{{ lastFinalCaption || "..." }}</p>
-              </div>
-            </div>
-
             <div class="flex flex-wrap gap-2">
               <button
-                class="px-3 py-2 rounded-lg border bg-white"
+                type="button"
+                class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition hover:bg-muted/50 disabled:opacity-50"
                 :disabled="isRecording || micTestActive"
                 @click="startMicTest"
               >
                 Test mikrofonu (bez lekcji)
               </button>
               <button
-                class="px-3 py-2 rounded-lg border bg-white"
+                type="button"
+                class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition hover:bg-muted/50 disabled:opacity-50"
                 :disabled="!micTestActive"
                 @click="stopMicTest"
               >
@@ -110,50 +190,36 @@
               </button>
             </div>
           </div>
-
-          <div class="bg-white rounded-xl border p-6">
-            <div class="flex justify-between text-sm text-gray-600 mb-2">
-              <span>{{ discussedCount }} z {{ points.length }} punktów omówionych</span>
-              <span>{{ progress }}%</span>
-            </div>
-            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div class="h-2 bg-green-600" :style="{ width: `${progress}%` }" />
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border p-6 space-y-3">
-            <h2 class="text-lg font-semibold">Plan Lekcji - Dashboard Nauczyciela</h2>
-            <div v-for="(point, index) in points" :key="point.id" class="p-4 rounded-lg border-2" :class="point.status === 'discussed' ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'">
-              <div class="flex items-start justify-between">
-                <div>
-                  <div class="font-medium">{{ index + 1 }}. {{ point.title }}</div>
-                  <div class="flex flex-wrap gap-1 mt-2">
-                    <span v-for="k in point.keywords" :key="k" class="text-xs px-2 py-1 rounded bg-gray-100">{{ k }}</span>
-                  </div>
-                </div>
-                <span v-if="point.status === 'discussed'" class="text-green-600">✓</span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="transcription.length" class="bg-white rounded-xl border p-6">
-            <h2 class="text-lg font-semibold mb-3">Transkrypcja na Żywo</h2>
-            <div class="space-y-2 max-h-[300px] overflow-y-auto bg-gray-50 p-4 rounded-lg text-sm">
-              <div v-for="(text, idx) in transcription.slice(-10)" :key="idx">{{ text }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-6">
-
-          <div v-if="pendingPoints.length > 0 && elapsedSec > 120" class="rounded-lg border border-red-300 bg-red-50 p-4 text-sm">
+          <div
+            v-if="pendingPoints.length > 0 && elapsedSec > 120"
+            class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground"
+          >
             Uwaga! Pozostało {{ pendingPoints.length }} nieomówionych punktów.
-            <button class="mt-2 w-full border rounded-lg py-2 bg-white" @click="goPresentation">Generuj Koło Ratunkowe</button>
+            <button
+              type="button"
+              class="mt-2 w-full rounded-xl border border-border bg-card py-2 text-sm font-medium transition hover:bg-muted/50"
+              @click="goPresentation"
+            >
+              Generuj koło ratunkowe
+            </button>
           </div>
 
-          <div class="bg-white rounded-xl border p-4 space-y-2">
-            <button class="w-full border rounded-lg py-2" :disabled="pendingPoints.length === 0" @click="goPresentation">Koło Ratunkowe ({{ pendingPoints.length }})</button>
-            <button class="w-full border rounded-lg py-2" @click="finalizeNow">Zakończ i Archiwizuj</button>
+          <div class="space-y-2 rounded-2xl border border-border bg-card p-4">
+            <button
+              type="button"
+              class="w-full rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
+              :disabled="pendingPoints.length === 0"
+              @click="goPresentation"
+            >
+              Koło ratunkowe ({{ pendingPoints.length }})
+            </button>
+            <button
+              type="button"
+              class="w-full rounded-xl border border-primary/40 bg-primary/15 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/25"
+              @click="finalizeNow"
+            >
+              Zakończ i archiwizuj
+            </button>
           </div>
         </div>
       </div>
