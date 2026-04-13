@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
+  <div class="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-10">
     <div class="mx-auto max-w-7xl">
       <header class="mb-8">
         <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
@@ -21,12 +21,12 @@
             Brak zarchiwizowanych lekcji.
           </div>
 
-          <div v-for="lesson in filteredLessons" :key="lesson.id" class="bg-white rounded-xl border p-4 cursor-pointer hover:border-orange-300" @click="selectLesson(lesson)">
+          <div v-for="lesson in filteredLessons" :key="lesson.id" class="rounded-xl border border-border bg-card p-4 cursor-pointer transition hover:border-primary/40 hover:bg-muted/30" @click="selectLesson(lesson)">
             <div class="flex items-start justify-between">
               <div>
-                <h3 class="font-medium text-foreground">{{ lesson.title }}</h3>
+                <h3 class="font-medium text-foreground">{{ lesson.finalNote?.title || lesson.title }}</h3>
                 <p class="mt-1 text-sm text-muted-foreground">
-                  {{ lesson.subject }} • {{ lesson.date }} • {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }} punktów
+                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} • {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }} punktów
                 </p>
               </div>
               <span class="shrink-0 rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">{{ lesson.month }}</span>
@@ -45,7 +45,7 @@
             </ul>
           </div>
 
-          <div v-if="selected?.finalNote" class="bg-white rounded-xl border p-6 space-y-4">
+          <div v-if="selected?.finalNote" class="rounded-xl border border-border bg-card p-6 space-y-4">
             <div class="flex items-center justify-between gap-3">
               <h3 class="font-semibold">Złota Notatka</h3>
               <button class="px-3 py-2 rounded-lg border border-red-300 text-red-700 bg-red-50 text-sm" @click="handleDeleteFinalNote" :disabled="saving">
@@ -85,9 +85,16 @@
             <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white text-sm" @click="openFinalNote">
               Przenieś do notatki
             </button>
+
+            <RouterLink
+              to="/notes"
+              class="block w-full rounded-lg border border-border bg-card px-3 py-2 text-center text-sm font-semibold text-foreground transition hover:bg-muted/40"
+            >
+              Wróć do notatek
+            </RouterLink>
           </div>
 
-          <div v-else-if="selected" class="bg-white rounded-xl border p-6 text-sm text-gray-600">
+          <div v-else-if="selected" class="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
             Dla tej lekcji nie ma jeszcze notatki końcowej.
           </div>
         </div>
@@ -101,7 +108,7 @@
           class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           @click="closeQrModal"
         >
-          <div class="rounded-3xl bg-white p-5 shadow-2xl" @click.stop>
+          <div class="rounded-3xl bg-card p-5 shadow-2xl" @click.stop>
             <img :src="qrCodeUrl" alt="QR" width="320" height="320" class="mx-auto h-auto w-full max-w-[320px]" />
           </div>
         </div>
@@ -131,7 +138,11 @@ onMounted(async () => {
 const filteredLessons = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
   if (!q) return state.lessons;
-  return state.lessons.filter((l) => `${l.title} ${l.subject} ${l.month}`.toLowerCase().includes(q));
+  return state.lessons.filter((l) => {
+    const noteTitle = l.finalNote?.title || l.title || "";
+    const noteSubject = l.finalNote?.subject || l.subject || "";
+    return `${noteTitle} ${noteSubject} ${l.month || ""}`.toLowerCase().includes(q);
+  });
 });
 
 const qrCodeUrl = computed(() => {

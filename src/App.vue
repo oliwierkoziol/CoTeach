@@ -23,7 +23,7 @@ const route = useRoute();
 const router = useRouter();
 const minimalChrome = computed(() => {
   const p = route.path;
-  return p === "/login" || p === "/register" || p.startsWith("/share/");
+  return p === "/" || p === "/login" || p === "/register" || p.startsWith("/share/");
 });
 
 /** Pełny ekran — bez lewego panelu (nakładka fixed ma sensowny układ). */

@@ -8,7 +8,17 @@
         v-html="html"
       />
       <div v-else class="rounded-2xl border border-border bg-card p-6 text-muted-foreground">Notatka nie istnieje.</div>
-      <RouterLink to="/login" class="mt-6 inline-block text-sm font-semibold text-primary hover:underline"> Zaloguj się do CoTeach </RouterLink>
+      <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <RouterLink
+          to="/notes"
+          class="inline-flex rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/40"
+        >
+          Wróć do notatek
+        </RouterLink>
+        <RouterLink to="/login" class="text-sm font-semibold text-primary hover:underline sm:text-right">
+          Zaloguj się do CoTeach
+        </RouterLink>
+      </div>
     </div>
   </div>
 </template>

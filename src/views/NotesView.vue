@@ -114,7 +114,12 @@ const classOptions = [
   "2 Szkoła Średnia",
   "3 Szkoła Średnia",
   "4 Szkoła Średnia",
-  "5 Szkoła Średnia"
+  "5 Szkoła Średnia",
+  "Szkolenie firmowe",
+  "Szkolenie wewnętrzne",
+  "Warsztat",
+  "Konsultacje",
+  "Inny typ notatki"
 ];
 
 const subject = ref("");

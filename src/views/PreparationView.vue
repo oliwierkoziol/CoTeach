@@ -34,7 +34,11 @@
             </div>
             <div>
               <label class="text-sm text-muted-foreground">Data lekcji</label>
-              <input v-model="dateInput" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="dd-mm-rrrr" />
+              <input
+                v-model="dateInput"
+                type="date"
+                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              />
             </div>
           </div>
 
@@ -175,34 +179,17 @@ const classOptions = [
   "2 Szkoła Średnia",
   "3 Szkoła Średnia",
   "4 Szkoła Średnia",
-  "5 Szkoła Średnia"
+  "5 Szkoła Średnia",
+  "Szkolenie firmowe",
+  "Szkolenie wewnętrzne",
+  "Warsztat",
+  "Konsultacje",
+  "Inny typ notatki"
 ];
-
-function formatDateDisplay(dateValue) {
-  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear());
-  return `${day}-${month}-${year}`;
-}
-
-function isoToDisplay(isoDate) {
-  const iso = String(isoDate || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return formatDateDisplay(new Date());
-  const [year, month, day] = iso.split("-");
-  return `${day}-${month}-${year}`;
-}
 
 function displayToIso(inputDate) {
   const raw = String(inputDate || "").trim();
   if (!raw) return new Date().toISOString().split("T")[0];
-
-  if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
-    const [day, month, year] = raw.split("-");
-    const isoCandidate = `${year}-${month}-${day}`;
-    const parsed = new Date(`${isoCandidate}T00:00:00`);
-    if (!Number.isNaN(parsed.getTime())) return isoCandidate;
-  }
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
 
@@ -214,7 +201,7 @@ function displayToIso(inputDate) {
 const subject = ref("");
 const title = ref("");
 const classLevel = ref(classOptions[0]);
-const dateInput = ref(formatDateDisplay(new Date()));
+const dateInput = ref(new Date().toISOString().split("T")[0]);
 const rawText = ref("");
 const uploadMethod = ref("text");
 const selectedFile = ref(null);
@@ -262,7 +249,7 @@ async function handleGenerate() {
       return;
     }
     const normalizedDate = displayToIso(dateInput.value);
-    dateInput.value = isoToDisplay(normalizedDate);
+    dateInput.value = normalizedDate;
     const lessonMonth = new Date(`${normalizedDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" });
 
     const created = await createLesson({

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { supabase } from "../supabase.js";
+import LandingView from "../views/LandingView.vue";
 import DashboardView from "../views/DashboardView.vue";
 import PreparationView from "../views/PreparationView.vue";
 import LiveLessonView from "../views/LiveLessonView.vue";
@@ -19,7 +20,8 @@ const router = createRouter({
     return { top: 0, left: 0, behavior: "auto" };
   },
   routes: [
-    { path: "/", component: DashboardView },
+    { path: "/", component: LandingView },
+    { path: "/dashboard", component: DashboardView },
     { path: "/profile", component: ProfileView },
     { path: "/preparation", component: PreparationView },
     { path: "/notes", component: NotesView },
@@ -59,6 +61,7 @@ async function getSessionWithTimeout() {
 
 router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
+  if (to.path === "/") return true;
   if (to.path.startsWith("/share/")) return true;
   if (to.path === "/login" || to.path === "/register") return true;
 
@@ -78,7 +81,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.path.startsWith("/admin") && profile?.admin !== true) {
-    return { path: "/" };
+    return { path: "/dashboard" };
   }
 
   return true;

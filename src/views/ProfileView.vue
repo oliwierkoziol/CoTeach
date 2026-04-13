@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
+  <div class="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-10">
     <div class="mx-auto max-w-2xl">
       <header class="mb-8">
         <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Konto</p>
@@ -19,7 +19,7 @@
             </div>
 
             <div
-              class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+              class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-black/65"
             >
               <span class="px-2 text-center text-sm font-semibold text-white">Zmień zdjęcie</span>
             </div>
@@ -37,18 +37,18 @@
 
         <div class="space-y-6">
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Imię i nazwisko</label>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
             <div class="flex gap-2">
               <input
                 v-model.trim="userProfile.full_name"
                 type="text"
                 autocomplete="name"
-                class="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                class="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 placeholder="Jan Kowalski"
               />
               <button
                 type="button"
-                class="shrink-0 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                class="shrink-0 rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 :disabled="isSavingName"
                 @click.prevent="saveFullName"
               >
@@ -58,8 +58,8 @@
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Adres e-mail</label>
-            <div class="text-lg text-slate-900 border-b border-slate-200 pb-1 flex items-center justify-between gap-3">
+            <label class="mb-2 block text-sm font-semibold text-foreground">Adres e-mail</label>
+            <div class="flex items-center justify-between gap-3 border-b border-border pb-1 text-lg text-foreground">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="truncate">{{ displayEmail }}</span>
                 <button
@@ -73,7 +73,7 @@
               </div>
               <button
                 type="button"
-                class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                class="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
                 :disabled="isSavingEmail"
                 @click="toggleEmailEdit"
               >
@@ -85,12 +85,12 @@
                 v-model.trim="newEmail"
                 type="email"
                 autocomplete="email"
-                class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 placeholder="Nowy adres e-mail"
               />
               <button
                 type="button"
-                class="mt-3 w-full sm:w-auto rounded-2xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                class="mt-3 w-full sm:w-auto rounded-2xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 :disabled="isSavingEmail"
                 @click.prevent="saveEmail"
               >
@@ -100,12 +100,12 @@
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Hasło</label>
-            <div class="text-lg text-slate-900 border-b border-slate-200 pb-1 flex items-center justify-between gap-3">
-              <span class="tracking-widest text-slate-400 select-none">••••••••••</span>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Hasło</label>
+            <div class="flex items-center justify-between gap-3 border-b border-border pb-1 text-lg text-foreground">
+              <span class="select-none tracking-widest text-muted-foreground">••••••••••</span>
               <button
                 type="button"
-                class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                class="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
                 @click="showPasswordModal = true"
               >
                 Edytuj
@@ -136,7 +136,7 @@
 
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <RouterLink
-            to="/"
+            to="/dashboard"
             class="inline-block rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-muted/50"
           >
             Start
@@ -158,15 +158,15 @@
             class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4 pw-modal-overlay"
             @mousedown.self="closePasswordModal"
           >
-            <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 pw-modal-card">
+            <div class="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl pw-modal-card">
               <div class="flex items-start justify-between mb-2">
                 <div>
-                  <h2 class="text-xl font-bold text-slate-900">Zaktualizuj hasło</h2>
-                  <p class="text-sm text-slate-500 mt-1">Wprowadź swoje obecne hasło i nowe hasło.</p>
+                  <h2 class="text-xl font-bold text-foreground">Zaktualizuj hasło</h2>
+                  <p class="mt-1 text-sm text-muted-foreground">Wprowadź swoje obecne hasło i nowe hasło.</p>
                 </div>
                 <button
                   type="button"
-                  class="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                  class="text-muted-foreground hover:text-foreground text-2xl leading-none"
                   @click="closePasswordModal"
                   aria-label="Zamknij"
                 >&times;</button>
@@ -174,30 +174,30 @@
 
               <div class="space-y-4 mt-4">
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1">Bieżące hasło <span class="text-red-500">*</span></label>
+                  <label class="mb-1 block text-sm font-semibold text-foreground">Bieżące hasło <span class="text-red-500">*</span></label>
                   <input
                     v-model="pwCurrent"
                     type="password"
                     autocomplete="current-password"
-                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    class="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1">Nowe hasło <span class="text-red-500">*</span></label>
+                  <label class="mb-1 block text-sm font-semibold text-foreground">Nowe hasło <span class="text-red-500">*</span></label>
                   <input
                     v-model="pwNew"
                     type="password"
                     autocomplete="new-password"
-                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    class="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-semibold text-slate-700 mb-1">Potwierdź nowe hasło <span class="text-red-500">*</span></label>
+                  <label class="mb-1 block text-sm font-semibold text-foreground">Potwierdź nowe hasło <span class="text-red-500">*</span></label>
                   <input
                     v-model="pwConfirm"
                     type="password"
                     autocomplete="new-password"
-                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    class="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
@@ -208,7 +208,7 @@
               <div class="mt-5 flex gap-3">
                 <button
                   type="button"
-                  class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  class="flex-1 rounded-xl border border-border bg-card px-4 py-3 font-semibold text-foreground transition hover:bg-muted/50"
                   :disabled="isSavingPassword"
                   @click="closePasswordModal"
                 >
@@ -242,7 +242,7 @@
             {{ showDeleteConfirm ? "Anuluj usuwanie" : "Usuń konto" }}
           </button>
 
-          <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-white p-4">
+          <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-card p-4">
             <p class="text-sm text-red-700">
               Wpisz hasło, aby potwierdzić usunięcie konta.
             </p>
@@ -250,7 +250,7 @@
               v-model="deletePassword"
               type="password"
               autocomplete="current-password"
-              class="mt-3 w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              class="mt-3 w-full rounded-2xl border border-red-200 bg-background px-4 py-3 text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
               placeholder="Podaj hasło"
             />
             <div class="mt-3 flex flex-wrap gap-3">
@@ -264,7 +264,7 @@
               </button>
               <button
                 type="button"
-                class="rounded-2xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+                class="rounded-2xl border border-border bg-card px-6 py-3 font-semibold text-foreground transition hover:bg-muted/50"
                 :disabled="isDeletingAccount"
                 @click="cancelDeleteConfirm"
               >

@@ -68,10 +68,6 @@
           {{ infoMessage }}
         </div>
 
-        <p class="mt-8 text-center text-sm text-muted-foreground">
-          Masz już konto?
-          <RouterLink to="/login" class="font-semibold text-primary hover:underline">Zaloguj się</RouterLink>
-        </p>
       </div>
     </div>
   </div>
@@ -142,7 +138,7 @@ async function handleRegister() {
     } catch {
       // Keep registration successful even if profile upsert is temporarily unavailable.
     }
-    router.push("/");
+    router.push("/dashboard");
     return;
   }
 

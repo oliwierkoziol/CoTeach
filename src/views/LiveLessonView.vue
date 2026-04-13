@@ -87,13 +87,13 @@
                 <button
                   type="button"
                   class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                  :class="point.manualApproved ? 'border-amber-700 bg-amber-200 text-amber-950 hover:bg-amber-300' : 'border-emerald-500/40 bg-emerald-500/10 text-black hover:bg-emerald-500/20'"
+                  :class="point.manualApproved ? 'border-amber-600 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-400/50 dark:bg-amber-500/20 dark:text-amber-100 dark:hover:bg-amber-500/30' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 hover:bg-emerald-500/20 dark:text-emerald-100 dark:hover:bg-emerald-500/30'"
                   :disabled="manualUpdateLoadingId === point.id"
                   @click="toggleManualApproval(point)"
                 >
                   {{ manualUpdateLoadingId === point.id ? "Aktualizuję..." : point.manualApproved ? "Cofnij ręczne zatwierdzenie" : "Zatwierdź ręcznie" }}
                 </button>
-                <span v-if="point.manualApproved" class="rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-950">Ręcznie zatwierdzone</span>
+                <span v-if="point.manualApproved" class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-100">Ręcznie zatwierdzone</span>
               </div>
             </div>
           </div>

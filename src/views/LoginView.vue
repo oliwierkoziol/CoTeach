@@ -63,10 +63,6 @@
           />
         </div>
 
-        <p class="mt-8 text-center text-sm text-muted-foreground">
-          Nie masz konta?
-          <RouterLink to="/register" class="font-semibold text-primary hover:underline">Zarejestruj się</RouterLink>
-        </p>
       </div>
     </div>
   </div>
@@ -186,7 +182,7 @@ async function handleLogin() {
     // Login should still succeed even if profile sync fails transiently.
   }
 
-  window.location.assign("/");
+  window.location.assign("/dashboard");
 }
 
 onMounted(() => {
