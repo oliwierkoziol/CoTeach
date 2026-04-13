@@ -1,39 +1,34 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 py-12 px-4">
-    <div class="max-w-2xl mx-auto">
-      <div class="bg-white rounded-3xl shadow-xl p-8">
-        <div class="text-center mb-8">
-          <h1 class="text-4xl font-bold text-slate-900">Mój Profil</h1>
-        </div>
+  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
+    <div class="mx-auto max-w-2xl">
+      <header class="mb-8">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Konto</p>
+        <h1 class="text-3xl font-bold text-foreground">Mój profil</h1>
+      </header>
 
-        <div class="flex justify-center mb-8">
-          <div class="relative group">
+      <div class="rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div class="mb-8 flex justify-center">
+          <div class="group relative">
             <div
-              class="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-slate-600 flex items-center justify-center shadow-lg overflow-hidden"
+              class="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary/50 shadow-lg"
             >
-              <img v-if="avatarUrl" :src="avatarUrl" alt="Avatar" class="w-full h-full object-cover" />
-              <span v-else class="text-5xl font-bold text-white">
+              <img v-if="avatarUrl" :src="avatarUrl" alt="Avatar" class="h-full w-full object-cover" />
+              <span v-else class="text-5xl font-bold text-primary-foreground">
                 {{ userInitials }}
               </span>
             </div>
 
             <div
-              class="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none"
+              class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
             >
-              <span class="text-white text-sm font-semibold text-center px-2">Zmień zdjęcie</span>
+              <span class="px-2 text-center text-sm font-semibold text-white">Zmień zdjęcie</span>
             </div>
 
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleAvatarUpload"
-            />
+            <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleAvatarUpload" />
 
             <button
               type="button"
-              class="absolute inset-0 rounded-full w-full h-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              class="absolute inset-0 h-full w-full cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Zmień zdjęcie profilowe"
               @click="openFilePicker"
             ></button>
@@ -42,6 +37,7 @@
 
         <div class="space-y-6">
           <div>
+<<<<<<< Updated upstream
             <label class="block text-sm font-semibold text-slate-700 mb-2">Imię i nazwisko</label>
             <div class="flex gap-2">
               <input
@@ -115,40 +111,64 @@
               >
                 Edytuj
               </button>
+=======
+            <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
+            <input
+              v-model.trim="userProfile.full_name"
+              type="text"
+              autocomplete="name"
+              class="w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="Jan Kowalski"
+            />
+            <button
+              type="button"
+              class="mt-3 w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
+              :disabled="isSavingName"
+              @click.prevent="saveFullName"
+            >
+              {{ isSavingName ? "Zapisywanie…" : "Zapisz imię i nazwisko" }}
+            </button>
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Email</label>
+            <div class="border-b border-border pb-2 text-lg text-foreground">
+              {{ userProfile.email || "Brak danych" }}
+>>>>>>> Stashed changes
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Data utworzenia konta</label>
-            <div class="text-lg text-slate-900 border-b-2 border-slate-200 pb-2">
+            <label class="mb-2 block text-sm font-semibold text-foreground">Data utworzenia konta</label>
+            <div class="border-b border-border pb-2 text-lg text-foreground">
               {{ formatDate(userProfile.created_at) }}
             </div>
           </div>
 
         </div>
 
-        <div v-if="isUploading" class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-2xl text-center">
-          <p class="text-blue-700 font-semibold">Przesyłanie zdjęcia...</p>
+        <div v-if="isUploading" class="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
+          <p class="font-semibold text-foreground">Przesyłanie zdjęcia...</p>
         </div>
 
-        <div v-if="errorMessage" class="mt-8 p-4 bg-red-50 border border-red-200 rounded-2xl">
-          <p class="text-red-700">{{ errorMessage }}</p>
+        <div v-if="errorMessage" class="mt-8 rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+          <p class="text-destructive">{{ errorMessage }}</p>
         </div>
 
-        <div v-if="successMessage" class="mt-8 p-4 bg-green-50 border border-green-200 rounded-2xl">
-          <p class="text-green-700">{{ successMessage }}</p>
+        <div v-if="successMessage" class="mt-8 rounded-xl border border-primary/25 bg-primary/10 p-4">
+          <p class="text-foreground">{{ successMessage }}</p>
         </div>
 
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <RouterLink
             to="/"
-            class="inline-block rounded-2xl bg-slate-900 px-6 py-3 text-white font-semibold hover:bg-slate-800 transition"
+            class="inline-block rounded-xl border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-muted/50"
           >
-            Wróć do Dashboardu
+            Start
           </RouterLink>
           <button
             type="button"
-            class="inline-block rounded-2xl border-2 border-slate-900 bg-white px-6 py-3 font-semibold text-slate-900 hover:bg-slate-50 transition"
+            class="inline-block rounded-xl border border-destructive/50 px-6 py-3 text-sm font-semibold text-destructive transition hover:bg-destructive/10"
             @click="handleLogout"
           >
             Wyloguj się
@@ -286,7 +306,12 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
+<<<<<<< Updated upstream
 import { createTemporarySupabaseClient, supabase } from "../supabase";
+=======
+import { supabase } from "../supabase";
+import { clearLessonStoreAuthCache } from "../composables/useLessonStore";
+>>>>>>> Stashed changes
 
 const router = useRouter();
 
@@ -711,6 +736,7 @@ const handleAvatarUpload = async (event) => {
 
 async function handleLogout() {
   await supabase.auth.signOut({ scope: "local" });
+  clearLessonStoreAuthCache();
   router.push("/login");
 }
 
