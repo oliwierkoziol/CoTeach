@@ -1,0 +1,64 @@
+```json
+[
+  {
+    "tytul_sekcji": "Definicja i Istota Hermetyzacji",
+    "streszczenie_sekcji": "Hermetyzacja polega na ukrywaniu reprezentacji wewnętrznej obiektu i oddzieleniu interfejsu od implementacji, co chroni stan wewnętrzny przed niekontrolowanymi zmianami.",
+    "keywords": [
+      "hermetyzacja",
+      "paradygmat programowania obiektowego",
+      "reprezentacja",
+      "stan",
+      "interfejs",
+      "implementacja"
+    ]
+  },
+  {
+    "tytul_sekcji": "Mechanizmy Implementacyjne i Modyfikatory Dostępu",
+    "streszczenie_sekcji": "Realizacja hermetyzacji za pomocą modyfikatorów dostępu (private, public, protected), które kontrolują widoczność pól, metod i klas w strukturze projektu i dziedziczeniu.",
+    "keywords": [
+      "modyfikator dostępu",
+      "klasa",
+      "metoda",
+      "pole",
+      "dziedziczenie",
+      "podklasa",
+      "klasa bazowa"
+    ]
+  },
+  {
+    "tytul_sekcji": "Kontrolowany Dostęp: Gettery i Settery",
+    "streszczenie_sekcji": "Zastosowanie specjalnych metod dostępowych (getterów i setterów) do bezpiecznego odczytu i modyfikacji prywatnych pól wraz z walidacją danych.",
+    "keywords": [
+      "getter",
+      "setter",
+      "metoda dostępowa",
+      "walidacja",
+      "wyjątek"
+    ]
+  },
+  {
+    "tytul_sekcji": "Podłoże Logiczne i Filozoficzne",
+    "streszczenie_sekcji": "Wykorzystanie hermetyzacji do redukcji sprzężenia, zapewnienia spójności stanu poprzez zasadę jednej odpowiedzialności oraz uproszczenia modelu systemu za pomocą abstrakcji.",
+    "keywords": [
+      "zasada jednej odpowiedzialności",
+      "spójność stanu",
+      "sprzężenie",
+      "abstrakcja",
+      "modelowanie rzeczywistości"
+    ]
+  },
+  {
+    "tytul_sekcji": "Kluczowe powiązania",
+    "streszczenie_sekcji": "Wpływ hermetyzacji na cyberbezpieczeństwo, realizację wzorców projektowych (Fasada, Singleton) oraz ułatwienie testowania jednostkowego i refaktoryzacji kodu.",
+    "keywords": [
+      "cyberbezpieczeństwo",
+      "wzorzec projektowy",
+      "fasada",
+      "singleton",
+      "konstruktor",
+      "testowanie jednostkowe",
+      "refaktoryzacja"
+    ]
+  }
+]
+```

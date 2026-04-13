@@ -76,7 +76,8 @@
               "
             >
               <span :class="navIconBoxClass(item, isActive, isExactActive)">
-                <component :is="item.icon" class="h-6 w-6" />
+                <component v-if="typeof item.icon !== 'string'" :is="item.icon" class="h-6 w-6" />
+                <img v-else :src="item.icon" alt="" class="h-6 w-6" />
               </span>
               <span :class="navLabelClass(item, isActive, isExactActive)">{{ item.label }}</span>
             </a>
@@ -127,7 +128,7 @@ function createStrokeIcon(name, childrenFn) {
               "stroke-width": "2",
               "stroke-linecap": "round",
               "stroke-linejoin": "round",
-              "aria-hidden": "true",
+              "aria-hidden": "true"
             },
             attrs
           ),
@@ -172,6 +173,10 @@ const IconChart = createStrokeIcon("IconChart", () => [
   h("line", { x1: "19", y1: "21", x2: "19", y2: "10" }),
 ]);
 
+const IconSparkles = createStrokeIcon("IconSparkles", () => [
+  h("path", { d: "M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" }),
+]);
+
 const route = useRoute();
 const router = useRouter();
 const open = ref(false);
@@ -195,6 +200,7 @@ const liveLessonTo = computed(() => {
 const navItems = computed(() => [
   { kind: "link", key: "start", to: "/", label: "Panel startowy", icon: IconGrid, exact: true },
   { kind: "link", key: "prep", to: "/preparation", label: "Materiały do lekcji", icon: IconFileUp, exact: false },
+  { kind: "link", key: "notes", to: "/notes", label: "Generator notatek", icon: IconSparkles, exact: false },
   { kind: "link", key: "live", to: liveLessonTo.value, label: "Lekcja na żywo", icon: IconMonitorPlay, exact: false },
   { kind: "presentation", key: "pres" },
   { kind: "link", key: "monitoring", to: "/archive", label: "Monitoring", icon: IconChart, exact: false },

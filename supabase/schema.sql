@@ -144,3 +144,50 @@ create policy "final_notes_delete_own" on public.final_notes for delete using (
     where p.id = auth.uid() and p.teacher_id = final_notes.teacher_id
   )
 );
+
+create table if not exists public.saved_notes (
+  id uuid primary key,
+  teacher_id text not null,
+  title text not null,
+  subject text not null,
+  class_level text,
+  content text not null,
+  source text not null default 'manual',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists saved_notes_teacher_idx on public.saved_notes(teacher_id);
+create index if not exists saved_notes_updated_idx on public.saved_notes(updated_at desc);
+
+alter table public.saved_notes enable row level security;
+
+drop policy if exists "saved_notes_select_own" on public.saved_notes;
+drop policy if exists "saved_notes_insert_own" on public.saved_notes;
+drop policy if exists "saved_notes_update_own" on public.saved_notes;
+drop policy if exists "saved_notes_delete_own" on public.saved_notes;
+
+create policy "saved_notes_select_own" on public.saved_notes for select using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = saved_notes.teacher_id
+  )
+);
+create policy "saved_notes_insert_own" on public.saved_notes for insert with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = saved_notes.teacher_id
+  )
+);
+create policy "saved_notes_update_own" on public.saved_notes for update using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = saved_notes.teacher_id
+  )
+);
+create policy "saved_notes_delete_own" on public.saved_notes for delete using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = saved_notes.teacher_id
+  )
+);

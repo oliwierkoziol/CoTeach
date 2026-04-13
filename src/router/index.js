@@ -11,6 +11,7 @@ import ShareView from "../views/ShareView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import ProfileView from "../views/ProfileView.vue";
+import NotesView from "../views/NotesView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: "/", component: DashboardView },
     { path: "/profile", component: ProfileView },
     { path: "/preparation", component: PreparationView },
+    { path: "/notes", component: NotesView },
     { path: "/live-lesson/:lessonId?", component: LiveLessonView },
     { path: "/presentation/:lessonId", component: PresentationView },
     { path: "/archive", component: ArchiveView },
