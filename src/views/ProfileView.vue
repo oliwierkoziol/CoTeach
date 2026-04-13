@@ -155,7 +155,7 @@
           <Transition name="pw-modal">
           <div
             v-if="showPasswordModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+            class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4 pw-modal-overlay"
             @mousedown.self="closePasswordModal"
           >
             <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 pw-modal-card">
@@ -798,6 +798,39 @@ async function handleDeleteAccount() {
 
 onMounted(loadUserProfile);
 </script>
+
+<style scoped>
+.pw-modal-enter-active,
+.pw-modal-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.pw-modal-enter-from,
+.pw-modal-leave-to {
+  opacity: 0;
+}
+
+.pw-modal-enter-active .pw-modal-overlay,
+.pw-modal-leave-active .pw-modal-overlay {
+  transition: background-color 0.18s ease;
+}
+
+.pw-modal-enter-from .pw-modal-overlay,
+.pw-modal-leave-to .pw-modal-overlay {
+  background-color: rgb(0 0 0 / 0%);
+}
+
+.pw-modal-enter-active .pw-modal-card,
+.pw-modal-leave-active .pw-modal-card {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.pw-modal-enter-from .pw-modal-card,
+.pw-modal-leave-to .pw-modal-card {
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+}
+</style>
 
 <style scoped>
 /* overlay fade */

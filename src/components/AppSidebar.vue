@@ -144,6 +144,7 @@ const { state, fetchLessons } = useLessonStore();
 const userEmail = ref("");
 const userAvatarUrl = ref("");
 const userFullName = ref("");
+const isAdmin = ref(false);
 const sessionUserId = ref("");
 
 let authListener = null;
@@ -155,14 +156,21 @@ const presentationLink = computed(() => {
   return `/presentation/${id}`;
 });
 
-const items = computed(() => [
-  { to: "/", label: "Start", short: "◆", exact: true },
-  { to: "/preparation", label: "Przygotowanie", short: "1", exact: false },
-  { to: "/live-lesson", label: "Lekcja na żywo", short: "2", exact: false },
-  { to: presentationLink.value, label: "Prezentacja", short: "3", exact: false },
-  { to: "/archive", label: "Archiwum", short: "4", exact: false },
-  { to: "/admin", label: "Administracja", short: "5", exact: false },
-]);
+const items = computed(() => {
+  const baseItems = [
+    { to: "/", label: "Start", short: "◆", exact: true },
+    { to: "/preparation", label: "Przygotowanie", short: "1", exact: false },
+    { to: "/live-lesson", label: "Lekcja na żywo", short: "2", exact: false },
+    { to: presentationLink.value, label: "Prezentacja", short: "3", exact: false },
+    { to: "/archive", label: "Archiwum", short: "4", exact: false },
+  ];
+
+  if (isAdmin.value) {
+    baseItems.push({ to: "/admin/users", label: "Panel sterowania admina", short: "A", exact: false });
+  }
+
+  return baseItems;
+});
 
 const userInitials = computed(() => {
   if (!userEmail.value) return "U";
@@ -182,15 +190,17 @@ async function loadUserProfile(userId) {
   if (!userId) {
     userAvatarUrl.value = "";
     userFullName.value = "";
+    isAdmin.value = false;
     return;
   }
   const { data: profile } = await supabase
     .from("profiles")
-    .select("avatar_url, full_name")
+    .select("avatar_url, full_name, admin")
     .eq("id", userId)
     .maybeSingle();
   userAvatarUrl.value = profile?.avatar_url || "";
   userFullName.value = String(profile?.full_name || "").trim();
+  isAdmin.value = profile?.admin === true;
 }
 
 function applySession(session) {
@@ -203,6 +213,7 @@ function applySession(session) {
   userEmail.value = "";
   userAvatarUrl.value = "";
   userFullName.value = "";
+  isAdmin.value = false;
   sessionUserId.value = "";
   return Promise.resolve();
 }

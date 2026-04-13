@@ -93,11 +93,13 @@ const infoMessage = ref("");
 
 async function upsertProfileRow({ id, email, fullName }) {
   if (!id) return;
+  const teacherId = `teacher-${crypto.randomUUID()}`;
   await supabase.from("profiles").upsert(
     {
       id,
       email: email || null,
       full_name: fullName || null,
+      teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }

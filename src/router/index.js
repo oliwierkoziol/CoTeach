@@ -64,11 +64,9 @@ router.beforeEach(async (to) => {
   if (timedOut) return true;
   if (!session) return { path: "/login", query: { redirect: to.fullPath } };
 
-  if (to.path.startsWith("/admin")) return true;
-
   const { data: profile, error: blockedCheckError } = await supabase
     .from("profiles")
-    .select("blocked")
+    .select("blocked, admin")
     .eq("id", session.user.id)
     .maybeSingle();
 
@@ -76,6 +74,11 @@ router.beforeEach(async (to) => {
     await supabase.auth.signOut({ scope: "local" });
     return { path: "/login", query: { blocked: "1" } };
   }
+
+  if (to.path.startsWith("/admin") && profile?.admin !== true) {
+    return { path: "/" };
+  }
+
   return true;
 });
 

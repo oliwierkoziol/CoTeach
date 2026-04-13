@@ -21,6 +21,39 @@ create table if not exists public.lessons (
 
 create index if not exists lessons_status_idx on public.lessons(status);
 create index if not exists lessons_updated_at_idx on public.lessons(updated_at desc);
+create index if not exists lessons_teacher_idx on public.lessons(teacher_id);
+
+alter table public.lessons enable row level security;
+
+drop policy if exists "lessons_select_own" on public.lessons;
+drop policy if exists "lessons_insert_own" on public.lessons;
+drop policy if exists "lessons_update_own" on public.lessons;
+drop policy if exists "lessons_delete_own" on public.lessons;
+
+create policy "lessons_select_own" on public.lessons for select using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = lessons.teacher_id
+  )
+);
+create policy "lessons_insert_own" on public.lessons for insert with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = lessons.teacher_id
+  )
+);
+create policy "lessons_update_own" on public.lessons for update using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = lessons.teacher_id
+  )
+);
+create policy "lessons_delete_own" on public.lessons for delete using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = lessons.teacher_id
+  )
+);
 
 create table if not exists public.lesson_cost_events (
   id uuid primary key default gen_random_uuid(),
@@ -54,6 +87,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
+  teacher_id text,
   admin boolean not null default false,
   blocked boolean not null default false,
   avatar_url text,
@@ -63,6 +97,11 @@ create table if not exists public.profiles (
 
 alter table public.profiles
   add column if not exists blocked boolean not null default false;
+
+alter table public.profiles
+  add column if not exists teacher_id text;
+
+create unique index if not exists profiles_teacher_id_unique_idx on public.profiles(teacher_id) where teacher_id is not null;
 
 alter table public.profiles enable row level security;
 
@@ -81,7 +120,27 @@ drop policy if exists "final_notes_insert_own" on public.final_notes;
 drop policy if exists "final_notes_update_own" on public.final_notes;
 drop policy if exists "final_notes_delete_own" on public.final_notes;
 
-create policy "final_notes_select_own" on public.final_notes for select using (auth.uid()::text = teacher_id);
-create policy "final_notes_insert_own" on public.final_notes for insert with check (auth.uid()::text = teacher_id);
-create policy "final_notes_update_own" on public.final_notes for update using (auth.uid()::text = teacher_id);
-create policy "final_notes_delete_own" on public.final_notes for delete using (auth.uid()::text = teacher_id);
+create policy "final_notes_select_own" on public.final_notes for select using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = final_notes.teacher_id
+  )
+);
+create policy "final_notes_insert_own" on public.final_notes for insert with check (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = final_notes.teacher_id
+  )
+);
+create policy "final_notes_update_own" on public.final_notes for update using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = final_notes.teacher_id
+  )
+);
+create policy "final_notes_delete_own" on public.final_notes for delete using (
+  exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.teacher_id = final_notes.teacher_id
+  )
+);

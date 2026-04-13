@@ -72,7 +72,15 @@
               {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
             </button>
 
-            <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(selected.finalNote.shareUrl)}`" alt="QR" width="220" height="220" />
+            <div class="flex justify-center">
+              <button
+                type="button"
+                class="rounded-2xl border border-border bg-card p-3 transition hover:border-primary/40"
+                @click="openQrModal"
+              >
+                <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
+              </button>
+            </div>
 
             <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white text-sm" @click="openFinalNote">
               Przenieś do notatki
@@ -85,6 +93,20 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <Transition name="qr-modal">
+        <div
+          v-if="isQrModalOpen && qrCodeUrl"
+          class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+          @click="closeQrModal"
+        >
+          <div class="rounded-3xl bg-white p-5 shadow-2xl" @click.stop>
+            <img :src="qrCodeUrl" alt="QR" width="320" height="320" class="mx-auto h-auto w-full max-w-[320px]" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -99,6 +121,7 @@ const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
+const isQrModalOpen = ref(false);
 
 onMounted(async () => {
   await fetchLessons();
@@ -111,11 +134,18 @@ const filteredLessons = computed(() => {
   return state.lessons.filter((l) => `${l.title} ${l.subject} ${l.month}`.toLowerCase().includes(q));
 });
 
+const qrCodeUrl = computed(() => {
+  const shareUrl = selected.value?.finalNote?.shareUrl;
+  if (!shareUrl) return "";
+  return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(shareUrl)}`;
+});
+
 function discussed(lesson) {
   return (lesson.plan || []).filter((p) => p.status === "discussed").length;
 }
 
 function selectLesson(lesson) {
+  isQrModalOpen.value = false;
   selected.value = lesson;
   editTitle.value = String(lesson?.finalNote?.title || "");
   editSubject.value = String(lesson?.finalNote?.subject || "");
@@ -154,4 +184,35 @@ function openFinalNote() {
   if (!selected.value?.finalNote?.shareUrl) return;
   window.open(selected.value.finalNote.shareUrl, "_blank", "noopener,noreferrer");
 }
+
+function openQrModal() {
+  if (!qrCodeUrl.value) return;
+  isQrModalOpen.value = true;
+}
+
+function closeQrModal() {
+  isQrModalOpen.value = false;
+}
 </script>
+
+<style scoped>
+.qr-modal-enter-active,
+.qr-modal-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.qr-modal-enter-from,
+.qr-modal-leave-to {
+  opacity: 0;
+}
+
+.qr-modal-enter-from > div,
+.qr-modal-leave-to > div {
+  transform: scale(0.92);
+}
+
+.qr-modal-enter-to > div,
+.qr-modal-leave-from > div {
+  transform: scale(1);
+}
+</style>

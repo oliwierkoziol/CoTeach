@@ -148,6 +148,61 @@ async function requireAdmin(req, res) {
   return true;
 }
 
+async function resolveTeacherContext(req, res) {
+  if (!supabase) {
+    return { teacherId: defaultTeacherId };
+  }
+  const user = await getRequestUser(req);
+  if (!user?.id) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("teacher_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    res.status(500).json({ error: `Nie udało się odczytać profilu: ${profileError.message}` });
+    return null;
+  }
+
+  let teacherId = String(profile?.teacher_id || "").trim();
+  if (!teacherId) {
+    teacherId = `teacher-${randomUUID()}`;
+    const { error: upsertError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email || null,
+        teacher_id: teacherId,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "id" }
+    );
+    if (upsertError) {
+      res.status(500).json({ error: `Nie udało się zapisać teacher_id: ${upsertError.message}` });
+      return null;
+    }
+  }
+
+  return { teacherId };
+}
+
+function getOwnedLessonOrRespond(req, res, teacherId) {
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    res.status(404).json({ error: "Lesson not found" });
+    return null;
+  }
+  if (String(lesson.teacherId) !== String(teacherId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return null;
+  }
+  return lesson;
+}
+
 function rowToLesson(row) {
   return {
     id: row.id,
@@ -538,6 +593,9 @@ app.put("/api/account/email", async (req, res) => {
 });
 
 app.post("/api/lessons", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
   const { title, subject, month, date, rawText = "" } = req.body || {};
   if (!title || !subject || !month) return res.status(400).json({ error: "Missing fields" });
 
@@ -545,7 +603,7 @@ app.post("/api/lessons", async (req, res) => {
   const lesson = {
     id: randomUUID(),
     schoolId: defaultSchoolId,
-    teacherId: defaultTeacherId,
+    teacherId: teacher.teacherId,
     title,
     subject,
     month,
@@ -565,14 +623,20 @@ app.post("/api/lessons", async (req, res) => {
   return res.status(201).json({ lesson });
 });
 
-app.get("/api/lessons", (_req, res) => {
-  res.json({ lessons: [...db.lessons.values()] });
+app.get("/api/lessons", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const lessons = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === teacher.teacherId);
+  res.json({ lessons });
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
   try {
-    const lesson = db.lessons.get(req.params.lessonId);
-    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+    if (!lesson) return;
 
     let extractedText = String(req.body.rawText || "").trim();
     if (!extractedText && req.file) {
@@ -601,8 +665,10 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
 });
 
 app.put("/api/lessons/:lessonId/plan", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   lesson.plan = req.body.plan || [];
   lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
@@ -611,8 +677,10 @@ app.put("/api/lessons/:lessonId/plan", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const check = checkLicenseForSchool(lesson.schoolId);
   if (!check.allowed) return res.status(403).json({ error: check.reason });
   lesson.status = "live";
@@ -623,8 +691,10 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
 
@@ -643,8 +713,10 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
 });
 
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -653,8 +725,10 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
 });
 
 app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson);
   const noteId = randomUUID();
   const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
@@ -679,8 +753,10 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
 });
 
 app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
   const title = String(req.body?.title || "").trim();
@@ -704,8 +780,10 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
 });
 
 app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
   lesson.finalNote = null;
@@ -715,9 +793,11 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   return res.json({ lesson });
 });
 
-app.get("/api/lessons/:lessonId/costs", (req, res) => {
-  const lesson = db.lessons.get(req.params.lessonId);
-  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+app.get("/api/lessons/:lessonId/costs", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  if (!lesson) return;
   return res.json(getCostSummary(lesson.id));
 });
 
@@ -777,7 +857,19 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
 
   const userId = req.params.userId;
 
-  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === String(userId));
+  const { data: targetProfile, error: targetProfileError } = await supabase
+    .from("profiles")
+    .select("teacher_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetProfileError) {
+    return res.status(500).json({ error: `Nie udało się pobrać teacher_id użytkownika: ${targetProfileError.message}` });
+  }
+
+  const targetTeacherId = String(targetProfile?.teacher_id || userId);
+
+  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === targetTeacherId);
   for (const lesson of lessonsToDelete) {
     db.lessons.delete(lesson.id);
     db.costs.delete(lesson.id);
@@ -788,7 +880,7 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
     return res.status(500).json({ error: `Nie udało się usunąć profilu: ${profileDeleteError.message}` });
   }
 
-  const { error: lessonsDeleteError } = await supabase.from("lessons").delete().eq("teacher_id", userId);
+  const { error: lessonsDeleteError } = await supabase.from("lessons").delete().eq("teacher_id", targetTeacherId);
   if (lessonsDeleteError) {
     return res.status(500).json({ error: `Nie udało się usunąć lekcji użytkownika: ${lessonsDeleteError.message}` });
   }
@@ -809,10 +901,15 @@ app.get("/api/license/check", (req, res) => {
 
 app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
     const lessonId = String(req.body.lessonId || "");
     const lesson = db.lessons.get(lessonId);
     if (!lessonId || !lesson) {
       return res.status(400).json({ error: "Valid lessonId is required." });
+    }
+    if (String(lesson.teacherId) !== teacher.teacherId) {
+      return res.status(403).json({ error: "Forbidden" });
     }
     if (!req.file?.buffer) {
       return res.status(400).json({ error: "Audio file is required." });
