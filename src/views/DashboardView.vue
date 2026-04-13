@@ -105,7 +105,9 @@ onMounted(async () => {
 watch(
   () => route.path,
   (path) => {
-    if (path === "/dashboard") loadDisplayName();
+    if (path === "/dashboard") {
+      loadDisplayName();
+    }
   }
 );
 

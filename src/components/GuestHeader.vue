@@ -1,12 +1,11 @@
 <template>
   <header
-    class="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur-md sm:h-[4.5rem] sm:px-6"
+    class="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur-md sm:h-16 sm:px-6"
   >
-    <RouterLink to="/" class="flex items-center gap-2 font-semibold text-foreground no-underline sm:gap-3">
-      <div class="flex h-12 items-center">
-        <img src="../assets/logo.svg" alt="Logo" class="max-h-11 w-auto object-contain logo" />
+    <RouterLink to="/" class="flex items-center font-semibold text-foreground no-underline">
+      <div class="flex h-10 w-[150px] items-center overflow-hidden sm:h-16 sm:w-[280px] lg:h-24 lg:w-[380px]">
+        <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-16 lg:h-20" />
       </div>
-      <span class="text-base font-semibold tracking-tight">CoTeach</span>
     </RouterLink>
     <div v-if="showActions" class="flex items-center gap-2 text-sm">
       <button

@@ -1,5 +1,5 @@
 <template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-2">
+  <div class="grid min-h-[calc(100vh-3.5rem)] bg-gradient-to-br from-card via-sidebar to-background lg:bg-none lg:grid-cols-2">
     <div
       class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-card via-sidebar to-background p-10 text-foreground lg:flex"
     >
@@ -13,9 +13,9 @@
 
     <div class="flex items-center justify-center px-4 py-12 sm:px-8">
       <div class="w-full max-w-md">
-        <div class="mb-8 lg:hidden">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">CoTeach</p>
-          <h1 class="mt-2 text-2xl font-bold text-foreground">Rejestracja</h1>
+        <div class="mb-10 text-center lg:hidden">
+          <p class="text-sm font-semibold uppercase tracking-[0.28em] text-primary">CoTeach</p>
+          <h1 class="mt-2 text-4xl font-bold text-foreground">Rejestracja</h1>
         </div>
         <div class="mb-8 hidden lg:block">
           <h1 class="text-2xl font-bold text-foreground">Rejestracja</h1>

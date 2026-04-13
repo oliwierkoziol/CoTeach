@@ -8,6 +8,18 @@
           <p class="mt-1 text-sm text-muted-foreground">Monitoring i analiza postępu</p>
         </header>
         <div class="flex shrink-0 gap-2">
+          <div class="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Długość lekcji</span>
+            <select
+              v-model.number="selectedLessonDurationMinutes"
+              class="rounded-lg border border-border bg-input-background px-2 py-1.5 text-sm text-foreground outline-none"
+              :disabled="isRecording"
+            >
+              <option v-for="option in lessonDurationOptions" :key="option.minutes" :value="option.minutes">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
           <button
             v-if="!isRecording"
             type="button"
@@ -48,7 +60,7 @@
           >
             <div class="flex items-center justify-between gap-2">
               <div class="font-semibold text-foreground">{{ isRecording ? "Nagrywanie aktywne" : "Oczekiwanie..." }}</div>
-              <div class="text-sm text-muted-foreground">{{ elapsedLabel }} | {{ costLabel }}</div>
+              <div class="text-sm text-muted-foreground">{{ elapsedLabel }} / {{ durationLabel }} | {{ costLabel }}</div>
             </div>
           </div>
 
@@ -107,6 +119,16 @@
         </div>
 
         <div class="space-y-6">
+          <div class="rounded-2xl border border-border bg-card p-6">
+            <h2 class="text-lg font-semibold text-foreground">Czas lekcji</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Wybrany limit: <span class="font-semibold text-foreground">{{ durationLabel }}</span>
+            </p>
+            <p class="mt-2 text-sm text-muted-foreground">
+              Lekcja zatrzyma się automatycznie po upływie tego czasu.
+            </p>
+          </div>
+
           <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
             <h2 class="text-lg font-semibold text-foreground">Ustawienia mikrofonu</h2>
             <div
@@ -253,6 +275,14 @@ function normalizeBaseUrl(url) {
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
 
+const lessonDurationOptions = [
+  { label: "45 min", minutes: 45 },
+  { label: "1h 30 min", minutes: 90 },
+  { label: "2h", minutes: 120 },
+  { label: "2h 15 min", minutes: 135 },
+  { label: "3h", minutes: 180 }
+];
+
 const route = useRoute();
 const router = useRouter();
 const { state, startLive, sendTranscript, refreshCoverage, setManualPointApproval, finalizeLesson, fetchLessons } = useLessonStore();
@@ -283,6 +313,8 @@ const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
 const manualUpdateLoadingId = ref("");
+const selectedLessonDurationMinutes = ref(45);
+const activeSessionDurationMinutes = ref(45);
 let apiPingTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
@@ -290,6 +322,14 @@ const discussedCount = computed(() => points.value.filter((p) => p.status === "d
 const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
 const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
+const durationLabel = computed(() => {
+  const minutes = activeSessionDurationMinutes.value || selectedLessonDurationMinutes.value || 45;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (remainder === 0) return `${hours}h`;
+  return `${hours}h ${remainder} min`;
+});
 const costLabel = computed(() =>
   state.costInfo ? `${Number(state.costInfo.total).toFixed(2)} PLN` : "0.00 PLN"
 );
@@ -331,12 +371,18 @@ async function startSession() {
       error.value = "Brak lekcji. Najpierw utwórz plan.";
       return;
     }
+    activeSessionDurationMinutes.value = selectedLessonDurationMinutes.value || 45;
     await startLive(state.lesson.id);
     await beginMic();
     isRecording.value = true;
+    elapsedSec.value = 0;
     startAt.value = Date.now();
     timer.value = setInterval(() => {
       elapsedSec.value = Math.floor((Date.now() - startAt.value) / 1000);
+      if (elapsedSec.value >= activeSessionDurationMinutes.value * 60) {
+        info.value = `Osiągnięto ustawiony czas lekcji (${durationLabel.value}). Lekcja została zatrzymana automatycznie.`;
+        stopSession();
+      }
     }, 1000);
   } catch (e) {
     error.value = e.message;
@@ -353,7 +399,9 @@ function stopSession() {
   isRecording.value = false;
   interimCaption.value = "";
   if (timer.value) clearInterval(timer.value);
+  timer.value = null;
   if (analyserTimer.value) clearInterval(analyserTimer.value);
+  analyserTimer.value = null;
   stopMicMeter();
   sttStatus.value = "idle";
 }
