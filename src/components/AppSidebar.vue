@@ -27,7 +27,7 @@
               <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="" class="h-full w-full object-cover" />
               <span v-else>{{ userInitials }}</span>
             </span>
-            <span class="truncate">Profil</span>
+            <span class="truncate">{{ userDisplayName }}</span>
           </a>
         </RouterLink>
         <button
@@ -131,6 +131,7 @@ const { state, fetchLessons } = useLessonStore();
 
 const userEmail = ref("");
 const userAvatarUrl = ref("");
+const userFullName = ref("");
 const sessionUserId = ref("");
 
 let authListener = null;
@@ -159,27 +160,37 @@ const userInitials = computed(() => {
   return (initials || userEmail.value[0]).substring(0, 2);
 });
 
-async function loadUserAvatar(userId) {
+const userDisplayName = computed(() => {
+  const fullName = String(userFullName.value || "").trim();
+  if (fullName) return fullName;
+  return "Profil";
+});
+
+async function loadUserProfile(userId) {
   if (!userId) {
     userAvatarUrl.value = "";
+    userFullName.value = "";
     return;
   }
   const { data: profile } = await supabase
     .from("profiles")
-    .select("avatar_url")
+    .select("avatar_url, full_name")
     .eq("id", userId)
     .maybeSingle();
   userAvatarUrl.value = profile?.avatar_url || "";
+  userFullName.value = String(profile?.full_name || "").trim();
 }
 
 function applySession(session) {
   if (session?.user) {
     userEmail.value = session.user.email || "";
+    userFullName.value = String(session.user.user_metadata?.full_name || "").trim();
     sessionUserId.value = session.user.id;
-    return loadUserAvatar(session.user.id);
+    return loadUserProfile(session.user.id);
   }
   userEmail.value = "";
   userAvatarUrl.value = "";
+  userFullName.value = "";
   sessionUserId.value = "";
   return Promise.resolve();
 }
@@ -205,7 +216,7 @@ watch(
     if (!sessionUserId.value) return;
     clearTimeout(routeDebounceTimer);
     routeDebounceTimer = setTimeout(() => {
-      void loadUserAvatar(sessionUserId.value).catch(console.error);
+      void loadUserProfile(sessionUserId.value).catch(console.error);
     }, 250);
   }
 );
