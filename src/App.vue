@@ -5,19 +5,16 @@
       <RouterView />
     </template>
     <RouterView v-else-if="presentationMode" />
-    <div v-else class="flex min-h-screen">
-      <AppSidebar />
-      <main class="min-h-screen min-w-0 flex-1 overflow-x-hidden pt-[4.5rem] md:ml-[260px]">
-        <RouterView />
-      </main>
-    </div>
+    <AppLayout v-else>
+      <RouterView />
+    </AppLayout>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import AppSidebar from "./components/AppSidebar.vue";
+import AppLayout from "./components/AppLayout.vue";
 import GuestHeader from "./components/GuestHeader.vue";
 import { initTheme } from "./composables/useTheme";
 import { supabase } from "./supabase";
