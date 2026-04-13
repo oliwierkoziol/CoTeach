@@ -1,18 +1,37 @@
 <template>
-  <div class="min-h-screen bg-background text-foreground antialiased">
-    <template v-if="minimalChrome">
-      <GuestHeader />
-      <RouterView />
-    </template>
-    <RouterView v-else-if="presentationMode" />
-    <AppLayout v-else>
-      <RouterView />
-    </AppLayout>
+  <div class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+    <div class="flex-1">
+      <template v-if="minimalChrome">
+        <GuestHeader />
+        <div
+          v-if="showLicenseWarning"
+          class="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
+        >
+          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+        </div>
+        <RouterView />
+      </template>
+      <template v-else-if="presentationMode">
+        <div
+          v-if="showLicenseWarning"
+          class="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
+        >
+          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+        </div>
+        <RouterView />
+      </template>
+      <AppLayout v-else :license-warning="showLicenseWarning">
+        <RouterView />
+      </AppLayout>
+    </div>
+    <footer class="border-t border-border bg-card/70 px-4 py-3 text-center text-xs text-muted-foreground">
+      &copy; LeanMate 2026
+    </footer>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppLayout from "./components/AppLayout.vue";
 import GuestHeader from "./components/GuestHeader.vue";
@@ -21,6 +40,15 @@ import { supabase } from "./supabase";
 
 const route = useRoute();
 const router = useRouter();
+const showLicenseWarning = ref(false);
+
+function normalizeBaseUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/\/$/, "");
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
 const minimalChrome = computed(() => {
   const p = route.path;
   return p === "/" || p === "/login" || p === "/register" || p.startsWith("/share/");
@@ -87,6 +115,32 @@ async function checkInactivityLogout() {
   }
 }
 
+async function refreshLicenseWarning() {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+  if (!token) {
+    showLicenseWarning.value = false;
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/account/license-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      showLicenseWarning.value = false;
+      return;
+    }
+    showLicenseWarning.value = data?.hasActiveLicense !== true;
+  } catch {
+    showLicenseWarning.value = false;
+  }
+}
+
 onMounted(() => {
   initTheme();
 
@@ -99,16 +153,26 @@ onMounted(() => {
   }, 60000);
 
   void checkInactivityLogout();
+  void refreshLicenseWarning();
 
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     if (session) {
       setActivityCookie();
+      void refreshLicenseWarning();
       return;
     }
     clearActivityCookie();
+    showLicenseWarning.value = false;
   });
   authSubscription = data.subscription;
 });
+
+watch(
+  () => route.fullPath,
+  () => {
+    void refreshLicenseWarning();
+  }
+);
 
 onUnmounted(() => {
   ACTIVITY_EVENTS.forEach((eventName) => {
