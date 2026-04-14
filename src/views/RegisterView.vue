@@ -61,6 +61,20 @@
           </button>
         </form>
 
+        <div class="my-5 flex items-center gap-3">
+          <span class="h-px flex-1 bg-border"></span>
+          <span class="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">lub</span>
+          <span class="h-px flex-1 bg-border"></span>
+        </div>
+
+        <button
+          type="button"
+          @click="handleGoogleAuth"
+          class="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
+        >
+          Zarejestruj się przez Google
+        </button>
+
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {{ errorMessage }}
         </div>
@@ -149,6 +163,33 @@ async function handleRegister() {
     );
     infoMessage.value =
       "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
+  }
+}
+
+async function handleGoogleAuth() {
+  errorMessage.value = "";
+  infoMessage.value = "";
+
+  const fullName = String(name.value || "").trim();
+  const fallbackEmail = String(email.value || "").trim().toLowerCase();
+
+  if (fullName || fallbackEmail) {
+    localStorage.setItem(
+      PENDING_PROFILE_SEED_KEY,
+      JSON.stringify({ email: fallbackEmail, full_name: fullName, created_at: Date.now() })
+    );
+  }
+
+  const redirectTo = `${window.location.origin}/dashboard`;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo
+    }
+  });
+
+  if (error) {
+    errorMessage.value = error.message;
   }
 }
 </script>
