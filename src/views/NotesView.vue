@@ -1,97 +1,164 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-7xl">
-      <header class="mb-8">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
-        <h1 class="text-3xl font-bold text-foreground">Generator notatek</h1>
-        <p class="mt-1 text-sm text-muted-foreground">Tworzenie i zapisywanie samych notatek lekcyjnych</p>
-      </header>
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
-      <div v-if="error" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        {{ error }}
-      </div>
-      <div v-if="info" class="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">
-        {{ info }}
+    <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
+      <!-- Header -->
+      <div class="content-stretch flex flex-col gap-[8px] items-center justify-center relative shrink-0 w-full mb-4">
+        <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
+          <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Dodaj materiały</h2>
+        </div>
+        <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
+          <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.</p>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
-          <div class="rounded-2xl border border-border bg-card p-6 space-y-4">
-            <h2 class="text-lg font-semibold text-foreground">Nowa notatka</h2>
-            <div>
-              <label class="text-sm text-muted-foreground">Przedmiot</label>
-              <input v-model="subject" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Historia" />
+      <!-- Podstawowe Informacje -->
+      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[32px] pt-[20px] px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <div class="content-stretch flex flex-col items-start relative shrink-0">
+          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px]">Podstawowe informacje</h3>
+        </div>
+
+        <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 lg:grid-cols-2 relative shrink-0 w-full mt-2">
+          <!-- Przedmiot -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Przedmiot</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input v-model="subject" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="np. Matematyka, Język Polski..." />
+              <svg class="absolute right-[12px] w-[22px] h-[18px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 22 18">
+                <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
+              </svg>
             </div>
-            <div>
-              <label class="text-sm text-muted-foreground">Temat lekcji</label>
-              <input v-model="title" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Powstanie listopadowe" />
+          </div>
+
+          <!-- Data -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Data</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input type="date" v-model="lessonDate" class="bg-transparent border-none outline-none w-full h-full px-[16px] pr-[40px] text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] [color-scheme:light]" />
+              <svg class="absolute right-[12px] w-[18px] h-[20px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 20">
+                <path d="M4 2H14V0H16V2H18V20H0V2H2V0H4V2ZM16 18V6H2V18H16ZM14 10H4V8H14V10ZM14 14H4V12H14V14Z" />
+              </svg>
             </div>
-            <div>
-              <label class="text-sm text-muted-foreground">Klasa</label>
-              <select
-                v-model="classLevel"
-                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                @focus="expandSelectOnMobile"
-                @blur="collapseSelect"
-                @change="collapseSelect"
-              >
+          </div>
+
+          <!-- Temat -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Temat</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
+              <svg class="absolute right-[12px] w-[18px] h-[16px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
+                <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Klasa -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Klasa</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+                <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
+                  <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
+                </svg>
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
             </div>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button type="button" class="rounded-xl border border-border bg-card py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-50" :disabled="loading" @click="handleGenerate">
-                {{ loading ? "Generuję..." : "Generuj notatkę AI" }}
-              </button>
-              <button type="button" class="rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50" :disabled="saving" @click="handleSave">
-                {{ saving ? "Zapisuję..." : "Zapisz notatkę" }}
-              </button>
-            </div>
-            <button
-              type="button"
-              class="w-full rounded-xl border border-border bg-card py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-50"
-              :disabled="!content.trim()"
-              @click="downloadNotePdf()"
-            >
-              Pobierz bieżącą notatkę (PDF)
-            </button>
-            <div>
-              <label class="text-sm text-muted-foreground">Treść notatki</label>
-              <textarea v-model="content" class="mt-1 min-h-[280px] w-full rounded-xl border border-border bg-input-background p-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="Treść notatki wygeneruje AI albo wpisz ją ręcznie..." />
+          </div>
+        </div>
+      </div>
+
+      <!-- Ingestion Area -->
+      <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 xl:grid-cols-12 relative shrink-0 w-full xl:min-h-[282px]">
+        
+        <!-- Text Input Area -->
+        <div class="xl:col-[1/span_9] content-stretch flex flex-col items-start relative shrink-0 w-full h-full">
+          <div class="bg-white relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full h-full">
+            <div class="content-stretch flex flex-col gap-[24px] items-start p-[32px] relative size-full h-full">
+              <div class="flex items-center justify-between relative shrink-0 w-full">
+                <div class="content-stretch flex flex-col items-start relative shrink-0">
+                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] whitespace-nowrap">Materiały źródłowe</h3>
+                </div>
+                <div class="flex items-center gap-[16px]">
+                  <button type="button" class="bg-[#0c3dfe] content-stretch flex items-center px-[32px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50" :disabled="loading" @click="handleGenerate">
+                    <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ loading ? "Generowanie..." : "Generuj notatkę AI" }}</span>
+                    <svg class="ml-2 w-[16px] h-[16px]" fill="none" viewBox="0 0 15.7635 15.7635">
+                      <path d="M7.88175 0L10.3204 5.4431L15.7635 7.88175L10.3204 10.3204L7.88175 15.7635L5.4431 10.3204L0 7.88175L5.4431 5.4431L7.88175 0Z" fill="white" />
+                    </svg>
+                  </button>
+                  <div class="content-stretch flex flex-col items-start">
+                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-[12px] leading-[16px] whitespace-nowrap">
+                      {{ rawTextContent.length }} / 25,000 Znaki
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[150px]">
+                <textarea 
+                  v-model="rawTextContent"
+                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
+                  placeholder="Paste lecture notes, book transcripts, or structured syllabi here for deep analysis..."
+                ></textarea>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-border bg-card p-6">
-          <h3 class="mb-3 font-semibold text-foreground">Zapisane notatki</h3>
-          <div class="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-            <div
-              v-for="note in state.notes"
-              :key="note.id"
-              class="w-full rounded-xl border border-border bg-card p-3 text-left transition hover:bg-muted/40"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <button type="button" class="min-w-0 flex-1 text-left" @click="loadNote(note)">
-                  <p class="truncate text-sm font-semibold text-foreground">{{ note.title }}</p>
-                  <p class="mt-1 text-xs text-muted-foreground">{{ note.subject }} • {{ note.classLevel || 'brak klasy' }}</p>
-                </button>
-                <button
-                  type="button"
-                  class="shrink-0 rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive transition hover:bg-destructive/20"
-                  @click="handleDelete(note)"
-                >
-                  Usuń
-                </button>
-                <button
-                  type="button"
-                  class="shrink-0 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-foreground transition hover:bg-muted/40"
-                  @click="downloadNotePdf(note)"
-                >
-                  PDF
-                </button>
+        <!-- Drag and Drop Zone -->
+        <div class="xl:col-[10/span_3] bg-white relative rounded-[12px] self-stretch shrink-0 w-full min-h-[250px] xl:min-h-[282px]">
+          <div class="overflow-hidden rounded-[12px] h-full w-full absolute inset-0">
+            <div class="flex flex-col items-center justify-center p-[34px] xl:pb-[34px] xl:pt-[11px] size-full">
+              <!-- Icon -->
+              <div class="bg-[#e6e8eb] flex items-center justify-center rounded-full shrink-0 size-[64px] mb-[24px]">
+                <svg class="w-[28px] h-[20px]" fill="none" viewBox="0 0 28 20">
+                   <path d="M19.35 7.04C18.67 3.05 15.33 0 11.25 0C7.81 0 4.88 2.34 3.79 5.6C1.61 6.13 0 8.08 0 10.5C0 13.54 2.46 16 5.5 16H19.5C21.98 16 24 13.98 24 11.5C24 9.14 22.18 7.24 19.35 7.04ZM14.25 10V13H8.25V10H4.5L11.25 3L18 10H14.25Z" fill="#0C3DFE" />
+                </svg>
               </div>
+              <!-- Texts -->
+              <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-[20px] text-black text-center leading-[28px] max-w-[236px]">Prześlij plik z materiałem</h4>
+              <div class="h-[9px] w-full shrink-0"></div>
+              <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[14px] text-center leading-[20px] max-w-[250px]">
+                Upuść tu plik PDF, DOCX albo PPTX, aby odczytać z niego dane.
+              </p>
+              <div class="h-[24px] w-full shrink-0"></div>
+              <!-- Button -->
+              <button type="button" @click="$refs.fileInput.click()" class="bg-[#e0e3e6] px-[24px] py-[10px] rounded-[8px] hover:bg-[#d0d3d6] transition-colors shrink-0">
+                <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#0c3dfe] text-[16px] leading-[24px]">Wybierz pliki</span>
+              </button>
+              <input type="file" ref="fileInput" class="hidden" @change="handleFileChange" accept=".pdf,.doc,.docx,.pptx,.txt" />
+              <p v-if="selectedFile" class="mt-3 text-sm text-[#0c3dfe] truncate max-w-[200px]">{{ selectedFile.name }}</p>
             </div>
           </div>
-          <p v-if="!state.notes.length" class="text-sm text-muted-foreground">Brak zapisanych notatek.</p>
+          <div class="absolute border-2 border-[rgba(0,0,0,0.1)] border-dashed inset-0 pointer-events-none rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons Footer -->
+      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
+        <div v-if="error" class="mb-4 text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold">
+           {{ error }}
+        </div>
+        <div v-if="info" class="mb-4 text-sm text-green-600 font-['Plus_Jakarta_Sans'] font-semibold">
+           {{ info }}
+        </div>
+        <div class="content-stretch flex gap-[12px] flex-col md:flex-row items-center justify-between relative shrink-0 w-full">
+          <button type="button" @click="downloadNotePdf()" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors w-full md:w-auto disabled:opacity-50" :disabled="!rawTextContent">
+            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">Pobierz notatkę jako PDF</span>
+          </button>
+          <div class="flex gap-[12px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end">
+            <button type="button" @click="resetForm" class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors">
+              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[16px] leading-[24px]">Anuluj</span>
+            </button>
+            <button type="button" :disabled="saving" @click="handleSave" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50">
+              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -99,7 +166,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
 
 let pdfMakeInstance = null;
@@ -117,11 +184,11 @@ async function getPdfMake() {
   return pdfMake;
 }
 
-const { state, generateTeacherNote, saveTeacherNote, deleteTeacherNote, fetchTeacherNotes } = useLessonStore();
+const { state, generateTeacherNote, saveTeacherNote } = useLessonStore();
 const classOptions = [
-  "1 Szkoła Podstawowa",
-  "2 Szkoła Podstawowa",
-  "3 Szkoła Podstawowa",
+  "1 Klasa Szkoły Podstawowej",
+  "2 Klasa Szkoły Podstawowej",
+  "3 Klasa Szkoły Podstawowej",
   "4 Szkoła Podstawowa",
   "5 Szkoła Podstawowa",
   "6 Szkoła Podstawowa",
@@ -141,20 +208,33 @@ const classOptions = [
 
 const subject = ref("");
 const title = ref("");
-const classLevel = ref("1");
-const content = ref("");
+const lessonDate = ref(new Date().toISOString().split("T")[0]);
+const classLevel = ref("1 Klasa Szkoły Podstawowej");
+const rawTextContent = ref("");
+const selectedFile = ref(null);
+
 const loading = ref(false);
 const saving = ref(false);
 const error = ref("");
 const info = ref("");
 
-onMounted(async () => {
-  try {
-    await fetchTeacherNotes();
-  } catch (e) {
-    error.value = e.message || "Nie udało się pobrać notatek.";
+function handleFileChange(event) {
+  const file = event.target.files?.[0];
+  if (file) {
+    selectedFile.value = file;
   }
-});
+}
+
+function resetForm() {
+  subject.value = "";
+  lessonDate.value = new Date().toISOString().split("T")[0];
+  classLevel.value = "1 Klasa Szkoły Podstawowej";
+  title.value = "";
+  rawTextContent.value = "";
+  selectedFile.value = null;
+  error.value = "";
+  info.value = "";
+}
 
 async function handleGenerate() {
   try {
@@ -165,11 +245,13 @@ async function handleGenerate() {
       error.value = "Wpisz przedmiot i temat lekcji.";
       return;
     }
-    content.value = await generateTeacherNote({
+    const result = await generateTeacherNote({
       subject: subject.value,
       topic: title.value,
-      classLevel: classLevel.value
+      classLevel: classLevel.value,
+      rawText: rawTextContent.value
     });
+    rawTextContent.value = result || "";
     info.value = "Notatka wygenerowana. Możesz ją edytować i zapisać.";
   } catch (e) {
     error.value = e.message || "Nie udało się wygenerować notatki.";
@@ -183,53 +265,23 @@ async function handleSave() {
     saving.value = true;
     error.value = "";
     info.value = "";
-    if (!subject.value || !title.value || !content.value.trim()) {
-      error.value = "Uzupełnij przedmiot, temat i treść notatki.";
+    if (!subject.value || !title.value || !rawTextContent.value.trim()) {
+      error.value = "Uzupełnij przedmiot, temat i treść w obszarze roboczym.";
       return;
     }
     await saveTeacherNote({
       title: title.value,
       subject: subject.value,
       classLevel: classLevel.value,
-      content: content.value,
+      content: rawTextContent.value,
       source: "ai"
     });
-    info.value = "Notatka zapisana.";
+    info.value = "Notatka zapisana pomyślnie.";
   } catch (e) {
     error.value = e.message || "Nie udało się zapisać notatki.";
   } finally {
     saving.value = false;
   }
-}
-
-async function handleDelete(note) {
-  const confirmed = window.confirm(`Usunąć notatkę \"${note.title}\"?`);
-  if (!confirmed) return;
-  try {
-    saving.value = true;
-    error.value = "";
-    info.value = "";
-    await deleteTeacherNote(note.id);
-    if (title.value === note.title && subject.value === note.subject && content.value === note.content) {
-      title.value = "";
-      subject.value = "";
-      content.value = "";
-    }
-    info.value = "Notatka usunięta.";
-  } catch (e) {
-    error.value = e.message || "Nie udało się usunąć notatki.";
-  } finally {
-    saving.value = false;
-  }
-}
-
-function loadNote(note) {
-  title.value = String(note.title || "");
-  subject.value = String(note.subject || "");
-  classLevel.value = String(note.classLevel || "1");
-  content.value = String(note.content || "");
-  error.value = "";
-  info.value = "Załadowano zapisaną notatkę.";
 }
 
 function sanitizeFileName(value) {
@@ -242,21 +294,11 @@ function sanitizeFileName(value) {
     .slice(0, 80) || "notatka";
 }
 
-function expandSelectOnMobile(event) {
-  const isMobile = window.matchMedia("(max-width: 640px)").matches;
-  if (!isMobile) return;
-  event.target.size = 8;
-}
-
-function collapseSelect(event) {
-  event.target.size = 1;
-}
-
-async function downloadNotePdf(note = null) {
-  const noteTitle = String(note?.title || title.value || "Notatka").trim();
-  const noteSubject = String(note?.subject || subject.value || "").trim();
-  const noteClass = String(note?.classLevel || classLevel.value || "").trim();
-  const noteContent = String(note?.content || content.value || "").trim();
+async function downloadNotePdf() {
+  const noteTitle = String(title.value || "Notatka").trim();
+  const noteSubject = String(subject.value || "").trim();
+  const noteClass = String(classLevel.value || "").trim();
+  const noteContent = String(rawTextContent.value || "").trim();
 
   if (!noteContent) {
     error.value = "Brak treści notatki do pobrania.";
@@ -282,24 +324,11 @@ async function downloadNotePdf(note = null) {
       ...paragraphs
     ],
     styles: {
-      title: {
-        fontSize: 18,
-        bold: true,
-        lineHeight: 1.15
-      },
-      meta: {
-        fontSize: 10,
-        color: "#374151"
-      },
-      paragraph: {
-        fontSize: 11,
-        lineHeight: 1.35,
-        margin: [0, 0, 0, 8]
-      }
+      title: { fontSize: 18, bold: true, lineHeight: 1.15 },
+      meta: { fontSize: 10, color: "#374151" },
+      paragraph: { fontSize: 11, lineHeight: 1.35, margin: [0, 0, 0, 8] }
     },
-    defaultStyle: {
-      font: "Roboto"
-    },
+    defaultStyle: { font: "Roboto" },
     footer(currentPage, pageCount) {
       return {
         text: `${currentPage}/${pageCount}`,

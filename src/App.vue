@@ -8,7 +8,7 @@
       <template v-else-if="presentationMode">
         <div
           v-if="showLicenseWarning"
-          class="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
+          class="mx-4 mt-5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
         >
           Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
         </div>
@@ -18,9 +18,9 @@
         <RouterView />
       </AppLayout>
     </div>
-    <footer class="border-t border-border bg-card/70 px-4 py-3 text-center text-xs text-muted-foreground">
+    <!-- <footer class="border-t border-border bg-card/70 px-4 py-3 text-center text-xs text-muted-foreground">
       &copy; LeanMate 2026
-    </footer>
+    </footer> -->
   </div>
 </template>
 

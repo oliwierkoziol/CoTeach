@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background text-foreground transition-colors">
     <header
-      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
@@ -88,63 +88,102 @@
 
     <aside
       :class="[
-          'fixed bottom-0 left-0 top-16 z-[55] flex w-[min(17.5rem,calc(100vw-3rem))] flex-col border-r border-border bg-card px-3 py-4 transition-transform duration-200 md:w-[220px] md:translate-x-0',
-        open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+        open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
       ]"
     >
-      <RouterLink
-        to="/preparation"
-          class="mb-4 flex w-full items-center justify-center gap-2 rounded-[10px] bg-primary px-4 py-3 text-sm font-semibold tracking-tight text-primary-foreground shadow-sm no-underline transition hover:opacity-90 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        @click="open = false"
-      >
-        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.25" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-        </svg>
-        <span>Nowa Lekcja</span>
-      </RouterLink>
+      <div class="flex flex-1 flex-col overflow-y-auto p-4 pt-7 space-y-4">
 
-      <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Nawigacja">
-        <template v-for="item in navItems" :key="item.key">
-          <RouterLink
-            v-if="item.kind === 'link'"
-            :to="item.to"
-            custom
-            v-slot="{ href, navigate, isActive, isExactActive }"
+        <!-- Start Lesson Button -->
+        <RouterLink
+          :to="liveLessonTo"
+          custom
+          v-slot="{ href, navigate }"
+        >
+          <a
+            :href="href"
+            class="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#0c3dfe] py-3 transition-colors hover:bg-[#0a34d4]"
+            @click="navigate(); open = false;"
           >
-            <a
-              :href="href"
-              :class="navRowClass(item, isActive, isExactActive)"
-              @click.prevent="
-                navigate();
-                open = false;
-              "
-            >
-              <span :class="navIconBoxClass(item, isActive, isExactActive)">
-                <component v-if="typeof item.icon !== 'string'" :is="item.icon" class="h-6 w-6" />
-                <img v-else :src="item.icon" alt="" class="h-6 w-6" />
-              </span>
-              <span :class="navLabelClass(item, isActive, isExactActive)">{{ item.label }}</span>
+            <svg class="h-[10px] w-[10px]" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
+              Rozpocznij lekcję
+            </span>
+          </a>
+        </RouterLink>
+
+        <!-- Divider + nav links -->
+        <div class="flex-1 space-y-1 border-t border-black/30 pt-4">
+
+          <!-- Panel startowy -->
+          <RouterLink to="/dashboard" custom v-slot="{ href, navigate, isExactActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isExactActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 18 18">
+                <path d="M10 6V0H18V6H10ZM0 10V0H8V10H0ZM10 18V8H18V18H10ZM0 18V12H8V18H0ZM2 8H6V2H2V8ZM12 16H16V10H12V16ZM12 4H16V2H12V4ZM2 16H6V14H2V16Z" fill="#566166"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isExactActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
             </a>
           </RouterLink>
-          <a
-            v-else-if="item.kind === 'presentation'"
-            href="#"
-            :class="navRowClass({ exact: false }, isPresentationActive, false)"
-            @click.prevent="goPresentation"
-          >
-            <span :class="navIconBoxClass({ exact: false }, isPresentationActive, false)">
-              <IconScreenUp class="h-6 w-6" />
-            </span>
-            <span :class="navLabelClass({ exact: false }, isPresentationActive, false)">Prezentacja</span>
-          </a>
-        </template>
-      </nav>
 
+          <!-- Dodaj materiały -->
+          <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-5 w-4 shrink-0" fill="none" viewBox="0 0 16 20">
+                <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="#566166"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
+            </a>
+          </RouterLink>
+
+          <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Notatki</p>
+          </a>
+        </RouterLink>
+
+          <!-- Prezentacja -->
+          <RouterLink :to="presentationHref" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-4 w-5 shrink-0" fill="none" viewBox="0 0 20 16">
+                <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="#566166"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+            </a>
+          </RouterLink>
+
+          <!-- Archiwum -->
+          <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
+                <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="#566166"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
+            </a>
+          </RouterLink>
+
+          <!-- Monitoring -->
+          <RouterLink to="/monitoring" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 18 18">
+                <path d="M0 18V16L2 14V18H0ZM4 18V12L6 10V18H4ZM8 18V10L10 12.025V18H8ZM12 18V12.025L14 10.025V18H12ZM16 18V8L18 6V18H16ZM0 12.825V10L7 3L11 7L18 0V2.825L11 9.825L7 5.825L0 12.825Z" fill="#566166"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Monitoring</p>
+            </a>
+          </RouterLink>
+
+        </div>
+      </div>
     </aside>
 
-    <main class="min-h-screen min-w-0 pt-16 md:pl-[220px]">
+    <main class="min-h-screen min-w-0 pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
-        <div class="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
+        <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
           Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
         </div>
       </div>
@@ -262,21 +301,13 @@ const liveLessonTo = computed(() => {
   return id ? `/live-lesson/${id}` : "/live-lesson";
 });
 
-const navItems = computed(() => {
-  const items = [
-    { kind: "link", key: "start", to: "/dashboard", label: "Panel startowy", icon: IconGrid, exact: true },
-    { kind: "link", key: "prep", to: "/preparation", label: "Materiały do lekcji", icon: IconFileUp, exact: false },
-    { kind: "link", key: "notes", to: "/notes", label: "Generator notatek", icon: IconSparkles, exact: false },
-    { kind: "link", key: "live", to: liveLessonTo.value, label: "Lekcja na żywo", icon: IconMonitorPlay, exact: false },
-    { kind: "presentation", key: "pres" },
-    { kind: "link", key: "monitoring", to: "/archive", label: "Monitoring", icon: IconChart, exact: false },
-  ];
-
-  if (isAdmin.value) {
-    items.push({ kind: "link", key: "admin-dashboard", to: "/admin/dashboard", label: "Dashboard admina", icon: IconShield, exact: false });
-  }
-
-  return items;
+const activeLessonLink = computed(() => {
+  const lesson = state.lesson || state.lessons?.[0];
+  if (!lesson) return null;
+  return {
+    to: `/live-lesson/${lesson.id}`,
+    label: `Lekcja: ${lesson.title || "Lekcja"}`,
+  };
 });
 
 const userInitials = computed(() => {

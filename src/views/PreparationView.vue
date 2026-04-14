@@ -1,133 +1,128 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-6xl">
-      <header class="mb-8">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
-        <h1 class="text-3xl font-bold text-foreground">Przygotowanie materiałów</h1>
-        <p class="mt-1 text-sm text-muted-foreground">Ingestia danych i generator planu lekcji</p>
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
+
+    <template v-if="!lesson || !lesson.plan?.length">
+      <!-- Welcome Header -->
+      <header class="mb-7 relative z-10 w-full text-left">
+        <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+          Nowa lekcja
+        </h2>
+        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px] font-normal">
+          Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.
+        </p>
       </header>
-
-      <div v-if="error" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        {{ error }}
-      </div>
-      <div v-if="info" class="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">
-        {{ info }}
-      </div>
-
-      <div v-if="!lesson || !lesson.plan?.length" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
-          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Podstawowe informacje</h2>
-            <div>
-              <label class="text-sm text-muted-foreground">Przedmiot</label>
-              <input v-model="subject" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Biologia" />
-            </div>
-            <div>
-              <label class="text-sm text-muted-foreground">Temat lekcji</label>
-              <input v-model="title" class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25" placeholder="np. Fotosynteza" />
-            </div>
-            <div>
-              <label class="text-sm text-muted-foreground">Klasa</label>
-              <select
-                v-model="classLevel"
-                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                @focus="expandSelectOnMobile"
-                @blur="collapseSelect"
-                @change="collapseSelect"
-              >
-                <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-sm text-muted-foreground">Data lekcji</label>
-              <input
-                v-model="dateInput"
-                type="date"
-                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+  
+      <!-- Card 1: Podstawowe informacje -->
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
+        <h3 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-6">
+          Podstawowe informacje
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+          <!-- Temat Input -->
+          <div class="flex flex-col gap-2 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Temat</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input 
+                v-model="title" 
+                class="bg-transparent border-none outline-none w-full text-[16px] text-[#454652] placeholder-[rgba(118,118,131,0.6)] font-['Plus_Jakarta_Sans']" 
+                placeholder="Wprowadź temat zajęć..." 
               />
+              <svg class="h-4 w-4 ml-2 shrink-0 opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
+                <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
+              </svg>
             </div>
           </div>
-
-          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Materiały źródłowe</h2>
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="rounded-xl border px-4 py-2 text-sm font-medium transition"
-                :class="uploadMethod === 'text' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted/50'"
-                @click="uploadMethod = 'text'"
-              >
-                Notatka
-              </button>
-              <button
-                type="button"
-                class="rounded-xl border px-4 py-2 text-sm font-medium transition"
-                :class="uploadMethod === 'file' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted/50'"
-                @click="uploadMethod = 'file'"
-              >
-                Plik
-              </button>
-            </div>
-
-            <div v-if="uploadMethod === 'text'">
-              <label class="mb-2 block text-sm text-muted-foreground">Wybierz zapisaną notatkę albo wklej własną</label>
-              <select
-                v-if="state.notes.length"
-                v-model="selectedNoteId"
-                class="mb-3 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              >
-                <option value="">-- wybierz zapisaną notatkę --</option>
-                <option v-for="note in state.notes" :key="note.id" :value="note.id">
-                  {{ note.title }} • {{ note.subject }} • {{ note.classLevel || 'brak klasy' }}
-                </option>
-              </select>
-              <textarea
-                v-model="rawText"
-                class="min-h-[260px] w-full rounded-xl border border-border bg-input-background p-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                placeholder="Wklej notatkę lub wybierz ją z listy powyżej..."
+          <!-- Czas Lekcji Input -->
+          <div class="flex flex-col gap-2 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Czas lekcji</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input 
+                v-model="lessonTime" 
+                class="bg-transparent border-none outline-none w-full text-[16px] text-[#454652] placeholder-[rgba(118,118,131,0.6)] font-['Plus_Jakarta_Sans']" 
+                placeholder="1-90min" 
               />
+              <svg class="h-4 w-4 ml-2 shrink-0 opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
+                <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
+              </svg>
             </div>
-            <div v-else class="rounded-xl border-2 border-dashed border-border p-8 text-center">
-              <input type="file" accept=".txt,.pdf,.jpg,.jpeg,.png" @change="onFile" />
-              <p class="mt-2 text-sm text-muted-foreground">Obsługiwane formaty: TXT, PDF, JPG, PNG</p>
-              <p v-if="selectedFile" class="mt-2 text-sm font-medium text-foreground">{{ selectedFile.name }}</p>
-            </div>
-
-            <button
-              type="button"
-              class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-              :disabled="isGenerating"
-              @click="handleGenerate"
-            >
-              {{ isGenerating ? "Przetwarzam..." : "Generuj plan lekcji z notatki" }}
-            </button>
           </div>
         </div>
-
-        <div class="rounded-2xl border border-border bg-card/80 p-6">
-          <h3 class="mb-3 font-semibold text-foreground">Jak to działa?</h3>
-          <ol class="list-decimal space-y-2 pl-4 text-sm text-muted-foreground">
-            <li>Wybierz zapisaną notatkę albo wklej własną.</li>
-            <li>OCR odczyta treść pliku, jeśli go prześlesz.</li>
-            <li>AI zamieni notatkę na JSON planu lekcji.</li>
-            <li>Popraw punkty przed lekcją na żywo.</li>
-          </ol>
+      </div>
+  
+      <!-- Card 2: Wybierz notatke -->
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
+        <div class="flex items-center justify-between mb-8 w-full">
+          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+            Wybierz notatkę
+          </h3>
+          <!-- Create new button -->
+          <RouterLink to="/notes" type="button" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]">
+            Utwórz nową
+          </RouterLink>
+        </div>
+  
+        <div class="flex flex-wrap gap-4 items-center w-full">
+          <!-- Map over state.notes -->
+          <button 
+            v-for="note in state.notes" 
+            :key="note.id"
+            @click="selectedNoteId = note.id"
+            :class="[
+              'flex items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left w-[200px]', 
+              selectedNoteId === note.id 
+                ? 'bg-[#0c3dfe] text-white shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]' 
+                : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)]'
+            ]"
+          >
+            <!-- Document Icon -->
+            <svg class="h-[20px] w-[20px] shrink-0 fill-current opacity-90" viewBox="0 0 20 20">
+              <path d="M7 2h7l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2h3zm1 0v4h4L8 2zm8 16V7h-5V2H4v16h14zm-4-4v2H7v-2h7zm2-4v2H7v-2h9z" />
+            </svg>
+            <div class="flex flex-col justify-center font-['Plus_Jakarta_Sans'] font-bold text-[14px]">
+              <p class="leading-[18px] truncate max-w-[130px]">{{ note.title || 'Brak tytułu' }}</p>
+              <p class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[130px] mt-0.5" :class="selectedNoteId === note.id ? 'text-white' : 'text-[#454652]'">{{ note.subject || 'Brak przedmiotu' }}</p>
+            </div>
+          </button>
+  
+          <p v-if="!state.notes.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
+            Brak dostępnych notatek. Utwórz nową klikając przycisk.
+          </p>
         </div>
       </div>
+  
+      <!-- Card 3: Footer Buttons -->
+      <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 w-full relative z-10 mb-7">
+        <div v-if="error" class="mb-4 text-sm text-destructive font-['Plus_Jakarta_Sans'] font-semibold">
+          {{ error }}
+        </div>
+        <div class="flex items-center justify-end gap-3 w-full">
+          <!-- Button Anuluj -->
+          <button type="button" @click="resetForm" class="bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
+            Anuluj
+          </button>
+          <!-- Button Rozpocznij lekcję -->
+          <button type="button" :disabled="isGenerating" @click="handleGenerate" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50">
+            {{ isGenerating ? "Przetwarzam..." : "Rozpocznij lekcję" }}
+          </button>
+        </div>
+      </div>
+    </template>
 
-      <div v-else class="space-y-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <template v-else>
+      <div class="w-full relative z-10 space-y-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h2 class="text-2xl font-bold text-foreground">Edytor planu lekcji</h2>
-            <p class="text-sm text-muted-foreground">Korekta przed startem lekcji</p>
+            <h2 class="font-['Plus_Jakarta_Sans'] text-3xl font-extrabold text-[#191c1e] tracking-[-0.9px]">Edytor planu lekcji</h2>
+            <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#454652] mt-1">Korekta przed startem lekcji na żywo</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50" @click="resetPlan">
+            <button type="button" class="font-['Plus_Jakarta_Sans'] rounded-xl border border-transparent bg-white px-6 py-2.5 text-[16px] font-semibold text-[#454652] hover:bg-[#f2f2f2] transition-colors shadow-sm" @click="resetPlan">
               Wróć
             </button>
             <button
               type="button"
-              class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+              class="font-['Plus_Jakarta_Sans'] rounded-xl bg-[#0c3dfe] px-6 py-2.5 text-[16px] font-semibold text-white transition hover:bg-[#0a34d4] disabled:opacity-50 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
               :disabled="isSaving"
               @click="saveAndStart"
             >
@@ -136,31 +131,36 @@
           </div>
         </div>
 
-        <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
-          <div v-if="sourceNote" class="rounded-xl border border-border bg-muted/20 p-4">
-            <h3 class="mb-2 text-sm font-semibold text-foreground">Notatka źródłowa</h3>
-            <textarea :value="sourceNote" readonly class="min-h-[120px] w-full rounded-lg border border-border bg-input-background p-3 text-sm text-foreground" />
+        <div class="space-y-4 rounded-xl bg-white shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+          <div v-if="sourceNote" class="rounded-xl border border-[#e0e3e6] bg-[#f7f9fc] p-4">
+            <h3 class="font-['Plus_Jakarta_Sans'] mb-2 text-[14px] font-bold text-[#191c1e]">Notatka źródłowa</h3>
+            <textarea :value="sourceNote" readonly class="font-['Plus_Jakarta_Sans'] min-h-[120px] w-full rounded-lg border-none bg-transparent p-0 text-[14px] text-[#454652] outline-none resize-none" />
           </div>
-          <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-border p-4">
-            <div class="mb-2 flex items-center gap-2">
-              <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs text-muted-foreground">{{ idx + 1 }}</span>
-              <input v-model="point.title" class="flex-1 rounded-lg border border-border bg-input-background px-3 py-2 text-foreground" placeholder="Tytuł punktu" />
+          
+          <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-[#e0e3e6] p-5 bg-[#fbfcfd]">
+            <div class="mb-4 flex items-center gap-3">
+              <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0c3dfe]/10 text-sm font-bold text-[#0c3dfe]">{{ idx + 1 }}</span>
+              <input v-model="point.title" class="font-['Plus_Jakarta_Sans'] flex-1 rounded-lg border border-[#e0e3e6] bg-white px-4 py-2.5 text-[#191c1e] text-[16px] font-semibold outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors" placeholder="Tytuł punktu" />
             </div>
             <input
               :value="point.keywords.join(', ')"
-              class="mb-2 w-full rounded-lg border border-border bg-input-background px-3 py-2 text-foreground"
-              placeholder="Słowa kluczowe"
+              class="font-['Plus_Jakarta_Sans'] mb-3 w-full rounded-lg border border-[#e0e3e6] bg-white px-4 py-2 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors"
+              placeholder="Słowa kluczowe (po przecinku)"
               @input="setKeywords(idx, $event.target.value)"
             />
-            <textarea v-model="point.description" class="min-h-[80px] w-full rounded-lg border border-border bg-input-background p-3 text-foreground" />
-            <button type="button" class="mt-2 text-sm text-destructive hover:underline" @click="removePoint(point.id)">Usuń punkt</button>
+            <textarea v-model="point.description" class="font-['Plus_Jakarta_Sans'] min-h-[80px] w-full rounded-lg border border-[#e0e3e6] bg-white p-4 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors resize-y" placeholder="Opis punktu do poruszenia na żywo..." />
+            
+            <div class="mt-2 flex justify-end">
+              <button type="button" class="font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-red-500 hover:text-red-700 transition-colors" @click="removePoint(point.id)">Usuń punkt</button>
+            </div>
           </div>
-          <button type="button" class="w-full rounded-xl border-2 border-dashed border-border py-2 text-sm text-muted-foreground hover:bg-muted/30" @click="addPoint">
-            + Dodaj punkt
+          
+          <button type="button" class="font-['Plus_Jakarta_Sans'] w-full rounded-xl border-2 border-dashed border-[#0c3dfe]/40 bg-[#0c3dfe]/5 py-4 text-[14px] font-bold text-[#0c3dfe] transition-colors hover:bg-[#0c3dfe]/10" @click="addPoint">
+            + Dodaj punkt do planu
           </button>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -172,45 +172,9 @@ import { useLessonStore } from "../composables/useLessonStore";
 const router = useRouter();
 const { state, createLesson, uploadLessonMaterial, savePlan, fetchTeacherNotes } = useLessonStore();
 const lesson = computed(() => state.lesson);
-const classOptions = [
-  "1 Szkoła Podstawowa",
-  "2 Szkoła Podstawowa",
-  "3 Szkoła Podstawowa",
-  "4 Szkoła Podstawowa",
-  "5 Szkoła Podstawowa",
-  "6 Szkoła Podstawowa",
-  "7 Szkoła Podstawowa",
-  "8 Szkoła Podstawowa",
-  "1 Szkoła Średnia",
-  "2 Szkoła Średnia",
-  "3 Szkoła Średnia",
-  "4 Szkoła Średnia",
-  "5 Szkoła Średnia",
-  "Szkolenie firmowe",
-  "Szkolenie wewnętrzne",
-  "Warsztat",
-  "Konsultacje",
-  "Inny typ notatki"
-];
 
-function displayToIso(inputDate) {
-  const raw = String(inputDate || "").trim();
-  if (!raw) return new Date().toISOString().split("T")[0];
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return new Date().toISOString().split("T")[0];
-  return parsed.toISOString().split("T")[0];
-}
-
-const subject = ref("");
 const title = ref("");
-const classLevel = ref(classOptions[0]);
-const dateInput = ref(new Date().toISOString().split("T")[0]);
-const rawText = ref("");
-const uploadMethod = ref("text");
-const selectedFile = ref(null);
+const lessonTime = ref("1-90min");
 const selectedNoteId = ref("");
 const isGenerating = ref(false);
 const isSaving = ref(false);
@@ -234,25 +198,15 @@ watch(selectedNoteId, (noteId) => {
   if (!noteId) return;
   const note = state.notes.find((item) => item.id === noteId);
   if (!note) return;
-  subject.value = String(note.subject || subject.value || "");
   title.value = String(note.title || title.value || "");
-  classLevel.value = String(note.classLevel || classLevel.value || classOptions[0]);
-  rawText.value = String(note.content || "");
-  uploadMethod.value = "text";
 });
 
-function onFile(event) {
-  selectedFile.value = event.target.files?.[0] || null;
-}
-
-function expandSelectOnMobile(event) {
-  const isMobile = window.matchMedia("(max-width: 640px)").matches;
-  if (!isMobile) return;
-  event.target.size = 8;
-}
-
-function collapseSelect(event) {
-  event.target.size = 1;
+function resetForm() {
+  title.value = "";
+  selectedNoteId.value = "";
+  lessonTime.value = "1-90min";
+  error.value = "";
+  info.value = "";
 }
 
 async function handleGenerate() {
@@ -260,25 +214,34 @@ async function handleGenerate() {
     isGenerating.value = true;
     error.value = "";
     info.value = "";
-    if (!subject.value || !title.value) {
-      error.value = "Wypełnij nazwę przedmiotu i tytuł lekcji.";
+    
+    if (!title.value) {
+      error.value = "Wypełnij temat lekcji.";
       return;
     }
-    const normalizedDate = displayToIso(dateInput.value);
-    dateInput.value = normalizedDate;
-    const lessonMonth = new Date(`${normalizedDate}T00:00:00`).toLocaleString("pl-PL", { month: "long" });
+    if (!selectedNoteId.value) {
+      error.value = "Wybierz notatkę z listy materiałów źródłowych.";
+      return;
+    }
+
+    const normalizedDate = new Date().toISOString().split("T")[0];
+    const lessonMonth = new Date().toLocaleString("pl-PL", { month: "long" });
+    const generatedSubject = selectedNote.value?.subject || "Ogólny";
+    const extractedRawText = selectedNote.value?.content || "";
 
     const created = await createLesson({
-      subject: subject.value,
+      subject: generatedSubject,
       title: title.value,
       month: lessonMonth,
       date: normalizedDate,
       rawText: ""
     });
+    
     await uploadLessonMaterial(created.id, {
-      rawText: uploadMethod.value === "text" ? rawText.value : "",
-      file: uploadMethod.value === "file" ? selectedFile.value : null
+      rawText: extractedRawText,
+      file: null
     });
+    
     info.value = state.info;
   } catch (e) {
     error.value = e.message;

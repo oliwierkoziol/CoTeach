@@ -1,56 +1,80 @@
 <template>
-  <div class="px-4 py-6 sm:px-5 text-foreground">
-    <div class="mx-auto max-w-none">
-      <header class="mb-5">
-        <h1 class="text-[44px] font-bold tracking-tight text-foreground">
-          Witaj, {{ displayName }}
-        </h1>
-        <p class="mt-1 text-[22px] text-muted-foreground">
-          Aby utworzyć nową lekcję, kliknij przycisk po lewej.
-        </p>
-      </header>
+  <!-- Main layout container -->
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-4rem)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+    <!-- Background Decoration -->
+    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
-          <div class="flex items-start justify-between gap-2">
-            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden="true">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </span>
-            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Aktualne</span>
+    <!-- Welcome Header -->
+    <header class="max-w-[1024px] mb-7 relative z-10">
+      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-4xl tracking-tight leading-10 mb-2">
+        Witaj, {{ displayName }}
+      </h2>
+      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-7">
+        Rozpocznij nową lekcję używając przycisku po lewej.
+      </p>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-full relative z-10">
+      <!-- Card 1 -->
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(20,37,136,0.1)] text-[#142588]">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
           </div>
-          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Lekcje</p>
-          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">{{ lessonsCount }}</p>
+          <div class="px-2 py-1 rounded bg-[rgba(20,37,136,0.05)] text-[#142588]">
+            <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Liczba</span>
+          </div>
         </div>
-
-        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
-          <div class="flex items-start justify-between gap-2">
-            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden="true">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
-            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Estymacja</span>
-          </div>
-          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Średni czas</p>
-          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">42 min</p>
+        <div class="space-y-1">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Liczba lekcji</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ lessonsCount }} lekcji</p>
+          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">+3 od ostatniego miesiąca</p>
         </div>
+      </div>
 
-        <div class="rounded-xl border border-border bg-card p-6 shadow-sm md:min-h-[260px]">
-          <div class="flex items-start justify-between gap-2">
-            <span class="flex h-8 w-8 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300" aria-hidden="true">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </span>
-            <span class="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Postęp</span>
+      <!-- Card 2 -->
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(0,89,187,0.1)] text-[#0059bb]">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
-          <p class="mt-5 text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">Realizacja planu</p>
-          <p class="mt-2 text-[32px] font-bold leading-none text-foreground">{{ completionRate }}%</p>
-          <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div class="px-2 py-1 rounded bg-[rgba(0,89,187,0.05)] text-[#0059bb]">
+            <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Estymacja</span>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Średni czas</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">48 min.</p>
+          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">Czas ostatniej lekcji: 52min.</p>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(88,35,0,0.1)] text-[#582300]">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div class="px-2 py-1 rounded bg-[rgba(88,35,0,0.05)] text-[#582300]">
+            <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Postęp</span>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Realizacja planu</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ completionRate }}% średnio</p>
+        </div>
+        <!-- Progress Bar -->
+        <div class="mt-6">
+          <div class="bg-[#e6e8eb] h-2 w-full rounded-full overflow-hidden">
             <div
-              class="h-full rounded-full bg-primary/80 transition-all duration-500"
+              class="h-full rounded-full bg-[#582300] transition-all duration-500 w-0"
               :style="{ width: `${Math.min(100, completionRate)}%` }"
             />
           </div>

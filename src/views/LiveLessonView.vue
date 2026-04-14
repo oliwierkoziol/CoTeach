@@ -1,266 +1,271 @@
 <template>
-  <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-7xl">
-      <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <header>
-          <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
-          <h1 class="text-3xl font-bold text-foreground">Lekcja na żywo</h1>
-          <p class="mt-1 text-sm text-muted-foreground">Monitoring i analiza postępu</p>
-        </header>
-        <div class="flex shrink-0 gap-2">
-          <div class="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Długość lekcji</span>
-            <select
-              v-model.number="selectedLessonDurationMinutes"
-              class="rounded-lg border border-border bg-input-background px-2 py-1.5 text-sm text-foreground outline-none"
-              :disabled="isRecording"
-            >
-              <option v-for="option in availableLessonDurationOptions" :key="option.minutes" :value="option.minutes">
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
-          <button
-            v-if="!isRecording"
-            type="button"
-            class="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
-            @click="startSession"
-          >
-            Rozpocznij lekcję
-          </button>
-          <button
-            v-else
-            type="button"
-            class="rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:opacity-90"
-            @click="stopSession"
-          >
-            Zatrzymaj
-          </button>
-        </div>
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
+    <!-- Background Decor -->
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
+    
+    <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
+    <!-- Header -->
+    <div class="mb-7 max-w-[1024px]">
+      <div class="flex items-center gap-2 mb-2">
+        <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }" />
+        <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#9e3f4e] text-[10.5px] tracking-[0.525px] uppercase">
+          W TRAKCIE
+        </p>
       </div>
+      <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+        Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
+      </h1>
+      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+        Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.
+      </p>
+    </div>
 
-      <div v-if="error" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{{ error }}</div>
-      <div v-if="info" class="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">{{ info }}</div>
+    <!-- Main Grid -->
+    <div class="grid grid-cols-12 gap-8 mb-7">
+      <!-- Plan lekcji -->
+      <div class="col-span-12 xl:col-span-4 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 flex flex-col h-[497px]">
+        <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] leading-[28px] mb-2">
+          Plan lekcji
+        </h2>
 
-      <div class="mb-6 rounded-2xl border border-border bg-card p-6">
-        <div class="mb-2 flex justify-between text-sm text-muted-foreground">
-          <span>{{ discussedCount }} z {{ points.length }} punktów omówionych</span>
-          <span>{{ progress }}%</span>
-        </div>
-        <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div class="h-2 rounded-full bg-emerald-500 transition-all" :style="{ width: `${progress}%` }" />
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
+        <div class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 scrollbar-thin">
           <div
-            class="rounded-2xl border border-border bg-card p-6"
-            :class="isRecording ? 'border-emerald-500/50 bg-emerald-500/5' : ''"
+            v-for="(point, index) in points"
+            :key="point.id"
+            class="rounded-lg py-3 cursor-pointer group"
+            @click="toggleManualApproval(point)"
           >
-            <div class="flex items-center justify-between gap-2">
-              <div class="font-semibold text-foreground">{{ isRecording ? "Nagrywanie aktywne" : "Oczekiwanie..." }}</div>
-              <div class="text-sm text-muted-foreground">{{ elapsedLabel }} / {{ durationLabel }} | {{ costLabel }}</div>
-            </div>
-          </div>
-
-          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Napisy na żywo</h2>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div class="rounded-xl border border-border bg-muted/30 p-3">
-                <div class="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Napisy live (w trakcie)</div>
-                <p class="min-h-[48px] text-sm text-foreground">{{ interimCaption || "..." }}</p>
-              </div>
-              <div class="rounded-xl border border-border bg-muted/30 p-3">
-                <div class="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Ostatnia pełna wypowiedź</div>
-                <p class="min-h-[48px] text-sm text-foreground">{{ lastFinalCaption || "..." }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-3 rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Plan lekcji</h2>
-            <div
-              v-for="(point, index) in points"
-              :key="point.id"
-              class="rounded-xl border-2 p-4"
-              :class="point.status === 'discussed' ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-border bg-card'"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <div class="font-medium text-foreground">{{ index + 1 }}. {{ point.title }}</div>
-                  <div class="mt-2 flex flex-wrap gap-1">
-                    <span v-for="k in point.keywords" :key="k" class="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{{ k }}</span>
-                  </div>
-                </div>
-                <span v-if="point.status === 'discussed'" class="text-emerald-400">✓</span>
-              </div>
-              <div class="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-                  :class="point.manualApproved ? 'border-amber-600 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-400/50 dark:bg-amber-500/20 dark:text-amber-100 dark:hover:bg-amber-500/30' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 hover:bg-emerald-500/20 dark:text-emerald-100 dark:hover:bg-emerald-500/30'"
-                  :disabled="manualUpdateLoadingId === point.id"
-                  @click="toggleManualApproval(point)"
+            <div class="flex items-start gap-4">
+              <div 
+                class="size-8 rounded-full flex items-center justify-center shrink-0 transition"
+                :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962]' : 'bg-[#e0e3e6] group-hover:bg-[#d0d3d6]'"
+              >
+                <span 
+                  class="font-['Inter'] font-semibold text-[16px]"
+                  :class="point.status === 'discussed' || point.manualApproved ? 'text-white' : 'text-[#454652]'"
                 >
-                  {{ manualUpdateLoadingId === point.id ? "Aktualizuję..." : point.manualApproved ? "Cofnij ręczne zatwierdzenie" : "Zatwierdź ręcznie" }}
-                </button>
-                <span v-if="point.manualApproved" class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-100">Ręcznie zatwierdzone</span>
+                  <span v-if="manualUpdateLoadingId === point.id" class="block animate-spin">⟳</span>
+                  <span v-else>{{ index + 1 }}</span>
+                </span>
               </div>
-            </div>
-          </div>
-
-          <div v-if="transcription.length" class="rounded-2xl border border-border bg-card p-6">
-            <h2 class="mb-3 text-lg font-semibold text-foreground">Transkrypcja na żywo</h2>
-            <div class="max-h-[300px] space-y-2 overflow-y-auto rounded-xl bg-muted/30 p-4 text-sm text-foreground">
-              <div v-for="(text, idx) in transcription.slice(-10)" :key="idx">{{ text }}</div>
+              <div class="flex-1 min-w-0">
+                <p class="font-['Inter'] font-semibold text-[#191c1e] text-[16px] leading-[24px] mb-2">
+                  {{ point.title }}
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span
+                    v-for="(tag, i) in point.keywords"
+                    :key="i"
+                    class="px-2 py-0.5 rounded text-[12px] font-['Inter'] font-bold transition"
+                    :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="space-y-6">
-          <div class="rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Czas lekcji</h2>
-            <p class="mt-1 text-sm text-muted-foreground">
-              Wybrany limit: <span class="font-semibold text-foreground">{{ durationLabel }}</span>
+        <!-- Progress -->
+        <div class="space-y-2 pt-2 border-t border-gray-100">
+          <div class="flex items-center justify-between">
+            <p class="font-['Manrope'] font-bold text-[#142588] text-[18px] leading-[28px]">
+              {{ discussedCount }} z {{ points.length }} punktów omówionych
             </p>
-            <p class="mt-2 text-sm text-muted-foreground">
-              Lekcja zatrzyma się automatycznie po upływie tego czasu.
+            <p class="font-['Inter'] font-semibold text-[#142588] text-[16px]">
+              {{ progress }}%
+            </p>
+          </div>
+          <div class="bg-[#d8e2ff] h-4 rounded-full overflow-hidden">
+            <div 
+              class="bg-[#0059bb] h-full rounded-full shadow-[0px_0px_8px_0px_rgba(0,89,187,0.4)] transition-all duration-300" 
+              :style="{ width: `${progress}%` }" 
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Transcription -->
+      <div class="col-span-12 xl:col-span-5 space-y-6">
+        <div class="flex items-center gap-2">
+          <!-- Mic Wave Icon -->
+          <svg class="w-[22px] h-[19px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke="#0059BB" />
+          </svg>
+          <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] tracking-[0.9px] leading-[28px]">
+            Napisy na żywo
+          </h2>
+        </div>
+
+        <div class="bg-[#f2f4f7] rounded-xl border-l-4 border-[#0059bb] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 h-[445px] overflow-y-auto">
+          <p class="font-['Inter'] font-semibold text-[#0059bb] text-[12px] tracking-[1.2px] uppercase mb-3">
+            NAPISY LIVE (W TRAKCIE)
+          </p>
+          
+          <div v-if="lastFinalCaption || interimCaption" class="flex flex-col gap-4">
+            <p class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
+              {{ lastFinalCaption }}
+            </p>
+            <p class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
+              {{ interimCaption }}
             </p>
             <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
               Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
             </p>
           </div>
+          <p v-else class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
+            Czekam na rozpoczęcie wypowiedzi...<br />
+            System jest gotowy do przechwytywania<br />
+            dźwięku w czasie rzeczywistym.
+          </p>
+        </div>
+      </div>
 
-          <div class="space-y-4 rounded-2xl border border-border bg-card p-6">
-            <h2 class="text-lg font-semibold text-foreground">Ustawienia mikrofonu</h2>
-            <div
-              class="rounded-xl border p-3 text-sm"
-              :class="
-                sttStatus === 'listening'
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                  : sttStatus === 'error'
-                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
-                    : 'border-border bg-muted/30 text-foreground'
-              "
-            >
-              STT status: <strong>{{ sttStatusLabel }}</strong>
-            </div>
-            <div
-              class="rounded-xl border p-3 text-sm"
-              :class="
-                apiStatus === 'online'
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                  : apiStatus === 'offline'
-                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
-                    : 'border-border bg-muted/30 text-foreground'
-              "
-            >
-              API status: <strong>{{ apiStatusLabel }}</strong>
-            </div>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label class="mb-1 block text-sm text-muted-foreground">Urządzenie mikrofonu</label>
-                <select
-                  v-model="selectedMicId"
-                  class="w-full rounded-xl border border-border bg-input-background px-3 py-2 text-foreground"
-                  :disabled="isRecording"
-                >
-                  <option value="">Domyślny mikrofon systemowy</option>
-                  <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId">
-                    {{ d.label || `Mikrofon ${d.deviceId.slice(0, 6)}` }}
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-muted-foreground">
-                  Uwaga: rozpoznawanie mowy przeglądarki zwykle używa domyślnego mikrofonu systemu.
-                </p>
-              </div>
-              <div>
-                <label class="mb-1 block text-sm text-muted-foreground">Silnik STT</label>
-                <select
-                  v-model="sttEngine"
-                  class="w-full rounded-xl border border-border bg-input-background px-3 py-2 text-foreground"
-                  :disabled="isRecording || micTestActive"
-                >
-                  <option value="browser">Przeglądarka (Web Speech)</option>
-                  <option value="whisper">Whisper (OpenAI API)</option>
-                </select>
-                <p class="mt-1 text-xs text-muted-foreground">Whisper wysyła audio do backendu i transkrybuje przez OpenAI.</p>
-              </div>
-              <div>
-                <label class="mb-1 block text-sm text-muted-foreground">Poziom mikrofonu</label>
-                <div class="h-3 w-full overflow-hidden rounded-full bg-muted">
-                  <div class="h-3 rounded-full bg-primary transition-all duration-100" :style="{ width: `${micLevel}%` }" />
-                </div>
-                <p class="mt-1 text-xs text-muted-foreground">Sygnał wejściowy: {{ Math.round(micLevel) }}%</p>
-              </div>
-            </div>
+      <!-- Microphone Settings -->
+      <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 space-y-6">
+        <div class="flex items-center gap-3">
+          <!-- Mic Icon -->
+          <svg class="w-6 h-[22px]" fill="none" stroke="#142588" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+            Ustawienia mikrofonu
+          </h3>
+        </div>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label class="mb-1 block text-sm text-muted-foreground">Wzmocnienie mikrofonu (podgląd)</label>
-                <input v-model.number="micGain" type="range" min="0.5" max="2" step="0.1" class="w-full" />
-                <p class="mt-1 text-xs text-muted-foreground">x{{ micGain.toFixed(1) }}</p>
-              </div>
-              <div>
-                <label class="mb-1 block text-sm text-muted-foreground">Czułość napisów live</label>
-                <input v-model.number="captionSensitivity" type="range" min="1" max="12" step="1" class="w-full" />
-                <p class="mt-1 text-xs text-muted-foreground">Minimum długości fragmentu: {{ captionSensitivity }}</p>
-              </div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition hover:bg-muted/50 disabled:opacity-50"
-                :disabled="isRecording || micTestActive"
-                @click="startMicTest"
+        <!-- Mikrofon -->
+        <div class="space-y-2">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
+            Mikrofon
+          </label>
+          <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
+            <select
+              v-model="selectedMicId"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              :disabled="isRecording"
+            >
+              <option value="">Domyślny mikrofon systemowy</option>
+              <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId">
+                {{ d.label || `Mikrofon ${d.deviceId.slice(0, 6)}` }}
+              </option>
+            </select>
+            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
+              {{ micDevices.find(d => d.deviceId === selectedMicId)?.label || 'Domyślny - System Mic' }}
+            </span>
+            <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
+              <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Silnik STT -->
+        <div class="space-y-2">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
+            Silnik STT
+          </label>
+          <div class="relative">
+            <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
+              <select
+                v-model="sttEngine"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                :disabled="isRecording"
               >
-                Test mikrofonu (bez lekcji)
-              </button>
-              <button
-                type="button"
-                class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition hover:bg-muted/50 disabled:opacity-50"
-                :disabled="!micTestActive"
-                @click="stopMicTest"
-              >
-                Stop testu mikrofonu
-              </button>
+                <option value="browser">Przeglądarka Web Speech</option>
+                <option value="whisper">Atheneum AI Whisper v3</option>
+              </select>
+              <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] pointer-events-none">
+                {{ sttEngine === 'whisper' ? 'Atheneum AI Whisper v3' : 'Przeglądarka Web Speech' }}
+              </span>
+              <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
+                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
           </div>
-          <div
-            v-if="pendingPoints.length > 0 && elapsedSec > 120"
-            class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground"
-          >
-            Uwaga! Pozostało {{ pendingPoints.length }} nieomówionych punktów.
-            <button
-              type="button"
-              class="mt-2 w-full rounded-xl border border-border bg-card py-2 text-sm font-medium transition hover:bg-muted/50"
-              @click="goPresentation"
-            >
-              Generuj koło ratunkowe
-            </button>
-          </div>
+        </div>
 
-          <div class="space-y-2 rounded-2xl border border-border bg-card p-4">
-            <button
-              type="button"
-              class="w-full rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
-              :disabled="pendingPoints.length === 0"
-              @click="goPresentation"
-            >
-              Koło ratunkowe ({{ pendingPoints.length }})
-            </button>
-            <button
-              type="button"
-              class="w-full rounded-xl border border-primary/40 bg-primary/15 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/25"
-              @click="finalizeNow"
-            >
-              Zakończ i archiwizuj
-            </button>
+        <!-- Poziom mikrofonu -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-['Inter'] font-semibold text-[#454652] text-[12px]">
+              POZIOM MIKROFONU
+            </span>
+            <span class="font-['Inter'] font-semibold text-[#142588] text-[12px]">
+              +{{ Math.round(micLevel) }}db
+            </span>
+          </div>
+          <div class="bg-[#e0e3e6] h-1 rounded-full overflow-hidden">
+            <div class="bg-[#142588] h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }" />
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Bottom Section -->
+    <div class="grid grid-cols-12 gap-8">
+      <!-- Progress Tracker -->
+      <div class="col-span-12 lg:col-span-9 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <!-- Calendar Icon -->
+            <svg class="w-[21px] h-[22px]" fill="none" stroke="#0053DB" viewBox="0 0 24 24" stroke-width="2.5">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#566166] text-[14px] tracking-[0.7px] uppercase">
+              POSTĘP LEKCJI
+            </h3>
+          </div>
+          <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#0053db] text-[14px]">
+            {{ Math.floor(elapsedSec / 60) }} / {{ activeSessionDurationMinutes }} Minutes
+          </p>
+        </div>
+
+        <div class="bg-[#d9e4ea] h-8 rounded-2xl overflow-hidden relative">
+          <div 
+            class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
+            :style="{ width: `${Math.min(100, Math.floor((elapsedSec / (activeSessionDurationMinutes * 60)) * 100))}%` }" 
+          />
+          <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30" />
+          <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
+          <div class="absolute left-3/4 top-0 bottom-0 w-0.5 bg-white/50 shadow-[0px_0px_0px_2px_rgba(0,83,219,0.4)]" />
+        </div>
+
+        <div class="flex items-center justify-between text-[10px] font-['Plus_Jakarta_Sans'] font-bold tracking-[1px] uppercase">
+          <span class="text-[#566166]">POCZĄTEK</span>
+          <span class="text-[#0053db]">KONIEC</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
+        <button 
+          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors"
+          @click="goPresentation"
+        >
+          <!-- Presentation Icon -->
+          <svg class="size-5" fill="none" stroke="#142588" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+          </svg>
+          <span class="font-['Inter'] font-semibold text-[#142588] text-[16px]">
+            Utwórz prezentację
+          </span>
+        </button>
+
+        <button 
+          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)]"
+          @click="finalizeNow"
+        >
+          <!-- Archive Icon -->
+          <svg class="size-5" fill="none" stroke="#FFA26E" stroke-width="2.2" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <span class="font-['Inter'] font-semibold text-[#ffa26e] text-[16px]">
+            Zakończ i archiwizuj
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -368,6 +373,9 @@ onMounted(async () => {
     const lessons = await fetchLessons();
     const target = lessons.find((l) => l.id === route.params.lessonId) || lessons[0];
     if (target) state.lesson = target;
+  }
+  if (!isRecording.value) {
+    startSession();
   }
 });
 
