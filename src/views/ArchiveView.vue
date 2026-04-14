@@ -21,17 +21,7 @@
             Brak zarchiwizowanych lekcji.
           </div>
 
-          <div
-            v-for="lesson in filteredLessons"
-            :key="lesson.id"
-            :class="[
-              'rounded-xl border bg-card p-4 cursor-pointer transition',
-              selected?.id === lesson.id
-                ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                : 'border-border hover:border-primary/40 hover:bg-muted/30'
-            ]"
-            @click="selectLesson(lesson)"
-          >
+          <div v-for="lesson in filteredLessons" :key="lesson.id" class="rounded-xl border border-border bg-card p-4 cursor-pointer transition hover:border-primary/40 hover:bg-muted/30" @click="selectLesson(lesson)">
             <div class="flex items-start justify-between">
               <div>
                 <h3 class="font-medium text-foreground">{{ lesson.finalNote?.title || lesson.title }}</h3>
@@ -77,10 +67,6 @@
               <label class="text-sm text-gray-600 block mb-1">Data</label>
               <input v-model="editDate" type="date" class="w-full border rounded-lg px-3 py-2" />
             </div>
-
-            <p v-if="editError" class="text-sm text-red-600">
-              {{ editError }}
-            </p>
 
             <button class="w-full px-3 py-2 rounded-lg bg-orange-600 text-white text-sm" :disabled="saving" @click="handleSaveFinalNote">
               {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
@@ -142,7 +128,6 @@ const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
-const editError = ref("");
 const isQrModalOpen = ref(false);
 
 onMounted(async () => {
@@ -174,34 +159,13 @@ function discussed(lesson) {
 function selectLesson(lesson) {
   isQrModalOpen.value = false;
   selected.value = lesson;
-  editError.value = "";
   editTitle.value = String(lesson?.finalNote?.title || "");
   editSubject.value = String(lesson?.finalNote?.subject || "");
   editDate.value = String(lesson?.finalNote?.date || "");
 }
 
-function isDateBeyondFutureWeek(dateIso) {
-  const raw = String(dateIso || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
-  const candidate = new Date(`${raw}T00:00:00`);
-  if (Number.isNaN(candidate.getTime())) return false;
-
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const maxAllowed = new Date(todayStart);
-  maxAllowed.setDate(maxAllowed.getDate() + 7);
-  return candidate.getTime() > maxAllowed.getTime();
-}
-
 async function handleSaveFinalNote() {
   if (!selected.value?.id || !selected.value?.finalNote) return;
-
-  editError.value = "";
-  if (isDateBeyondFutureWeek(editDate.value)) {
-    editError.value = "Data wybiega dalej niż 7 dni w przyszłość. Popraw datę, aby zapisać notatkę.";
-    return;
-  }
-
   try {
     saving.value = true;
     const lesson = await updateFinalNote(selected.value.id, {
@@ -210,8 +174,6 @@ async function handleSaveFinalNote() {
       date: editDate.value
     });
     selectLesson(lesson);
-  } catch (e) {
-    editError.value = e?.message || "Nie udało się zapisać notatki. Sprawdź datę i spróbuj ponownie.";
   } finally {
     saving.value = false;
   }

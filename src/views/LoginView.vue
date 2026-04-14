@@ -1,5 +1,5 @@
-﻿<template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#081226_0%,#0f2a52_38%,#1a4d86_72%,#5f2f0f_100%)] lg:bg-none lg:grid-cols-2">
+<template>
+  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#1f2937_0%,#111827_45%,#0b1220_100%)] lg:bg-none lg:grid-cols-2">
     <div
       class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-sidebar via-background to-card p-10 text-foreground lg:flex"
     >
@@ -8,7 +8,7 @@
         <p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">CoTeach</p>
         <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">Lekcje, plan i archiwum w jednym panelu.</h2>
       </div>
-      <p class="relative text-sm text-muted-foreground">Zaloguj siÄ™, ĹĽeby wrĂłciÄ‡ do pracy.</p>
+      <p class="relative text-sm text-muted-foreground">Zaloguj się, żeby wrócić do pracy.</p>
     </div>
 
     <div class="flex items-center justify-center px-4 py-12 sm:px-8">
@@ -37,7 +37,7 @@
             :class="accountMode === 'business' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
             @click="accountMode = 'business'"
           >
-            Konto sĹ‚uĹĽbowe
+            Konto służbowe
           </button>
         </div>
 
@@ -53,27 +53,27 @@
             />
           </label>
           <label class="block text-sm font-semibold text-foreground">
-            HasĹ‚o
+            Hasło
             <input
               v-model="password"
               type="password"
               required
               class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="â€˘â€˘â€˘â€˘â€˘â€˘â€˘â€˘"
+              placeholder="••••••••"
             />
           </label>
           <button
             type="submit"
             class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
           >
-            Zaloguj siÄ™
+            Zaloguj się
           </button>
           <button
             type="button"
             class="w-full text-sm font-medium text-primary transition hover:opacity-80"
             @click="handlePasswordReset"
           >
-            Nie pamiÄ™tasz hasĹ‚a?
+            Nie pamiętasz hasła?
           </button>
         </form>
 
@@ -95,7 +95,7 @@
 
         <form v-else @submit.prevent="handleBusinessLogin" class="space-y-5">
           <label class="block text-sm font-semibold text-foreground">
-            Login sĹ‚uĹĽbowy
+            Login służbowy
             <input
               v-model="businessLogin"
               type="text"
@@ -105,20 +105,20 @@
             />
           </label>
           <label class="block text-sm font-semibold text-foreground">
-            HasĹ‚o
+            Hasło
             <input
               v-model="businessPassword"
               type="password"
               required
               class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="â€˘â€˘â€˘â€˘â€˘â€˘â€˘â€˘"
+              placeholder="••••••••"
             />
           </label>
           <button
             type="submit"
             class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
           >
-            Zaloguj konto sĹ‚uĹĽbowe
+            Zaloguj konto służbowe
           </button>
         </form>
 
@@ -209,26 +209,26 @@ function mapLoginErrorMessage(error, mode = "individual") {
   const status = Number(error?.status || 0);
 
   if (raw.includes("email not confirmed") || raw.includes("email_not_confirmed")) {
-    return "Konto nie zostaĹ‚o jeszcze potwierdzone. SprawdĹş skrzynkÄ™ e-mail i kliknij link aktywacyjny.";
+    return "Konto nie zostało jeszcze potwierdzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.";
   }
 
   if (raw.includes("invalid login credentials") || raw.includes("invalid_credentials") || status === 400) {
     return mode === "business"
-      ? "NieprawidĹ‚owy login sĹ‚uĹĽbowy lub hasĹ‚o."
-      : "NieprawidĹ‚owy email lub hasĹ‚o.";
+      ? "Nieprawidłowy login służbowy lub hasło."
+      : "Nieprawidłowy email lub hasło.";
   }
 
   if (status === 429 || raw.includes("too many requests")) {
-    return "Zbyt wiele prĂłb logowania. SprĂłbuj ponownie za chwilÄ™.";
+    return "Zbyt wiele prób logowania. Spróbuj ponownie za chwilę.";
   }
 
   if (raw.includes("failed to fetch") || raw.includes("network") || status >= 500) {
-    return "Nie udaĹ‚o siÄ™ poĹ‚Ä…czyÄ‡ z usĹ‚ugÄ… logowania. SprawdĹş poĹ‚Ä…czenie i sprĂłbuj ponownie.";
+    return "Nie udało się połączyć z usługą logowania. Sprawdź połączenie i spróbuj ponownie.";
   }
 
   return mode === "business"
-    ? "Logowanie kontem sĹ‚uĹĽbowym nie powiodĹ‚o siÄ™. SprĂłbuj ponownie."
-    : "Logowanie nie powiodĹ‚o siÄ™. SprĂłbuj ponownie.";
+    ? "Logowanie kontem służbowym nie powiodło się. Spróbuj ponownie."
+    : "Logowanie nie powiodło się. Spróbuj ponownie.";
 }
 
 function readPendingProfileSeed() {
@@ -314,7 +314,7 @@ async function handleLogin() {
 
   if (!data.session) {
     errorMessage.value =
-      "Brak sesji po logowaniu. JeĹ›li konto wymaga potwierdzenia e-mail, uĹĽyj linku z wiadomoĹ›ci.";
+      "Brak sesji po logowaniu. Jeśli konto wymaga potwierdzenia e-mail, użyj linku z wiadomości.";
     return;
   }
 
@@ -357,7 +357,7 @@ async function handleBusinessLogin() {
   const emailFromLogin = toBusinessEmail(businessLogin.value);
 
   if (!emailFromLogin) {
-    errorMessage.value = "Podaj login sĹ‚uĹĽbowy.";
+    errorMessage.value = "Podaj login służbowy.";
     return;
   }
 
@@ -391,7 +391,7 @@ async function handleBusinessLogin() {
   const profileEmail = String(profile?.email || "").toLowerCase();
   if (!isBusinessEmail(profileEmail)) {
     await supabase.auth.signOut({ scope: "local" });
-    errorMessage.value = "To nie jest konto sĹ‚uĹĽbowe. UĹĽyj logowania dla konta indywidualnego.";
+    errorMessage.value = "To nie jest konto służbowe. Użyj logowania dla konta indywidualnego.";
     return;
   }
 
@@ -428,7 +428,7 @@ async function handlePasswordReset() {
 
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
   if (!normalizedEmail) {
-    errorMessage.value = "Podaj email w polu logowania, aby zresetowaÄ‡ hasĹ‚o.";
+    errorMessage.value = "Podaj email w polu logowania, aby zresetować hasło.";
     return;
   }
 
@@ -439,7 +439,7 @@ async function handlePasswordReset() {
     return;
   }
 
-  infoMessage.value = "WysĹ‚aliĹ›my link do resetu hasĹ‚a. SprawdĹş skrzynkÄ™ e-mail.";
+  infoMessage.value = "Wysłaliśmy link do resetu hasła. Sprawdź skrzynkę e-mail.";
 }
 
 async function handleGoogleIntentAfterRedirect() {
@@ -449,7 +449,7 @@ async function handleGoogleIntentAfterRedirect() {
   const { data } = await supabase.auth.getSession();
   const session = data?.session;
   if (!session?.user?.id) {
-    infoMessage.value = "FinalizujÄ™ logowanie Google...";
+    infoMessage.value = "Finalizuję logowanie Google...";
     return;
   }
 
@@ -477,7 +477,7 @@ async function handleGoogleIntentAfterRedirect() {
     if (!profile || profileError) {
       await supabase.auth.signOut({ scope: "local" });
       localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
-      errorMessage.value = "To konto nie jest zarejestrowane przez Google. UĹĽyj najpierw rejestracji.";
+      errorMessage.value = "To konto nie jest zarejestrowane przez Google. Użyj najpierw rejestracji.";
       return;
     }
   }

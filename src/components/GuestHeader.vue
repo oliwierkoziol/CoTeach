@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <header
     class="sticky top-0 z-50 flex h-14 min-w-0 items-center justify-between gap-2 border-b border-border bg-card/95 px-3 backdrop-blur-md sm:h-16 sm:px-6"
   >
@@ -11,8 +11,8 @@
       <button
         type="button"
         class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground transition hover:bg-muted/60"
-        :title="isDark ? 'PrzeĹ‚Ä…cz na tryb jasny' : 'PrzeĹ‚Ä…cz na tryb ciemny'"
-        :aria-label="isDark ? 'PrzeĹ‚Ä…cz na tryb jasny' : 'PrzeĹ‚Ä…cz na tryb ciemny'"
+        :title="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
+        :aria-label="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
         @click="toggleTheme"
       >
         <svg
@@ -53,7 +53,7 @@
       <RouterLink
         v-if="route.path === '/register'"
         to="/login"
-        class="inline-flex rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground"
+        class="hidden rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground sm:inline-flex"
       >
         Logowanie
       </RouterLink>
@@ -84,7 +84,7 @@
       to="/login"
       class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
     >
-      Zaloguj siÄ™
+      Zaloguj się
     </RouterLink>
   </header>
 </template>

@@ -292,21 +292,6 @@ function normalizeLessonDate(dateInput) {
   return parsed.toISOString().split("T")[0];
 }
 
-function isDateMoreThanDaysInFuture(isoDate, maxFutureDays = 7) {
-  const raw = String(isoDate || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
-
-  const candidate = new Date(`${raw}T00:00:00`);
-  if (Number.isNaN(candidate.getTime())) return false;
-
-  const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const maxAllowed = new Date(todayStart);
-  maxAllowed.setDate(maxAllowed.getDate() + Number(maxFutureDays || 0));
-
-  return candidate.getTime() > maxAllowed.getTime();
-}
-
 function resolveLessonMonth(monthInput, isoDate) {
   const rawMonth = String(monthInput || "").trim();
   if (rawMonth) return rawMonth;
@@ -1585,11 +1570,6 @@ app.post("/api/lessons", async (req, res) => {
   const activeLicense = getActiveUserLicense(teacher.userId);
 
   const normalizedDate = normalizeLessonDate(date);
-  if (isDateMoreThanDaysInFuture(normalizedDate, 7)) {
-    return res.status(400).json({
-      error: "Data lekcji może być maksymalnie 7 dni w przyszłość. Popraw datę i spróbuj ponownie."
-    });
-  }
   const normalizedMonth = resolveLessonMonth(month, normalizedDate);
   const lessonId = randomUUID();
   const lesson = {
@@ -1715,46 +1695,6 @@ app.use((error, _req, res, next) => {
     return res.status(413).json({ error: "Plik jest zbyt duży. Maksymalny rozmiar to 50 MB." });
   }
   return next(error);
-});
-
-app.post("/api/notes/extract", upload.single("file"), async (req, res) => {
-  try {
-    const teacher = await resolveTeacherContext(req, res);
-    if (!teacher) return;
-
-    if (!req.file) {
-      return res.status(400).json({ error: "Plik jest wymagany." });
-    }
-
-    const supportedMimeTypes = new Set([
-      "application/pdf",
-      "text/plain",
-      "image/png",
-      "image/jpeg"
-    ]);
-
-    if (!supportedMimeTypes.has(String(req.file.mimetype || ""))) {
-      return res.status(415).json({
-        error: "Nieobsługiwany format pliku. Dozwolone: PDF, TXT, PNG, JPG."
-      });
-    }
-
-    const extractedText = await extractTextFromFile(req.file, {
-      teacherId: teacher.teacherId,
-      schoolId: teacher.schoolId
-    });
-
-    if (!String(extractedText || "").trim()) {
-      return res.status(422).json({ error: "Nie udało się odczytać treści z pliku." });
-    }
-
-    return res.json({
-      text: String(extractedText || "").trim(),
-      fileName: req.file.originalname || "material"
-    });
-  } catch (error) {
-    return res.status(400).json({ error: error.message || "Nie udało się odczytać pliku." });
-  }
 });
 
 app.post("/api/notes/generate", async (req, res) => {
@@ -2000,23 +1940,16 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
 
   const title = String(req.body?.title || "").trim();
   const subject = String(req.body?.subject || "").trim();
-  const dateRaw = String(req.body?.date || "").trim();
-  if (!title || !subject || !dateRaw) {
+  const date = String(req.body?.date || "").trim();
+  if (!title || !subject || !date) {
     return res.status(400).json({ error: "Title, subject, and date are required" });
-  }
-
-  const normalizedDate = normalizeLessonDate(dateRaw);
-  if (isDateMoreThanDaysInFuture(normalizedDate, 7)) {
-    return res.status(400).json({
-      error: "Data notatki może być maksymalnie 7 dni w przyszłość. Popraw datę i spróbuj ponownie."
-    });
   }
 
   lesson.finalNote = {
     ...lesson.finalNote,
     title,
     subject,
-    date: normalizedDate,
+    date,
     updatedAt: new Date().toISOString()
   };
   db.lessons.set(lesson.id, lesson);
@@ -2278,7 +2211,7 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
   if (supabase) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, teacher_id, full_name, email, avatar_url, school_id")
+      .select("id, teacher_id, full_name, email, school_id")
       .eq("school_id", adminSchool.schoolId);
     for (const profile of data || []) {
       const teacherId = String(profile.teacher_id || "").trim();
@@ -2287,8 +2220,7 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
         userId: profile.id,
         teacherId,
         fullName: profile.full_name || "",
-        email: profile.email || "",
-        avatar_url: profile.avatar_url || null
+        email: profile.email || ""
       });
     }
   }
@@ -2316,7 +2248,6 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
       userId: teacherMeta.get(teacherId)?.userId || null,
       fullName: teacherMeta.get(teacherId)?.fullName || "",
       email: teacherMeta.get(teacherId)?.email || "",
-      avatar_url: teacherMeta.get(teacherId)?.avatar_url || null,
       base: 0,
       margin: 0,
       total: 0,
@@ -2417,71 +2348,31 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
   const userId = req.params.userId;
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "").trim();
-  const requestedSchoolId = String(req.body?.schoolId || "").trim();
-
-  const { data: currentProfile, error: currentProfileError } = await supabase
-    .from("profiles")
-    .select("id, school_id")
-    .eq("id", userId)
-    .eq("school_id", adminSchool.schoolId)
-    .maybeSingle();
-
-  if (currentProfileError) {
-    return res.status(500).json({ error: `Nie udało się zweryfikować konta: ${currentProfileError.message}` });
-  }
-  if (!currentProfile) {
-    return res.status(404).json({ error: "Użytkownik nie istnieje w Twojej organizacji." });
-  }
 
   const authPayload = {};
   if (email) authPayload.email = email;
   if (password) authPayload.password = password;
 
-  let nextSchoolId = String(currentProfile.school_id || "").trim() || adminSchool.schoolId;
-  if (requestedSchoolId) {
-    if (!db.schools.has(requestedSchoolId)) {
-      return res.status(400).json({ error: "Wybrana organizacja nie istnieje." });
-    }
-    nextSchoolId = requestedSchoolId;
+  if (!Object.keys(authPayload).length) {
+    return res.status(400).json({ error: "Podaj email lub hasło do aktualizacji." });
   }
 
-  const hasProfileChange = Boolean(email) || nextSchoolId !== String(currentProfile.school_id || "");
-  if (!Object.keys(authPayload).length && !hasProfileChange) {
-    return res.status(400).json({ error: "Podaj email, hasło lub organizację do aktualizacji." });
+  const { data, error } = await supabase.auth.admin.updateUserById(userId, authPayload);
+  if (error) {
+    return res.status(500).json({ error: `Nie udało się zaktualizować konta: ${error.message}` });
   }
 
-  let updatedAuthUser = null;
-  if (Object.keys(authPayload).length) {
-    const { data, error } = await supabase.auth.admin.updateUserById(userId, authPayload);
-    if (error) {
-      return res.status(500).json({ error: `Nie udało się zaktualizować konta: ${error.message}` });
-    }
-    updatedAuthUser = data?.user || null;
-  }
-
-  if (hasProfileChange) {
-    const profilePatch = {
-      updated_at: new Date().toISOString(),
-      school_id: nextSchoolId
-    };
-    if (email) profilePatch.email = email;
-
+  if (email) {
     const { error: profileError } = await supabase
       .from("profiles")
-      .update(profilePatch)
+      .update({ email, updated_at: new Date().toISOString() })
       .eq("id", userId);
     if (profileError) {
       return res.status(500).json({ error: `Nie udało się zaktualizować profilu: ${profileError.message}` });
     }
   }
 
-  return res.json({
-    user: {
-      id: userId,
-      email: updatedAuthUser?.email || email || null,
-      school_id: nextSchoolId
-    }
-  });
+  return res.json({ user: { id: userId, email: data?.user?.email || email || null } });
 });
 
 app.post("/api/admin/users/special-account", async (req, res) => {

@@ -1,14 +1,14 @@
-﻿<template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#081226_0%,#0f2a52_38%,#1a4d86_72%,#5f2f0f_100%)] lg:bg-none lg:grid-cols-2">
+<template>
+  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#1f2937_0%,#111827_45%,#0b1220_100%)] lg:bg-none lg:grid-cols-2">
     <div
       class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-card via-sidebar to-background p-10 text-foreground lg:flex"
     >
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,oklch(0.74_0.12_195/0.15),transparent_55%)]" />
       <div class="relative">
         <p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">CoTeach</p>
-        <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">ZaĹ‚ĂłĹĽ konto i od razu planuj lekcje.</h2>
+        <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">Załóż konto i od razu planuj lekcje.</h2>
       </div>
-      <p class="relative text-sm text-muted-foreground">Ten sam ukĹ‚ad: panel nawigacji po lewej po zalogowaniu.</p>
+      <p class="relative text-sm text-muted-foreground">Ten sam układ: panel nawigacji po lewej po zalogowaniu.</p>
     </div>
 
     <div class="flex items-center justify-center px-4 py-12 sm:px-8">
@@ -19,7 +19,7 @@
         </div>
         <div class="mb-8 hidden lg:block">
           <h1 class="text-2xl font-bold text-foreground">Rejestracja</h1>
-          <p class="mt-1 text-sm text-muted-foreground">Formularz po prawej â€” lewa kolumna to tylko podglÄ…d marki.</p>
+          <p class="mt-1 text-sm text-muted-foreground">Formularz po prawej — lewa kolumna to tylko podgląd marki.</p>
         </div>
 
         <form @submit.prevent="handleRegister" class="space-y-5">
@@ -30,14 +30,14 @@
               required
               class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
             >
-              <option value="" disabled>{{ isLoadingOrganizations ? "Ĺadowanie organizacji..." : "Wybierz organizacjÄ™" }}</option>
+              <option value="" disabled>{{ isLoadingOrganizations ? "Ładowanie organizacji..." : "Wybierz organizację" }}</option>
               <option v-for="org in organizations" :key="org.id" :value="org.id">
                 {{ org.name }}
               </option>
             </select>
           </label>
           <label class="block text-sm font-semibold text-foreground">
-            ImiÄ™ i nazwisko
+            Imię i nazwisko
             <input
               v-model="name"
               type="text"
@@ -57,20 +57,20 @@
             />
           </label>
           <label class="block text-sm font-semibold text-foreground">
-            HasĹ‚o
+            Hasło
             <input
               v-model="password"
               type="password"
               required
               class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="â€˘â€˘â€˘â€˘â€˘â€˘â€˘â€˘"
+              placeholder="••••••••"
             />
           </label>
           <button
             type="submit"
             class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
           >
-            Zarejestruj siÄ™
+            Zarejestruj się
           </button>
         </form>
 
@@ -85,7 +85,7 @@
           @click="handleGoogleAuth"
           class="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
         >
-          Zarejestruj siÄ™ przez Google
+          Zarejestruj się przez Google
         </button>
 
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -139,14 +139,14 @@ async function loadOrganizations() {
   try {
     const response = await fetch(`${String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "")}/api/public/organizations`);
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ organizacji.");
+    if (!response.ok) throw new Error(data.error || "Nie udało się pobrać organizacji.");
 
     organizations.value = Array.isArray(data.organizations) ? data.organizations : [];
     if (!selectedOrganizationId.value && organizations.value.length) {
       selectedOrganizationId.value = String(organizations.value[0].id || "");
     }
   } catch (error) {
-    errorMessage.value = error.message || "Nie udaĹ‚o siÄ™ pobraÄ‡ organizacji.";
+    errorMessage.value = error.message || "Nie udało się pobrać organizacji.";
   } finally {
     isLoadingOrganizations.value = false;
   }
@@ -161,7 +161,7 @@ async function handleRegister() {
   const schoolId = String(selectedOrganizationId.value || "").trim();
 
   if (!schoolId) {
-    errorMessage.value = "Wybierz organizacjÄ™.";
+    errorMessage.value = "Wybierz organizację.";
     return;
   }
 
@@ -205,7 +205,7 @@ async function handleRegister() {
       JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
     );
     infoMessage.value =
-      "Konto utworzone. JeĹ›li projekt wymaga potwierdzenia e-mail, sprawdĹş skrzynkÄ™ i dopiero wtedy zaloguj siÄ™.";
+      "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
   }
 }
 
@@ -218,7 +218,7 @@ async function handleGoogleAuth() {
   const schoolId = String(selectedOrganizationId.value || "").trim();
 
   if (!schoolId) {
-    errorMessage.value = "Wybierz organizacjÄ™.";
+    errorMessage.value = "Wybierz organizację.";
     return;
   }
 

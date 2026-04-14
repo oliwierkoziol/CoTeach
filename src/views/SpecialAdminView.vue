@@ -1,18 +1,18 @@
-﻿<template>
+<template>
   <div class="min-h-full px-4 py-8 sm:px-6 lg:px-10">
     <div class="mx-auto max-w-7xl space-y-6">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Panel admina</p>
           <h1 class="text-3xl font-bold text-foreground">Dashboard admina</h1>
-          <p class="mt-1 text-sm text-muted-foreground">Statystyki lekcji, pokrycie i zarzÄ…dzanie kontami.</p>
+          <p class="mt-1 text-sm text-muted-foreground">Statystyki lekcji, pokrycie i zarządzanie kontami.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <RouterLink
             to="/admin/cost-calculator"
             class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40"
           >
-            Kalkulator kosztĂłw
+            Kalkulator kosztów
           </RouterLink>
           <button
             type="button"
@@ -20,7 +20,7 @@
             :disabled="isLoading"
             @click="loadDashboard"
           >
-            {{ isLoading ? "OdĹ›wieĹĽanie..." : "OdĹ›wieĹĽ" }}
+            {{ isLoading ? "Odświeżanie..." : "Odśwież" }}
           </button>
         </div>
       </header>
@@ -39,13 +39,13 @@
           <p class="mt-2 text-3xl font-black text-foreground">{{ stats.totalLessons }}</p>
         </article>
         <article class="rounded-2xl border border-border bg-card p-5">
-          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Konta uĹĽytkownikĂłw</p>
+          <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Konta użytkowników</p>
           <p class="mt-2 text-3xl font-black text-foreground">{{ stats.usersCount }}</p>
         </article>
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-6">
-        <h2 class="mb-4 text-lg font-semibold text-foreground">Pokrycie wedĹ‚ug przedmiotĂłw</h2>
+        <h2 class="mb-4 text-lg font-semibold text-foreground">Pokrycie według przedmiotów</h2>
         <div v-if="!coverageBySubject.length" class="text-sm text-muted-foreground">Brak danych pokrycia.</div>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -53,7 +53,7 @@
               <tr class="border-b border-border text-left text-xs uppercase text-muted-foreground">
                 <th class="px-3 py-2 font-medium">Przedmiot</th>
                 <th class="px-3 py-2 font-medium">Lekcje</th>
-                <th class="px-3 py-2 font-medium">OmĂłwione / Wszystkie</th>
+                <th class="px-3 py-2 font-medium">Omówione / Wszystkie</th>
                 <th class="px-3 py-2 font-medium">Pokrycie</th>
               </tr>
             </thead>
@@ -81,7 +81,7 @@
               v-model="costSortBy"
               class="rounded-lg border border-border bg-input-background px-3 py-2 text-xs font-semibold text-foreground"
             >
-              <option value="total">Sortuj: koszt caĹ‚kowity</option>
+              <option value="total">Sortuj: koszt całkowity</option>
               <option value="teacher">Sortuj: nauczyciel</option>
               <option value="notes">Sortuj: notatki</option>
               <option value="live">Sortuj: lekcje live</option>
@@ -93,8 +93,8 @@
               v-model="costDirection"
               class="rounded-lg border border-border bg-input-background px-3 py-2 text-xs font-semibold text-foreground"
             >
-              <option value="desc">MalejÄ…co</option>
-              <option value="asc">RosnÄ…co</option>
+              <option value="desc">Malejąco</option>
+              <option value="asc">Rosnąco</option>
             </select>
 
             <button
@@ -103,12 +103,12 @@
               :disabled="isLoadingCosts"
               @click="loadTeacherCosts"
             >
-              {{ isLoadingCosts ? "Ĺadowanie..." : "OdĹ›wieĹĽ koszty" }}
+              {{ isLoadingCosts ? "Ładowanie..." : "Odśwież koszty" }}
             </button>
           </div>
         </div>
 
-        <div v-if="!teacherCosts.length" class="text-sm text-muted-foreground">Brak danych kosztĂłw nauczycieli.</div>
+        <div v-if="!teacherCosts.length" class="text-sm text-muted-foreground">Brak danych kosztów nauczycieli.</div>
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -126,23 +126,8 @@
             <tbody>
               <tr v-for="row in teacherCosts" :key="row.teacherId" class="border-b border-border/60">
                 <td class="px-3 py-3">
-                  <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-primary/10">
-                      <img
-                        v-if="row.avatar_url"
-                        :src="row.avatar_url"
-                        :alt="row.fullName || 'Avatar'"
-                        class="h-full w-full object-cover"
-                      />
-                      <div v-else class="flex h-full w-full items-center justify-center text-xs font-bold text-primary">
-                        {{ getInitials(row.fullName) }}
-                      </div>
-                    </div>
-                    <div>
-                      <div class="font-medium text-foreground">{{ row.fullName || "Brak nazwy" }}</div>
-                      <div class="text-xs text-muted-foreground">{{ row.email || row.teacherId }}</div>
-                    </div>
-                  </div>
+                  <div class="font-medium text-foreground">{{ row.fullName || "Brak nazwy" }}</div>
+                  <div class="text-xs text-muted-foreground">{{ row.email || row.teacherId }}</div>
                 </td>
                 <td class="px-3 py-3 text-muted-foreground">{{ currency(row.base) }}</td>
                 <td class="px-3 py-3 text-muted-foreground">{{ currency(row.margin) }}</td>
@@ -159,7 +144,7 @@
 
       <section class="rounded-2xl border border-border bg-card">
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 class="text-lg font-semibold text-foreground">Konta uĹĽytkownikĂłw ({{ users.length }})</h2>
+          <h2 class="text-lg font-semibold text-foreground">Konta użytkowników ({{ users.length }})</h2>
         </div>
 
         <div v-if="!users.length" class="px-6 py-10 text-sm text-muted-foreground">Brak kont.</div>
@@ -167,7 +152,7 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
-                <th class="px-6 py-3 font-medium">ImiÄ™ i nazwisko</th>
+                <th class="px-6 py-3 font-medium">Imię i nazwisko</th>
                 <th class="px-6 py-3 font-medium">E-mail</th>
                 <th class="px-6 py-3 font-medium">Status</th>
                 <th class="px-6 py-3 font-medium">Licencja</th>
@@ -176,23 +161,8 @@
             </thead>
             <tbody class="divide-y divide-border">
               <tr v-for="user in users" :key="user.id" class="hover:bg-muted/30">
-                <td class="px-6 py-4 font-medium text-foreground">
-                  <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-primary/10">
-                      <img
-                        v-if="user.avatar_url"
-                        :src="user.avatar_url"
-                        :alt="user.full_name || 'Avatar'"
-                        class="h-full w-full object-cover"
-                      />
-                      <div v-else class="flex h-full w-full items-center justify-center text-xs font-bold text-primary">
-                        {{ getInitials(user.full_name) }}
-                      </div>
-                    </div>
-                    <span>{{ user.full_name || "â€”" }}</span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-muted-foreground">{{ user.email || "â€”" }}</td>
+                <td class="px-6 py-4 font-medium text-foreground">{{ user.full_name || "—" }}</td>
+                <td class="px-6 py-4 text-muted-foreground">{{ user.email || "—" }}</td>
                 <td class="px-6 py-4">
                   <span
                     :class="user.blocked ? 'bg-red-500/10 text-red-700 dark:text-red-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'"
@@ -242,23 +212,23 @@
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-6">
-        <h2 class="text-lg font-semibold text-foreground">Ustawienia szkoĹ‚y</h2>
+        <h2 class="text-lg font-semibold text-foreground">Ustawienia szkoły</h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          Ustaw nazwÄ™ szkoĹ‚y i koĹ„cĂłwkÄ™ maili sĹ‚uĹĽbowych dla kont tworzonych przez administratora.
+          Ustaw nazwę szkoły i końcówkę maili służbowych dla kont tworzonych przez administratora.
         </p>
 
         <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <label class="block text-sm text-muted-foreground">
-            Nazwa szkoĹ‚y
+            Nazwa szkoły
             <input
               v-model.trim="schoolName"
               type="text"
               class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Np. SzkoĹ‚a Podstawowa nr 1"
+              placeholder="Np. Szkoła Podstawowa nr 1"
             />
           </label>
           <label class="block text-sm text-muted-foreground">
-            KoĹ„cĂłwka maili sĹ‚uĹĽbowych
+            Końcówka maili służbowych
             <input
               v-model.trim="businessEmailDomain"
               type="text"
@@ -275,20 +245,20 @@
             :disabled="isSavingSchoolSettings"
             @click="saveSchoolSettings"
           >
-            {{ isSavingSchoolSettings ? "Zapisywanie..." : "Zapisz ustawienia szkoĹ‚y" }}
+            {{ isSavingSchoolSettings ? "Zapisywanie..." : "Zapisz ustawienia szkoły" }}
           </button>
         </div>
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-6">
-        <h2 class="text-lg font-semibold text-foreground">UtwĂłrz konto sĹ‚uĹĽbowe</h2>
+        <h2 class="text-lg font-semibold text-foreground">Utwórz konto służbowe</h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          Administrator moĹĽe utworzyÄ‡ konto ze specjalnym loginem i hasĹ‚em.
+          Administrator może utworzyć konto ze specjalnym loginem i hasłem.
         </p>
 
         <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <label class="block text-sm text-muted-foreground">
-            ImiÄ™ i nazwisko
+            Imię i nazwisko
             <input
               v-model.trim="newBusinessFullName"
               type="text"
@@ -297,7 +267,7 @@
             />
           </label>
           <label class="block text-sm text-muted-foreground">
-            Login sĹ‚uĹĽbowy
+            Login służbowy
             <input
               v-model.trim="newBusinessLogin"
               type="text"
@@ -306,20 +276,20 @@
             />
           </label>
           <label class="block text-sm text-muted-foreground">
-            HasĹ‚o
+            Hasło
             <div class="mt-1 flex gap-2">
               <input
                 v-model="newBusinessPassword"
                 :type="showNewBusinessPassword ? 'text' : 'password'"
                 class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                placeholder="Minimum 8 znakĂłw"
+                placeholder="Minimum 8 znaków"
               />
               <button
                 type="button"
                 class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40"
                 @click="showNewBusinessPassword = !showNewBusinessPassword"
               >
-                {{ showNewBusinessPassword ? "Ukryj" : "PokaĹĽ" }}
+                {{ showNewBusinessPassword ? "Ukryj" : "Pokaż" }}
               </button>
             </div>
           </label>
@@ -332,7 +302,7 @@
             :disabled="isCreatingBusinessUser"
             @click="createBusinessUser"
           >
-            {{ isCreatingBusinessUser ? "Tworzenie..." : "UtwĂłrz konto sĹ‚uĹĽbowe" }}
+            {{ isCreatingBusinessUser ? "Tworzenie..." : "Utwórz konto służbowe" }}
           </button>
         </div>
       </section>
@@ -358,18 +328,6 @@
 
           <div class="mt-5 space-y-4">
             <label class="block text-sm text-muted-foreground">
-              Organizacja
-              <select
-                v-model="editSchoolId"
-                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              >
-                <option v-for="org in organizations" :key="org.id" :value="org.id">
-                  {{ org.name }}
-                </option>
-              </select>
-            </label>
-
-            <label class="block text-sm text-muted-foreground">
               E-mail
               <input
                 v-model="editEmail"
@@ -380,20 +338,20 @@
             </label>
 
             <label class="block text-sm text-muted-foreground">
-              Nowe hasĹ‚o
+              Nowe hasło
               <div class="mt-1 flex gap-2">
                 <input
                   v-model="editPassword"
                   :type="showEditPassword ? 'text' : 'password'"
                   class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                  placeholder="Pozostaw puste, aby nie zmieniaÄ‡"
+                  placeholder="Pozostaw puste, aby nie zmieniać"
                 />
                 <button
                   type="button"
                   class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40"
                   @click="showEditPassword = !showEditPassword"
                 >
-                  {{ showEditPassword ? "Ukryj" : "PokaĹĽ" }}
+                  {{ showEditPassword ? "Ukryj" : "Pokaż" }}
                 </button>
               </div>
             </label>
@@ -407,10 +365,10 @@
                   min="0"
                   class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
                 />
-                <p class="mt-1 text-xs text-muted-foreground">Wpisz 0, aby odebraÄ‡ licencjÄ™.</p>
+                <p class="mt-1 text-xs text-muted-foreground">Wpisz 0, aby odebrać licencję.</p>
               </label>
               <label class="block text-sm text-muted-foreground">
-                Limit aktywnych uĹĽytkownikĂłw
+                Limit aktywnych użytkowników
                 <input
                   v-model.number="licenseMaxUsers"
                   type="number"
@@ -426,7 +384,7 @@
                 type="checkbox"
                 class="h-4 w-4 rounded border-border bg-input-background text-primary focus:ring-primary/40"
               />
-              Tryb demo (ograniczenia: krĂłtsza lekcja live, mniejsze limity i watermark)
+              Tryb demo (ograniczenia: krótsza lekcja live, mniejsze limity i watermark)
             </label>
           </div>
 
@@ -437,7 +395,7 @@
               :disabled="isSubmitting"
               @click="deleteUserAccount"
             >
-              {{ isSubmitting ? "Usuwanie..." : "UsuĹ„ konto" }}
+              {{ isSubmitting ? "Usuwanie..." : "Usuń konto" }}
             </button>
             <button
               type="button"
@@ -482,7 +440,7 @@ async function readApiPayload(res) {
     return await res.json().catch(() => ({}));
   }
   const text = await res.text();
-  return { error: text?.slice(0, 180) || "Serwer zwrĂłciĹ‚ nieprawidĹ‚owÄ… odpowiedĹş." };
+  return { error: text?.slice(0, 180) || "Serwer zwrócił nieprawidłową odpowiedź." };
 }
 
 const isLoading = ref(false);
@@ -501,7 +459,6 @@ const costDirection = ref("desc");
 const editUser = ref(null);
 const editEmail = ref("");
 const editPassword = ref("");
-const editSchoolId = ref("");
 const showEditPassword = ref(false);
 const licenseDays = ref(30);
 const licenseMaxUsers = ref(1);
@@ -515,35 +472,16 @@ const isCreatingBusinessUser = ref(false);
 const schoolName = ref("");
 const businessEmailDomain = ref("");
 const isSavingSchoolSettings = ref(false);
-const organizations = ref([]);
-
-async function loadOrganizations() {
-  try {
-    const res = await fetch(`${API_BASE}/api/public/organizations`);
-    const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ organizacji.");
-    organizations.value = Array.isArray(data.organizations) ? data.organizations : [];
-  } catch (e) {
-    actionError.value = e.message;
-  }
-}
 
 function formatDate(value) {
-  if (!value) return "â€”";
+  if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "â€”";
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("pl-PL");
 }
 
 function currency(value) {
   return `${Number(value || 0).toFixed(2)} PLN`;
-}
-
-function getInitials(fullName) {
-  if (!fullName) return "?";
-  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  return parts[0]?.substring(0, 2).toUpperCase() || "?";
 }
 
 async function loadTeacherCosts() {
@@ -556,7 +494,7 @@ async function loadTeacherCosts() {
     });
     const res = await fetch(`${API_BASE}/api/admin/teacher-costs?${params.toString()}`, { headers });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ kosztĂłw nauczycieli.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać kosztów nauczycieli.");
     teacherCosts.value = data.rows || [];
   } catch (e) {
     actionError.value = e.message;
@@ -572,7 +510,7 @@ async function loadDashboard() {
     const headers = await getAuthHeader();
     const res = await fetch(`${API_BASE}/api/admin/dashboard`, { headers });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ danych dashboardu.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać danych dashboardu.");
     stats.value = data.stats || { totalLessons: 0, finishedLessons: 0, usersCount: 0 };
     coverageBySubject.value = data.coverageBySubject || [];
     users.value = data.users || [];
@@ -593,8 +531,8 @@ watch([costSortBy, costDirection], () => {
 async function toggleBlock(user, blocked) {
   const shouldProceed = window.confirm(
     blocked
-      ? `Na pewno chcesz zablokowaÄ‡ konto ${user.email || user.full_name || user.id}?`
-      : `Na pewno chcesz odblokowaÄ‡ konto ${user.email || user.full_name || user.id}?`
+      ? `Na pewno chcesz zablokować konto ${user.email || user.full_name || user.id}?`
+      : `Na pewno chcesz odblokować konto ${user.email || user.full_name || user.id}?`
   );
   if (!shouldProceed) return;
 
@@ -609,7 +547,7 @@ async function toggleBlock(user, blocked) {
       body: JSON.stringify({ blocked })
     });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ zmieniÄ‡ statusu konta.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się zmienić statusu konta.");
     users.value = users.value.map((item) => (item.id === user.id ? { ...item, blocked } : item));
   } catch (e) {
     actionError.value = e.message;
@@ -621,7 +559,6 @@ async function toggleBlock(user, blocked) {
 function openModify(user) {
   editUser.value = user;
   editEmail.value = String(user.email || "");
-  editSchoolId.value = String(user.school_id || "");
   editPassword.value = "";
   showEditPassword.value = false;
   const expiresAtMs = new Date(user.license?.expiresAt || "").getTime();
@@ -637,7 +574,6 @@ function openModify(user) {
 function closeModify() {
   editUser.value = null;
   editEmail.value = "";
-  editSchoolId.value = "";
   editPassword.value = "";
   showEditPassword.value = false;
 }
@@ -664,8 +600,7 @@ async function saveAllChanges() {
 
     const accountPayload = {
       email: String(editEmail.value || "").trim(),
-      password: String(editPassword.value || "").trim(),
-      schoolId: String(editSchoolId.value || "").trim()
+      password: String(editPassword.value || "").trim()
     };
 
     const accountRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
@@ -674,7 +609,7 @@ async function saveAllChanges() {
       body: JSON.stringify(accountPayload)
     });
     const accountData = await readApiPayload(accountRes);
-    if (!accountRes.ok) throw new Error(accountData.error || "Nie udaĹ‚o siÄ™ zapisaÄ‡ zmian konta.");
+    if (!accountRes.ok) throw new Error(accountData.error || "Nie udało się zapisać zmian konta.");
 
     const licenseRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}/license`, {
       method: "PATCH",
@@ -686,7 +621,7 @@ async function saveAllChanges() {
       })
     });
     const licenseData = await readApiPayload(licenseRes);
-    if (!licenseRes.ok) throw new Error(licenseData.error || "Nie udaĹ‚o siÄ™ zapisaÄ‡ zmian licencji.");
+    if (!licenseRes.ok) throw new Error(licenseData.error || "Nie udało się zapisać zmian licencji.");
 
     await loadDashboard();
     closeModify();
@@ -701,7 +636,7 @@ async function deleteUserAccount() {
   if (!editUser.value) return;
 
   const label = editUser.value.email || editUser.value.full_name || editUser.value.id;
-  const shouldDelete = window.confirm(`Na pewno chcesz usunÄ…Ä‡ konto ${label}? Tej operacji nie moĹĽna cofnÄ…Ä‡.`);
+  const shouldDelete = window.confirm(`Na pewno chcesz usunąć konto ${label}? Tej operacji nie można cofnąć.`);
   if (!shouldDelete) return;
 
   isSubmitting.value = true;
@@ -713,7 +648,7 @@ async function deleteUserAccount() {
       headers
     });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ konta.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się usunąć konta.");
 
     await loadDashboard();
     closeModify();
@@ -740,7 +675,7 @@ async function createBusinessUser() {
       })
     });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ utworzyÄ‡ konta sĹ‚uĹĽbowego.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się utworzyć konta służbowego.");
 
     newBusinessFullName.value = "";
     newBusinessLogin.value = "";
@@ -769,7 +704,7 @@ async function saveSchoolSettings() {
       })
     });
     const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udaĹ‚o siÄ™ zapisaÄ‡ ustawieĹ„ szkoĹ‚y.");
+    if (!res.ok) throw new Error(data.error || "Nie udało się zapisać ustawień szkoły.");
     schoolName.value = String(data.schoolSettings?.schoolName || schoolName.value);
     businessEmailDomain.value = String(data.schoolSettings?.businessEmailDomain || businessEmailDomain.value);
     try {
@@ -784,7 +719,5 @@ async function saveSchoolSettings() {
   }
 }
 
-onMounted(async () => {
-  await Promise.all([loadDashboard(), loadOrganizations()]);
-});
+onMounted(loadDashboard);
 </script>

@@ -8,7 +8,6 @@ function applyTheme(mode) {
   if (typeof document === "undefined") return;
   const isDark = mode === "dark";
   document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 }
 
 export function initTheme() {

@@ -91,38 +91,6 @@
   --brand-logo-filter: brightness(0) saturate(100%) invert(77%) sepia(21%) saturate(2113%) hue-rotate(191deg) brightness(102%) contrast(98%);
 }
 
-/*
- * Dark-mode safety net for legacy hardcoded Figma colors.
- * Prevents "ghost mode" where text and controls blend with light-themed surfaces.
- */
-.dark [class*="bg-white"] {
-  background-color: var(--card) !important;
-}
-
-.dark [class*="bg-[#f7f9fc]"],
-.dark [class*="bg-[#f2f4f7]"],
-.dark [class*="bg-[#e6e8eb]"],
-.dark [class*="bg-[#e0e3e6]"],
-.dark [class*="bg-[#d9e4ea]"] {
-  background-color: color-mix(in oklab, var(--muted) 82%, black 18%) !important;
-}
-
-.dark [class*="text-[#191c1e]"],
-.dark [class*="text-[#2a3439]"],
-.dark [class*="text-[#454652]"] {
-  color: var(--foreground) !important;
-}
-
-.dark [class*="text-[#566166]"],
-.dark [class*="text-[#767683]"],
-.dark [class*="text-muted-foreground"] {
-  color: var(--muted-foreground) !important;
-}
-
-.dark [class*="border-black/30"] {
-  border-color: color-mix(in oklab, var(--border) 78%, white 22%) !important;
-}
-
 @theme inline {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
