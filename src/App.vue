@@ -5,15 +5,6 @@
         <GuestHeader />
         <RouterView />
       </template>
-      <template v-else-if="presentationMode">
-        <div
-          v-if="showLicenseWarning"
-          class="mx-4 mt-5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
-        >
-          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
-        </div>
-        <RouterView />
-      </template>
       <AppLayout v-else :license-warning="showLicenseWarning">
         <RouterView />
       </AppLayout>
@@ -47,9 +38,6 @@ const minimalChrome = computed(() => {
   const p = route.path;
   return p === "/" || p === "/login" || p === "/register" || p === "/reset-password" || p.startsWith("/share/");
 });
-
-/** Pełny ekran — bez lewego panelu (nakładka fixed ma sensowny układ). */
-const presentationMode = computed(() => route.path.startsWith("/presentation/"));
 
 const INACTIVITY_COOKIE = "coteach_last_activity";
 const INACTIVITY_LIMIT_MS = 60 * 60 * 1000;
