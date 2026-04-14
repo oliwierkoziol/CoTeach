@@ -274,6 +274,7 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const COVERAGE_REFRESH_MIN_INTERVAL_MS = 90_000;
 
 const lessonDurationOptions = [
   { label: "45 min", minutes: 45 },
@@ -315,6 +316,8 @@ const shouldKeepListening = ref(false);
 const manualUpdateLoadingId = ref("");
 const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
+const lastCoverageRefreshMs = ref(0);
+const coverageRefreshTimer = ref(null);
 let apiPingTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
@@ -359,10 +362,43 @@ onMounted(async () => {
 onUnmounted(() => {
   if (timer.value) clearInterval(timer.value);
   if (analyserTimer.value) clearInterval(analyserTimer.value);
+  if (coverageRefreshTimer.value) clearTimeout(coverageRefreshTimer.value);
   if (apiPingTimer) clearInterval(apiPingTimer);
   stopMicMeter();
   recognition.value?.stop();
 });
+
+async function refreshCoverageThrottled(force = false) {
+  if (!state.lesson?.id) return;
+  const now = Date.now();
+  if (!force && now - lastCoverageRefreshMs.value < COVERAGE_REFRESH_MIN_INTERVAL_MS) return;
+
+  lastCoverageRefreshMs.value = now;
+  try {
+    await refreshCoverage(state.lesson.id);
+  } catch (e) {
+    info.value = `Błąd odświeżania pokrycia: ${e.message || "nieznany"}`;
+  }
+}
+
+function scheduleCoverageRefresh() {
+  if (!state.lesson?.id) return;
+
+  const now = Date.now();
+  const elapsedSinceLast = now - lastCoverageRefreshMs.value;
+  const delay = Math.max(0, COVERAGE_REFRESH_MIN_INTERVAL_MS - elapsedSinceLast);
+
+  if (delay === 0) {
+    void refreshCoverageThrottled(false);
+    return;
+  }
+
+  if (coverageRefreshTimer.value) return;
+  coverageRefreshTimer.value = setTimeout(() => {
+    coverageRefreshTimer.value = null;
+    void refreshCoverageThrottled(false);
+  }, delay);
+}
 
 async function startSession() {
   try {
@@ -404,6 +440,11 @@ function stopSession() {
   analyserTimer.value = null;
   stopMicMeter();
   sttStatus.value = "idle";
+  if (coverageRefreshTimer.value) {
+    clearTimeout(coverageRefreshTimer.value);
+    coverageRefreshTimer.value = null;
+  }
+  void refreshCoverageThrottled(true);
 }
 
 async function beginMic() {
@@ -451,7 +492,7 @@ async function beginMic() {
       // Fire and forget to keep UI captions responsive.
       if (state.lesson?.id) {
         sendTranscript(state.lesson.id, finalText)
-          .then(() => refreshCoverage(state.lesson.id))
+          .then(() => scheduleCoverageRefresh())
           .catch((e) => {
             info.value = `Błąd wysyłki transkrypcji: ${e.message || "nieznany"}`;
           });
@@ -549,7 +590,7 @@ async function beginWhisperMode() {
         lastFinalCaption.value = text;
         transcription.value.push(text);
         await sendTranscript(state.lesson.id, text);
-        await refreshCoverage(state.lesson.id);
+        scheduleCoverageRefresh();
         interimCaption.value = "";
       }
       if (data.limitReached) {

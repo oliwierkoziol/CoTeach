@@ -481,10 +481,11 @@ function estimateOpenRouterBaseUsdCost({ model, promptTokens = 0, completionToke
   return ((Number(promptTokens || 0) * pricing.prompt) + (Number(completionTokens || 0) * pricing.completion)) / 1_000_000;
 }
 
-function buildBilledCost(basePLN) {
+function buildBilledCost(basePLN, options = {}) {
+  const enforceMinMargin = options?.enforceMinMargin !== false;
   const base = roundMoney(basePLN);
   const marginFromRate = roundMoney(base * AI_MARKUP_RATE);
-  const margin = roundMoney(Math.max(marginFromRate, AI_MIN_MARGIN_PLN));
+  const margin = roundMoney(enforceMinMargin ? Math.max(marginFromRate, AI_MIN_MARGIN_PLN) : marginFromRate);
   return {
     basePLN: base,
     marginPLN: margin,
@@ -492,8 +493,8 @@ function buildBilledCost(basePLN) {
   };
 }
 
-function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, category, baseAmountPLN, providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
-  const cost = buildBilledCost(baseAmountPLN);
+function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, category, baseAmountPLN, providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null, enforceMinMargin = true }) {
+  const cost = buildBilledCost(baseAmountPLN, { enforceMinMargin });
   addCost({
     lessonId,
     schoolId,
@@ -515,6 +516,16 @@ function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null
     status,
     errorMessage
   });
+}
+
+function estimateLiveTranscriptionBasePln(text) {
+  const words = String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const estimatedMinutes = words > 0 ? words / 150 : 0;
+  const estimatedUsd = estimatedMinutes * WHISPER_PRICE_PER_MIN_USD;
+  return roundMoney(estimatedUsd * USD_TO_PLN);
 }
 
 async function persistLesson(lesson) {
@@ -1535,7 +1546,8 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
     teacherId: teacher.teacherId,
     provider: "deepgram",
     category: "live_transcription",
-    baseAmountPLN: 0.03
+    baseAmountPLN: estimateLiveTranscriptionBasePln(text),
+    enforceMinMargin: false
   });
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -1837,11 +1849,11 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
   }
 
   const rows = [...grouped.values()].map((row) => ({
-    platform: Number((row.total * 0.4).toFixed(4)),
-    provider: Number((row.total * 0.6).toFixed(4)),
+    platform: Number(row.margin.toFixed(4)),
+    provider: Number(row.base.toFixed(4)),
     ...row,
-    base: Number((row.total * 0.6).toFixed(4)),
-    margin: Number((row.total * 0.4).toFixed(4)),
+    base: Number(row.base.toFixed(4)),
+    margin: Number(row.margin.toFixed(4)),
     total: Number(row.total.toFixed(4)),
     notes: Number(row.notes.toFixed(4)),
     live: Number(row.live.toFixed(4)),
