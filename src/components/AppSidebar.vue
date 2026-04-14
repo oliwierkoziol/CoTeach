@@ -146,6 +146,16 @@
           </a>
         </RouterLink>
 
+         <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Notatki</p>
+          </a>
+        </RouterLink>
+
         <!-- Prezentacja -->
         <RouterLink :to="presentationLink" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">

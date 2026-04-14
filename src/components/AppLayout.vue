@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background text-foreground transition-colors">
     <header
-      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
@@ -88,36 +88,34 @@
 
     <aside
       :class="[
-        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-[#cbd5e1] bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
         open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
       ]"
     >
       <div class="flex flex-1 flex-col overflow-y-auto p-4 pt-7 space-y-4">
 
-        <!-- Active Lesson Link -->
+        <!-- Start Lesson Button -->
         <RouterLink
-          v-if="activeLessonLink"
-          :to="activeLessonLink.to"
+          :to="liveLessonTo"
           custom
           v-slot="{ href, navigate }"
         >
           <a
             :href="href"
-            class="flex items-center gap-3 rounded-lg bg-[rgba(12,61,254,0.08)] px-4 py-3"
+            class="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#0c3dfe] py-3 transition-colors hover:bg-[#0a34d4]"
             @click="navigate(); open = false;"
           >
-            <!-- Monitor Play Icon -->
-            <svg class="h-[18px] w-5 shrink-0" fill="none" viewBox="0 0 20 18">
-              <path d="M7.5 12.5L14.5 8L7.5 3.5V12.5ZM6 18V16H2C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H14V18H6ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="#566166"/>
+            <svg class="h-[10px] w-[10px]" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <p class="truncate text-[14px] font-semibold text-[#0c3dfe]" style="font-family: 'Plus Jakarta Sans', sans-serif;">
-              {{ activeLessonLink.label }}
-            </p>
+            <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
+              Rozpocznij lekcję
+            </span>
           </a>
         </RouterLink>
 
         <!-- Divider + nav links -->
-        <div class="flex-1 space-y-1 border-t border-[#cbd5e1] pt-4">
+        <div class="flex-1 space-y-1 border-t border-black/30 pt-4">
 
           <!-- Panel startowy -->
           <RouterLink to="/dashboard" custom v-slot="{ href, navigate, isExactActive }">
@@ -175,7 +173,7 @@
 
     <main class="min-h-screen min-w-0 pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
-        <div class="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
+        <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
           Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
         </div>
       </div>

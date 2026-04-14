@@ -3,7 +3,7 @@
     <!-- Background Decor -->
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
     
-    <div class="p-12 w-full max-w-[1664px] relative z-10">
+    <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
     <!-- Header -->
     <div class="mb-7 max-w-[1024px]">
       <div class="flex items-center gap-2 mb-2">
