@@ -191,3 +191,19 @@ create policy "saved_notes_delete_own" on public.saved_notes for delete using (
     where p.id = auth.uid() and p.teacher_id = saved_notes.teacher_id
   )
 );
+
+create table if not exists public.user_licenses (
+  id text primary key,
+  key text not null,
+  assigned_user_id uuid,
+  max_active_users integer not null default 1,
+  expires_at timestamptz not null,
+  demo_mode boolean not null default false,
+  school_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint user_licenses_assigned_user_fk foreign key (assigned_user_id) references auth.users(id) on delete cascade
+);
+
+create unique index if not exists user_licenses_assigned_user_unique_idx on public.user_licenses(assigned_user_id) where assigned_user_id is not null;
+create index if not exists user_licenses_expires_idx on public.user_licenses(expires_at desc);
