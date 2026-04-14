@@ -68,6 +68,13 @@
           >
             Zaloguj się
           </button>
+          <button
+            type="button"
+            class="w-full text-sm font-medium text-primary transition hover:opacity-80"
+            @click="handlePasswordReset"
+          >
+            Nie pamiętasz hasła?
+          </button>
         </form>
 
         <template v-if="accountMode === 'individual'">
@@ -117,6 +124,10 @@
 
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {{ errorMessage }}
+        </div>
+
+        <div v-if="infoMessage" class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+          {{ infoMessage }}
         </div>
 
         <div v-if="shouldShowBlockedImage" class="mt-4 flex justify-center">
@@ -175,12 +186,40 @@ function storeCachedBusinessDomain(domain) {
 
 const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
+const infoMessage = ref("");
 const shouldShowBlockedImage = computed(() =>
   String(errorMessage.value || "").toLowerCase().includes("zablokowane")
 );
 
 function setBlockedError() {
   errorMessage.value = "To konto jest obecnie zablokowane.";
+}
+
+function mapLoginErrorMessage(error, mode = "individual") {
+  const raw = String(error?.message || "").toLowerCase();
+  const status = Number(error?.status || 0);
+
+  if (raw.includes("email not confirmed") || raw.includes("email_not_confirmed")) {
+    return "Konto nie zostało jeszcze potwierdzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.";
+  }
+
+  if (raw.includes("invalid login credentials") || raw.includes("invalid_credentials") || status === 400) {
+    return mode === "business"
+      ? "Nieprawidłowy login służbowy lub hasło."
+      : "Nieprawidłowy email lub hasło.";
+  }
+
+  if (status === 429 || raw.includes("too many requests")) {
+    return "Zbyt wiele prób logowania. Spróbuj ponownie za chwilę.";
+  }
+
+  if (raw.includes("failed to fetch") || raw.includes("network") || status >= 500) {
+    return "Nie udało się połączyć z usługą logowania. Sprawdź połączenie i spróbuj ponownie.";
+  }
+
+  return mode === "business"
+    ? "Logowanie kontem służbowym nie powiodło się. Spróbuj ponownie."
+    : "Logowanie nie powiodło się. Spróbuj ponownie.";
 }
 
 function readPendingProfileSeed() {
@@ -245,6 +284,7 @@ async function syncProfileAfterLogin(session) {
 
 async function handleLogin() {
   errorMessage.value = "";
+  infoMessage.value = "";
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
@@ -252,7 +292,7 @@ async function handleLogin() {
   });
 
   if (error) {
-    errorMessage.value = error.message;
+    errorMessage.value = mapLoginErrorMessage(error, "individual");
     return;
   }
 
@@ -297,6 +337,7 @@ function isBusinessEmail(emailValue) {
 
 async function handleBusinessLogin() {
   errorMessage.value = "";
+  infoMessage.value = "";
   const emailFromLogin = toBusinessEmail(businessLogin.value);
 
   if (!emailFromLogin) {
@@ -310,7 +351,7 @@ async function handleBusinessLogin() {
   });
 
   if (error) {
-    errorMessage.value = "Nieprawidłowy login służbowy lub hasło.";
+    errorMessage.value = mapLoginErrorMessage(error, "business");
     return;
   }
 
@@ -348,6 +389,7 @@ async function handleBusinessLogin() {
 
 async function handleGoogleAuth() {
   errorMessage.value = "";
+  infoMessage.value = "";
 
   localStorage.setItem(GOOGLE_AUTH_INTENT_KEY, "login");
   const redirectTo = `${window.location.origin}/login`;
@@ -362,6 +404,26 @@ async function handleGoogleAuth() {
     localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
     errorMessage.value = error.message;
   }
+}
+
+async function handlePasswordReset() {
+  errorMessage.value = "";
+  infoMessage.value = "";
+
+  const normalizedEmail = String(email.value || "").trim().toLowerCase();
+  if (!normalizedEmail) {
+    errorMessage.value = "Podaj email w polu logowania, aby zresetować hasło.";
+    return;
+  }
+
+  const redirectTo = `${window.location.origin}/login`;
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+  if (error) {
+    errorMessage.value = mapLoginErrorMessage(error, "individual");
+    return;
+  }
+
+  infoMessage.value = "Wysłaliśmy link do resetu hasła. Sprawdź skrzynkę e-mail.";
 }
 
 async function handleGoogleIntentAfterRedirect() {
