@@ -141,13 +141,39 @@ import blockedImage from "../assets/czarek.jpg";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
+const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
+const DEFAULT_BUSINESS_EMAIL_DOMAIN = "sluzbowe.coteach.local";
 const route = useRoute();
+const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3001")
+  .trim()
+  .replace(/\/$/, "");
 
 const accountMode = ref("individual");
 const email = ref("");
 const password = ref("");
 const businessLogin = ref("");
 const businessPassword = ref("");
+function readCachedBusinessDomain() {
+  try {
+    return String(localStorage.getItem(BUSINESS_DOMAIN_CACHE_KEY) || "")
+      .trim()
+      .toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function storeCachedBusinessDomain(domain) {
+  const normalized = String(domain || "").trim().toLowerCase();
+  if (!normalized) return;
+  try {
+    localStorage.setItem(BUSINESS_DOMAIN_CACHE_KEY, normalized);
+  } catch {
+    // Ignore storage errors (private mode, quota, etc.).
+  }
+}
+
+const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
 const shouldShowBlockedImage = computed(() =>
   String(errorMessage.value || "").toLowerCase().includes("zablokowane")
@@ -261,7 +287,12 @@ function toBusinessEmail(loginValue) {
   const normalized = String(loginValue || "").trim().toLowerCase();
   if (!normalized) return "";
   if (normalized.includes("@")) return normalized;
-  return `${normalized}@sluzbowe.coteach.local`;
+  return `${normalized}@${businessEmailDomain.value}`;
+}
+
+function isBusinessEmail(emailValue) {
+  const normalized = String(emailValue || "").trim().toLowerCase();
+  return normalized.endsWith(`@${String(businessEmailDomain.value || "").toLowerCase()}`);
 }
 
 async function handleBusinessLogin() {
@@ -301,7 +332,7 @@ async function handleBusinessLogin() {
   }
 
   const profileEmail = String(profile?.email || "").toLowerCase();
-  if (!profileEmail.endsWith("@sluzbowe.coteach.local")) {
+  if (!isBusinessEmail(profileEmail)) {
     await supabase.auth.signOut({ scope: "local" });
     errorMessage.value = "To nie jest konto służbowe. Użyj logowania dla konta indywidualnego.";
     return;
@@ -382,6 +413,17 @@ async function handleGoogleIntentAfterRedirect() {
 }
 
 onMounted(async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/public/business-login-config`);
+    const data = await response.json().catch(() => null);
+    if (response.ok && data?.businessEmailDomain) {
+      businessEmailDomain.value = String(data.businessEmailDomain).trim().toLowerCase();
+      storeCachedBusinessDomain(businessEmailDomain.value);
+    }
+  } catch {
+    // Keep cached/default business domain when API is unavailable.
+  }
+
   if (String(route.query.blocked || "") === "1") {
     setBlockedError();
   }

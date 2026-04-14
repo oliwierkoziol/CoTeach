@@ -32,6 +32,9 @@ const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_BUSINESS_EMAIL_DOMAIN = String(process.env.BUSINESS_EMAIL_DOMAIN || "sluzbowe.coteach.local")
+  .trim()
+  .toLowerCase();
 
 const OPENROUTER_MODEL_PRICING_USD_PER_1M = {
   default: { prompt: 0.35, completion: 2.5 },
@@ -87,7 +90,12 @@ const defaultTeacherId = "teacher-default";
 const defaultAdminId = "admin-default";
 
 function seedMemoryDb() {
-  db.schools.set(defaultSchoolId, { id: defaultSchoolId, name: "Demo School", licenseId: defaultLicenseId });
+  db.schools.set(defaultSchoolId, {
+    id: defaultSchoolId,
+    name: "Demo School",
+    licenseId: defaultLicenseId,
+    businessEmailDomain: DEFAULT_BUSINESS_EMAIL_DOMAIN
+  });
   db.licenses.set(defaultLicenseId, {
     id: defaultLicenseId,
     schoolId: defaultSchoolId,
@@ -113,6 +121,128 @@ function seedMemoryDb() {
 }
 
 seedMemoryDb();
+let latestBusinessSchoolId = defaultSchoolId;
+
+function normalizeBusinessDomain(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, "");
+}
+
+function getSchoolSettings(schoolId) {
+  const school = db.schools.get(String(schoolId || defaultSchoolId)) || {};
+  const schoolName = String(school.name || "Twoja szkoła").trim() || "Twoja szkoła";
+  const businessEmailDomain =
+    normalizeBusinessDomain(school.businessEmailDomain) || DEFAULT_BUSINESS_EMAIL_DOMAIN;
+  return { schoolName, businessEmailDomain };
+}
+
+function getPublicBusinessSchoolId() {
+  if (latestBusinessSchoolId && db.schools.has(latestBusinessSchoolId)) return latestBusinessSchoolId;
+  const ids = [...db.schools.keys()];
+  return ids[0] || defaultSchoolId;
+}
+
+function buildSchoolIdFromName(name, fallbackId = defaultSchoolId) {
+  const base = String(name || "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return base || String(fallbackId || defaultSchoolId);
+}
+
+async function migrateSchoolIdEverywhere(oldSchoolId, newSchoolId) {
+  if (!supabase) return;
+  if (!oldSchoolId || !newSchoolId || oldSchoolId === newSchoolId) return;
+
+  const tablesWithSchoolId = [
+    "profiles",
+    "user_licenses",
+    "lessons",
+    "saved_notes",
+    "final_notes",
+    "openrouter_usage_events"
+  ];
+
+  for (const tableName of tablesWithSchoolId) {
+    const { error } = await supabase
+      .from(tableName)
+      .update({ school_id: newSchoolId, updated_at: new Date().toISOString() })
+      .eq("school_id", oldSchoolId);
+    if (error && !String(error.message || "").toLowerCase().includes("updated_at")) {
+      throw new Error(`Nie udało się zmigrować school_id w ${tableName}: ${error.message}`);
+    }
+    if (error && String(error.message || "").toLowerCase().includes("updated_at")) {
+      const fallback = await supabase.from(tableName).update({ school_id: newSchoolId }).eq("school_id", oldSchoolId);
+      if (fallback.error) {
+        throw new Error(`Nie udało się zmigrować school_id w ${tableName}: ${fallback.error.message}`);
+      }
+    }
+  }
+}
+
+async function ensureSupabaseSchoolRow({ schoolId, schoolName, businessEmailDomain, oldSchoolId = null }) {
+  if (!supabase || !schoolId) return;
+  const slug = String(schoolId || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "") || "school";
+
+  const candidatePayloads = [
+    {
+      id: schoolId,
+      name: schoolName,
+      slug,
+      business_email_domain: businessEmailDomain,
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      slug,
+      business_email_domain: businessEmailDomain
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      slug,
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      slug
+    },
+    {
+      id: schoolId,
+      slug
+    }
+  ];
+
+  let lastError = null;
+  for (const payload of candidatePayloads) {
+    const { error } = await supabase.from("schools").upsert(payload, { onConflict: "id" });
+    if (!error) {
+      lastError = null;
+      break;
+    }
+    lastError = error;
+  }
+  if (lastError) {
+    throw new Error(`Nie udało się utworzyć szkoły docelowej: ${lastError.message}`);
+  }
+
+  if (oldSchoolId && oldSchoolId !== schoolId) {
+    // Best effort cleanup of old id row after successful migration.
+    await supabase.from("schools").delete().eq("id", oldSchoolId);
+  }
+}
 
 function getTodayIsoDate() {
   return new Date().toISOString().split("T")[0];
@@ -645,6 +775,31 @@ async function loadLicensesFromSupabase() {
   for (const row of data || []) {
     const license = rowToLicense(row);
     db.licenses.set(license.id, license);
+  }
+}
+
+async function loadSchoolsFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from("schools")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(`Supabase schools load failed: ${error.message}`);
+
+  for (const row of data || []) {
+    const id = String(row.id || "").trim();
+    if (!id) continue;
+    const school = {
+      id,
+      name: String(row.name || "").trim() || "Twoja szkoła",
+      businessEmailDomain: normalizeBusinessDomain(row.business_email_domain || row.domain || ""),
+      updatedAt: row.updated_at || null
+    };
+    db.schools.set(id, school);
+  }
+
+  if (data?.length) {
+    latestBusinessSchoolId = String(data[0].id || defaultSchoolId);
   }
 }
 
@@ -1785,7 +1940,77 @@ app.get("/api/admin/dashboard", async (req, res) => {
     },
     costStats,
     coverageBySubject,
-    users
+    users,
+    schoolSettings: getSchoolSettings(adminSchool.schoolId)
+  });
+});
+
+app.patch("/api/admin/school-settings", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const schoolName = String(req.body?.schoolName || "").trim();
+  const businessEmailDomain = normalizeBusinessDomain(req.body?.businessEmailDomain);
+
+  if (!schoolName) {
+    return res.status(400).json({ error: "Podaj nazwę szkoły." });
+  }
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(businessEmailDomain)) {
+    return res.status(400).json({ error: "Podaj poprawną końcówkę maili służbowych (np. szkola.edu.pl)." });
+  }
+
+  const oldSchoolId = String(adminSchool.schoolId);
+  const existing = db.schools.get(oldSchoolId) || { id: oldSchoolId };
+
+  let nextSchoolId = buildSchoolIdFromName(schoolName, oldSchoolId);
+  if (nextSchoolId !== oldSchoolId && db.schools.has(nextSchoolId)) {
+    let suffix = 2;
+    while (db.schools.has(`${nextSchoolId}-${suffix}`)) suffix += 1;
+    nextSchoolId = `${nextSchoolId}-${suffix}`;
+  }
+
+  db.schools.set(nextSchoolId, {
+    ...existing,
+    id: nextSchoolId,
+    name: schoolName,
+    businessEmailDomain
+  });
+  latestBusinessSchoolId = nextSchoolId;
+
+  try {
+    await ensureSupabaseSchoolRow({
+      schoolId: nextSchoolId,
+      schoolName,
+      businessEmailDomain,
+      oldSchoolId
+    });
+
+    // Scope school change only to the admin who saved it.
+    const { error: adminProfileError } = await supabase
+      .from("profiles")
+      .update({
+        school_id: nextSchoolId,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", adminSchool.userId);
+    if (adminProfileError) {
+      throw new Error(`Nie udało się zapisać szkoły dla administratora: ${adminProfileError.message}`);
+    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Nie udało się zapisać ustawień szkoły." });
+  }
+
+  return res.json({
+    schoolId: nextSchoolId,
+    schoolSettings: getSchoolSettings(nextSchoolId)
+  });
+});
+
+app.get("/api/public/business-login-config", (_req, res) => {
+  const settings = getSchoolSettings(getPublicBusinessSchoolId());
+  return res.json({
+    businessEmailDomain: settings.businessEmailDomain
   });
 });
 
@@ -1987,7 +2212,8 @@ app.post("/api/admin/users/special-account", async (req, res) => {
     return res.status(400).json({ error: "Hasło musi mieć co najmniej 8 znaków." });
   }
 
-  const email = `${login}@sluzbowe.coteach.local`;
+  const { businessEmailDomain } = getSchoolSettings(adminSchool.schoolId);
+  const email = `${login}@${businessEmailDomain}`;
   const teacherId = `teacher-${randomUUID()}`;
 
   const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -2246,7 +2472,8 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-loadLessonsFromSupabase()
+loadSchoolsFromSupabase()
+  .then(() => loadLessonsFromSupabase())
   .then(() => loadLicensesFromSupabase())
   .then(() => loadFinalNotesFromSupabase())
   .then(() => loadSavedNotesFromSupabase())

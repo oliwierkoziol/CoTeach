@@ -201,6 +201,45 @@
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-6">
+        <h2 class="text-lg font-semibold text-foreground">Ustawienia szkoły</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Ustaw nazwę szkoły i końcówkę maili służbowych dla kont tworzonych przez administratora.
+        </p>
+
+        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <label class="block text-sm text-muted-foreground">
+            Nazwa szkoły
+            <input
+              v-model.trim="schoolName"
+              type="text"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="Np. Szkoła Podstawowa nr 1"
+            />
+          </label>
+          <label class="block text-sm text-muted-foreground">
+            Końcówka maili służbowych
+            <input
+              v-model.trim="businessEmailDomain"
+              type="text"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="np. szkola.edu.pl"
+            />
+          </label>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+          <button
+            type="button"
+            class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+            :disabled="isSavingSchoolSettings"
+            @click="saveSchoolSettings"
+          >
+            {{ isSavingSchoolSettings ? "Zapisywanie..." : "Zapisz ustawienia szkoły" }}
+          </button>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-border bg-card p-6">
         <h2 class="text-lg font-semibold text-foreground">Utwórz konto służbowe</h2>
         <p class="mt-1 text-sm text-muted-foreground">
           Administrator może utworzyć konto ze specjalnym loginem i hasłem.
@@ -363,6 +402,7 @@ function normalizeBaseUrl(url) {
   return String(url || "").trim().replace(/\/$/, "");
 }
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
 
 async function getAuthHeader() {
   const { data } = await supabase.auth.getSession();
@@ -404,6 +444,9 @@ const newBusinessLogin = ref("");
 const newBusinessPassword = ref("");
 const showNewBusinessPassword = ref(false);
 const isCreatingBusinessUser = ref(false);
+const schoolName = ref("");
+const businessEmailDomain = ref("");
+const isSavingSchoolSettings = ref(false);
 
 function formatDate(value) {
   if (!value) return "—";
@@ -446,6 +489,8 @@ async function loadDashboard() {
     stats.value = data.stats || { totalLessons: 0, finishedLessons: 0, usersCount: 0 };
     coverageBySubject.value = data.coverageBySubject || [];
     users.value = data.users || [];
+    schoolName.value = String(data.schoolSettings?.schoolName || "");
+    businessEmailDomain.value = String(data.schoolSettings?.businessEmailDomain || "");
     await loadTeacherCosts();
   } catch (e) {
     loadError.value = e.message;
@@ -588,6 +633,36 @@ async function createBusinessUser() {
     actionError.value = e.message;
   } finally {
     isCreatingBusinessUser.value = false;
+  }
+}
+
+async function saveSchoolSettings() {
+  isSavingSchoolSettings.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}/api/admin/school-settings`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        schoolName: String(schoolName.value || "").trim(),
+        businessEmailDomain: String(businessEmailDomain.value || "").trim().toLowerCase()
+      })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się zapisać ustawień szkoły.");
+    schoolName.value = String(data.schoolSettings?.schoolName || schoolName.value);
+    businessEmailDomain.value = String(data.schoolSettings?.businessEmailDomain || businessEmailDomain.value);
+    try {
+      localStorage.setItem(BUSINESS_DOMAIN_CACHE_KEY, businessEmailDomain.value);
+    } catch {
+      // Ignore storage errors.
+    }
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isSavingSchoolSettings.value = false;
   }
 }
 
