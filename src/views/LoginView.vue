@@ -240,6 +240,7 @@ function readPendingProfileSeed() {
     return {
       email: String(parsed.email || "").trim().toLowerCase(),
       full_name: String(parsed.full_name || "").trim(),
+      school_id: String(parsed.school_id || "").trim(),
       created_at: Number(parsed.created_at || 0)
     };
   } catch {
@@ -253,20 +254,25 @@ async function syncProfileAfterLogin(session) {
 
   const pending = readPendingProfileSeed();
   const authEmail = String(user.email || "").trim().toLowerCase();
+  const pendingMatchesUser = Boolean(pending && (!pending.email || pending.email === authEmail));
   const metadataName = String(user.user_metadata?.full_name || "").trim();
   const metadataAvatar = String(
     user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.photo_url || ""
   ).trim();
   const fullName =
-    pending && pending.email === authEmail && pending.full_name ? pending.full_name : metadataName;
+    pendingMatchesUser && pending?.full_name ? pending.full_name : metadataName;
 
   const { data: existingProfile } = await supabase
     .from("profiles")
-    .select("teacher_id")
+    .select("teacher_id, school_id")
     .eq("id", user.id)
     .maybeSingle();
 
   const teacherId = String(existingProfile?.teacher_id || "").trim() || `teacher-${crypto.randomUUID()}`;
+  const schoolId =
+    String(existingProfile?.school_id || "").trim() ||
+    (pendingMatchesUser ? String(pending?.school_id || "").trim() : "") ||
+    null;
 
   await supabase.from("profiles").upsert(
     {
@@ -274,6 +280,7 @@ async function syncProfileAfterLogin(session) {
       email: authEmail || null,
       full_name: fullName || null,
       avatar_url: metadataAvatar || null,
+      school_id: schoolId,
       teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },

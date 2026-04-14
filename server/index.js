@@ -2112,6 +2112,18 @@ app.get("/api/public/business-login-config", (_req, res) => {
   });
 });
 
+app.get("/api/public/organizations", (_req, res) => {
+  const organizations = [...db.schools.values()]
+    .map((school) => ({
+      id: String(school.id || "").trim(),
+      name: String(school.name || "").trim() || "Twoja szkoła"
+    }))
+    .filter((school) => Boolean(school.id))
+    .sort((a, b) => a.name.localeCompare(b.name, "pl"));
+
+  return res.json({ organizations });
+});
+
 app.get("/api/admin/teacher-costs", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
 

@@ -24,6 +24,19 @@
 
         <form @submit.prevent="handleRegister" class="space-y-5">
           <label class="block text-sm font-semibold text-foreground">
+            Organizacja
+            <select
+              v-model="selectedOrganizationId"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            >
+              <option value="" disabled>{{ isLoadingOrganizations ? "Ładowanie organizacji..." : "Wybierz organizację" }}</option>
+              <option v-for="org in organizations" :key="org.id" :value="org.id">
+                {{ org.name }}
+              </option>
+            </select>
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
             Imię i nazwisko
             <input
               v-model="name"
@@ -88,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
@@ -101,8 +114,11 @@ const email = ref("");
 const password = ref("");
 const errorMessage = ref("");
 const infoMessage = ref("");
+const organizations = ref([]);
+const selectedOrganizationId = ref("");
+const isLoadingOrganizations = ref(false);
 
-async function upsertProfileRow({ id, email, fullName }) {
+async function upsertProfileRow({ id, email, fullName, schoolId }) {
   if (!id) return;
   const teacherId = `teacher-${crypto.randomUUID()}`;
   await supabase.from("profiles").upsert(
@@ -110,11 +126,30 @@ async function upsertProfileRow({ id, email, fullName }) {
       id,
       email: email || null,
       full_name: fullName || null,
+      school_id: schoolId || null,
       teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }
   );
+}
+
+async function loadOrganizations() {
+  isLoadingOrganizations.value = true;
+  try {
+    const response = await fetch(`${String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3001").trim().replace(/\/$/, "")}/api/public/organizations`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Nie udało się pobrać organizacji.");
+
+    organizations.value = Array.isArray(data.organizations) ? data.organizations : [];
+    if (!selectedOrganizationId.value && organizations.value.length) {
+      selectedOrganizationId.value = String(organizations.value[0].id || "");
+    }
+  } catch (error) {
+    errorMessage.value = error.message || "Nie udało się pobrać organizacji.";
+  } finally {
+    isLoadingOrganizations.value = false;
+  }
 }
 
 async function handleRegister() {
@@ -123,6 +158,12 @@ async function handleRegister() {
 
   const fullName = String(name.value || "").trim();
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
+  const schoolId = String(selectedOrganizationId.value || "").trim();
+
+  if (!schoolId) {
+    errorMessage.value = "Wybierz organizację.";
+    return;
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -147,7 +188,8 @@ async function handleRegister() {
       await upsertProfileRow({
         id: userId,
         email: normalizedEmail,
-        fullName
+        fullName,
+        schoolId
       });
       localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
     } catch {
@@ -160,7 +202,7 @@ async function handleRegister() {
   if (data?.user) {
     localStorage.setItem(
       PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: normalizedEmail, full_name: fullName, created_at: Date.now() })
+      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
     );
     infoMessage.value =
       "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
@@ -173,11 +215,17 @@ async function handleGoogleAuth() {
 
   const fullName = String(name.value || "").trim();
   const fallbackEmail = String(email.value || "").trim().toLowerCase();
+  const schoolId = String(selectedOrganizationId.value || "").trim();
+
+  if (!schoolId) {
+    errorMessage.value = "Wybierz organizację.";
+    return;
+  }
 
   if (fullName || fallbackEmail) {
     localStorage.setItem(
       PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: fallbackEmail, full_name: fullName, created_at: Date.now() })
+      JSON.stringify({ email: fallbackEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
     );
   }
 
@@ -195,4 +243,8 @@ async function handleGoogleAuth() {
     errorMessage.value = error.message;
   }
 }
+
+onMounted(() => {
+  void loadOrganizations();
+});
 </script>
