@@ -33,7 +33,7 @@ function normalizeBaseUrl(url) {
     .replace(/\/$/, "");
 }
 
-const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 const minimalChrome = computed(() => {
   const p = route.path;
   return p === "/" || p === "/login" || p === "/register" || p === "/reset-password" || p.startsWith("/share/");

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-background text-foreground transition-colors">
+  <div class="min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
     <header
       class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
     >
@@ -15,7 +15,7 @@
           </svg>
         </button>
         <RouterLink to="/dashboard" class="flex min-w-0 items-center no-underline">
-          <div class="flex h-10 w-[170px] items-center overflow-hidden sm:h-12 sm:w-[220px]">
+          <div class="flex h-10 w-[124px] items-center overflow-hidden sm:h-12 sm:w-[220px]">
             <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-12" />
           </div>
         </RouterLink>
@@ -192,7 +192,7 @@
       </div>
     </aside>
 
-    <main class="min-h-screen min-w-0 pt-16 md:pl-[256px]">
+    <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
           Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.

@@ -425,7 +425,7 @@ import { supabase } from "../supabase";
 function normalizeBaseUrl(url) {
   return String(url || "").trim().replace(/\/$/, "");
 }
-const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
 
 async function getAuthHeader() {

@@ -18,6 +18,14 @@ export default defineConfig({
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
   server: {
-    port: 5173
+    port: 5173,
+    // Allow ngrok public domains when exposing local dev server to phone devices.
+    allowedHosts: ['.ngrok-free.dev', 'localhost', '127.0.0.1'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   }
 })

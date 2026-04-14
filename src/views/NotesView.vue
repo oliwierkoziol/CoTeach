@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
     <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
@@ -14,7 +14,7 @@
       </div>
 
       <!-- Podstawowe Informacje -->
-      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[32px] pt-[20px] px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
         <div class="content-stretch flex flex-col items-start relative shrink-0">
           <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px]">Podstawowe informacje</h3>
         </div>
@@ -79,20 +79,20 @@
         <!-- Text Input Area -->
         <div class="xl:col-[1/span_9] content-stretch flex flex-col items-start relative shrink-0 w-full h-full">
           <div class="bg-white relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full h-full">
-            <div class="content-stretch flex flex-col gap-[24px] items-start p-[32px] relative size-full h-full">
-              <div class="flex items-center justify-between relative shrink-0 w-full">
+            <div class="content-stretch flex flex-col gap-[24px] items-start p-[20px] sm:p-[32px] relative size-full h-full">
+              <div class="relative flex w-full shrink-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="content-stretch flex flex-col items-start relative shrink-0">
                   <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] whitespace-nowrap">Materiały źródłowe</h3>
                 </div>
-                <div class="flex items-center gap-[16px]">
-                  <button type="button" class="bg-[#0c3dfe] content-stretch flex items-center px-[32px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50" :disabled="loading" @click="handleGenerate">
+                <div class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-[16px]">
+                  <button type="button" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[20px] sm:px-[32px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto" :disabled="loading" @click="handleGenerate">
                     <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ loading ? "Generowanie..." : "Generuj notatkę AI" }}</span>
                     <svg class="ml-2 w-[16px] h-[16px]" fill="none" viewBox="0 0 15.7635 15.7635">
                       <path d="M7.88175 0L10.3204 5.4431L15.7635 7.88175L10.3204 10.3204L7.88175 15.7635L5.4431 10.3204L0 7.88175L5.4431 5.4431L7.88175 0Z" fill="white" />
                     </svg>
                   </button>
-                  <div class="content-stretch flex flex-col items-start">
-                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-[12px] leading-[16px] whitespace-nowrap">
+                  <div class="content-stretch flex flex-col items-start sm:items-end">
+                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-[12px] leading-[16px]">
                       {{ rawTextContent.length }} / 25,000 Znaki
                     </p>
                   </div>
@@ -140,7 +140,7 @@
       </div>
 
       <!-- Action Buttons Footer -->
-      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
+      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
         <div v-if="error" class="mb-4 text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold">
            {{ error }}
         </div>
@@ -151,11 +151,11 @@
           <button type="button" @click="downloadNotePdf()" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors w-full md:w-auto disabled:opacity-50" :disabled="!rawTextContent">
             <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">Pobierz notatkę jako PDF</span>
           </button>
-          <div class="flex gap-[12px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end">
-            <button type="button" @click="resetForm" class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors">
+          <div class="flex gap-[12px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end flex-col sm:flex-row">
+            <button type="button" @click="resetForm" class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[16px] leading-[24px]">Anuluj</span>
             </button>
-            <button type="button" :disabled="saving" @click="handleSave" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50">
+            <button type="button" :disabled="saving" @click="handleSave" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
             </button>
           </div>

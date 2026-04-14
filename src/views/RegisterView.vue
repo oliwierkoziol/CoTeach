@@ -1,5 +1,5 @@
 <template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] bg-gradient-to-br from-card via-sidebar to-background lg:bg-none lg:grid-cols-2">
+  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#1f2937_0%,#111827_45%,#0b1220_100%)] lg:bg-none lg:grid-cols-2">
     <div
       class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-card via-sidebar to-background p-10 text-foreground lg:flex"
     >
@@ -137,7 +137,7 @@ async function upsertProfileRow({ id, email, fullName, schoolId }) {
 async function loadOrganizations() {
   isLoadingOrganizations.value = true;
   try {
-    const response = await fetch(`${String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3001").trim().replace(/\/$/, "")}/api/public/organizations`);
+    const response = await fetch(`${String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "")}/api/public/organizations`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Nie udało się pobrać organizacji.");
 
