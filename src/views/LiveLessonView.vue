@@ -394,11 +394,15 @@ async function refreshCoverageThrottled(force = false) {
 }
 
 async function fetchLicenseStatus() {
+  const demoInfoPrefix = "Tryb demo ogranicza czas lekcji live";
   try {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
     if (!token) {
       demoMaxLiveMinutes.value = null;
+      if (String(info.value || "").startsWith(demoInfoPrefix)) {
+        info.value = "";
+      }
       return;
     }
 
@@ -406,17 +410,31 @@ async function fetchLicenseStatus() {
       headers: { Authorization: `Bearer ${token}` }
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) return;
+    if (!response.ok) {
+      demoMaxLiveMinutes.value = null;
+      if (String(info.value || "").startsWith(demoInfoPrefix)) {
+        info.value = "";
+      }
+      return;
+    }
 
+    const isDemo = payload?.isDemoLicense === true || payload?.license?.demoMode === true;
     const maxMinutes = Number(payload?.demoLimits?.maxLiveMinutes || 0);
-    demoMaxLiveMinutes.value = maxMinutes > 0 ? maxMinutes : null;
+    demoMaxLiveMinutes.value = isDemo && maxMinutes > 0 ? maxMinutes : null;
 
-    if (maxMinutes > 0 && selectedLessonDurationMinutes.value > maxMinutes) {
+    if (!isDemo && String(info.value || "").startsWith(demoInfoPrefix)) {
+      info.value = "";
+    }
+
+    if (isDemo && maxMinutes > 0 && selectedLessonDurationMinutes.value > maxMinutes) {
       selectedLessonDurationMinutes.value = maxMinutes;
       info.value = `Tryb demo ogranicza czas lekcji live do ${maxMinutes} minut.`;
     }
   } catch {
     demoMaxLiveMinutes.value = null;
+    if (String(info.value || "").startsWith(demoInfoPrefix)) {
+      info.value = "";
+    }
   }
 }
 
