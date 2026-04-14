@@ -86,43 +86,115 @@
 
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-[55] flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar pt-16 text-sidebar-foreground shadow-xl transition-transform duration-200 ease-out md:translate-x-0 md:shadow-none',
-      open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+      'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/10 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+      open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
     ]"
   >
-    <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3" aria-label="Nawigacja główna">
+    <div class="flex flex-1 flex-col overflow-y-auto p-4 pt-7 space-y-4">
+
+      <!-- Active Lesson Link -->
       <RouterLink
-        v-for="item in items"
-        :key="item.to"
-        :to="item.to"
+        v-if="activeLessonLink"
+        :to="activeLessonLink.to"
         custom
-        v-slot="{ href, navigate, isActive, isExactActive }"
+        v-slot="{ href, navigate }"
       >
         <a
           :href="href"
-          :class="[
-            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-            (item.exact ? isExactActive : isActive)
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
-          ]"
+          class="flex items-center gap-3 rounded-lg bg-[rgba(12,61,254,0.08)] px-4 py-3"
           @click="onNav(navigate)"
         >
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent/40 text-xs font-bold text-primary">
-            {{ item.short }}
-          </span>
-          {{ item.label }}
+          <!-- Monitor Play Icon -->
+          <svg class="h-[18px] w-5 shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <rect width="20" height="14" x="2" y="3" rx="2" />
+            <path d="M10 7.5v6l5-3-5-3z" />
+            <path d="M12 17v4" />
+            <path d="M8 21h8" />
+          </svg>
+          <p class="truncate text-[14px] font-semibold text-[#0c3dfe]" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+            {{ activeLessonLink.label }}
+          </p>
         </a>
       </RouterLink>
-    </nav>
-    <div class="p-3 pt-2">
-      <button
-        type="button"
-        class="flex w-full items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 px-3 py-2.5 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
-        @click="handleLogout"
-      >
-        Wyloguj
-      </button>
+
+      <!-- Divider + nav links -->
+      <div class="flex-1 space-y-1 border-t border-black/10 pt-4">
+
+        <!-- Panel startowy -->
+        <RouterLink to="/" custom v-slot="{ href, navigate, isActive, isExactActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isExactActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect width="7" height="9" x="3" y="3" rx="1" />
+              <rect width="7" height="5" x="14" y="3" rx="1" />
+              <rect width="7" height="9" x="14" y="12" rx="1" />
+              <rect width="7" height="5" x="3" y="16" rx="1" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
+          </a>
+        </RouterLink>
+
+        <!-- Dodaj materiały -->
+        <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="M12 18v-6" />
+              <path d="M9 15l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
+          </a>
+        </RouterLink>
+
+        <!-- Prezentacja -->
+        <RouterLink :to="presentationLink" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+          </a>
+        </RouterLink>
+
+        <!-- Archiwum -->
+        <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M20 7h-3a2 2 0 0 1-2-2V2" />
+              <path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z" />
+              <path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
+          </a>
+        </RouterLink>
+
+        <!-- Monitoring -->
+        <RouterLink to="/monitoring" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Monitoring</p>
+          </a>
+        </RouterLink>
+
+        <!-- Admin -->
+        <RouterLink v-if="isAdmin" to="/admin/users" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
+          </a>
+        </RouterLink>
+      </div>
+
     </div>
   </aside>
 </template>
@@ -156,20 +228,14 @@ const presentationLink = computed(() => {
   return `/presentation/${id}`;
 });
 
-const items = computed(() => {
-  const baseItems = [
-    { to: "/", label: "Start", short: "◆", exact: true },
-    { to: "/preparation", label: "Przygotowanie", short: "1", exact: false },
-    { to: "/live-lesson", label: "Lekcja na żywo", short: "2", exact: false },
-    { to: presentationLink.value, label: "Prezentacja", short: "3", exact: false },
-    { to: "/archive", label: "Archiwum", short: "4", exact: false },
-  ];
-
-  if (isAdmin.value) {
-    baseItems.push({ to: "/admin/users", label: "Panel sterowania admina", short: "A", exact: false });
-  }
-
-  return baseItems;
+// Active lesson shown pinned at the top of the nav
+const activeLessonLink = computed(() => {
+  const lesson = state.lesson || state.lessons?.[0];
+  if (!lesson) return null;
+  return {
+    to: `/live-lesson/${lesson.id}`,
+    label: `Lekcja: ${lesson.title || "Lekcja"}`,
+  };
 });
 
 const userInitials = computed(() => {
