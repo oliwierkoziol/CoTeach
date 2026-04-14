@@ -36,6 +36,7 @@ const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const OPENROUTER_MODEL_PRICING_USD_PER_1M = {
   default: { prompt: 0.35, completion: 2.5 },
@@ -250,7 +251,7 @@ async function resolveTeacherContext(req, res) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("teacher_id, school_id")
+    .select("teacher_id, school_id, license, license_lenght")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -279,6 +280,7 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
+  await syncProfileLicenseStateSafe({ userId: user.id, activeLicense: getActiveUserLicense(user.id), profileSnapshot: profile });
   return { teacherId, userId: user.id, schoolId };
 }
 
@@ -290,6 +292,43 @@ function getActiveUserLicense(userId) {
   const expiresAtMs = new Date(assignedLicense.expiresAt).getTime();
   if (!Number.isFinite(expiresAtMs) || expiresAtMs < now) return null;
   return assignedLicense;
+}
+
+function getRemainingLicenseDays(expiresAt) {
+  const expiresAtMs = new Date(expiresAt || "").getTime();
+  if (!Number.isFinite(expiresAtMs)) return 0;
+  const remainingMs = expiresAtMs - Date.now();
+  if (remainingMs <= 0) return 0;
+  return Math.ceil(remainingMs / DAY_MS);
+}
+
+async function syncProfileLicenseState({ userId, activeLicense = null, profileSnapshot = null }) {
+  if (!supabase || !userId) return;
+
+  const nextLicense = Boolean(activeLicense);
+  const nextLength = nextLicense ? getRemainingLicenseDays(activeLicense.expiresAt) : 0;
+  const currentLicense = profileSnapshot?.license === true;
+  const currentLength = Number(profileSnapshot?.license_lenght || 0);
+
+  if (currentLicense === nextLicense && currentLength === nextLength) return;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      license: nextLicense,
+      license_lenght: nextLength,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", userId);
+  if (error) throw new Error(`Nie udało się zsynchronizować licencji w profilu: ${error.message}`);
+}
+
+async function syncProfileLicenseStateSafe(params) {
+  try {
+    await syncProfileLicenseState(params);
+  } catch (error) {
+    console.error(error.message);
+  }
 }
 
 function getUserUploadPolicy(userId) {
@@ -2008,6 +2047,70 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
   return res.json({ user: { id: userId, email: data?.user?.email || email || null } });
 });
 
+app.post("/api/admin/users/special-account", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const login = String(req.body?.login || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").trim();
+  const fullName = String(req.body?.fullName || "").trim();
+
+  if (!/^[a-z0-9._-]{3,64}$/.test(login)) {
+    return res.status(400).json({ error: "Login służbowy musi mieć 3-64 znaki: litery, cyfry, kropka, myślnik lub podkreślenie." });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Hasło musi mieć co najmniej 8 znaków." });
+  }
+
+  const email = `${login}@sluzbowe.coteach.local`;
+  const teacherId = `teacher-${randomUUID()}`;
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName || null,
+      account_type: "business",
+      business_login: login
+    }
+  });
+
+  if (createError || !created?.user?.id) {
+    return res.status(500).json({ error: createError?.message || "Nie udało się utworzyć konta służbowego." });
+  }
+
+  const userId = created.user.id;
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email,
+      full_name: fullName || null,
+      teacher_id: teacherId,
+      school_id: adminSchool.schoolId,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileError) {
+    await supabase.auth.admin.deleteUser(userId);
+    return res.status(500).json({ error: `Nie udało się zapisać profilu konta służbowego: ${profileError.message}` });
+  }
+
+  return res.status(201).json({
+    user: {
+      id: userId,
+      full_name: fullName || null,
+      email,
+      businessLogin: login
+    }
+  });
+});
+
 app.patch("/api/admin/users/:userId/license", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
 
@@ -2045,6 +2148,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   try {
     await persistLicense(license);
     db.licenses.set(licenseId, license);
+    await syncProfileLicenseState({ userId, activeLicense: license });
   } catch (error) {
     if (previousLicense) {
       db.licenses.set(licenseId, previousLicense);
@@ -2060,7 +2164,8 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
       key: license.key,
       expiresAt: license.expiresAt,
       maxActiveUsers: license.maxActiveUsers,
-      demoMode: license.demoMode === true
+    demoMode: license.demoMode === true,
+    daysLeft: getRemainingLicenseDays(license.expiresAt)
     }
   });
 });
@@ -2127,6 +2232,7 @@ app.get("/api/account/license-status", async (req, res) => {
   if (!teacher) return;
 
   const activeLicense = getActiveUserLicense(teacher.userId);
+  await syncProfileLicenseStateSafe({ userId: teacher.userId, activeLicense });
   const uploadPolicy = getUserUploadPolicy(teacher.userId);
   const uploadsUsed = countUserFileUploads(teacher.teacherId, teacher.schoolId);
 
@@ -2139,7 +2245,8 @@ app.get("/api/account/license-status", async (req, res) => {
           key: activeLicense.key,
           expiresAt: activeLicense.expiresAt,
           maxActiveUsers: activeLicense.maxActiveUsers,
-          demoMode: activeLicense.demoMode === true
+          demoMode: activeLicense.demoMode === true,
+          daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
         }
       : null,
     demoLimits: activeLicense?.demoMode
