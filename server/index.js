@@ -816,6 +816,12 @@ async function persistLicense(license) {
   if (error) throw new Error(`Supabase license upsert failed: ${error.message}`);
 }
 
+async function removeLicense(licenseId) {
+  if (!supabase || !licenseId) return;
+  const { error } = await supabase.from("user_licenses").delete().eq("id", licenseId);
+  if (error) throw new Error(`Supabase license delete failed: ${error.message}`);
+}
+
 async function loadLicensesFromSupabase() {
   if (!supabase) return;
   const { data, error } = await supabase.from("user_licenses").select("*");
@@ -2344,12 +2350,12 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   if (!adminSchool) return;
 
   const userId = req.params.userId;
-  const days = Number(req.body?.days || 30);
+  const days = Number(req.body?.days ?? 30);
   const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
   const hasDemoModeInput = typeof req.body?.demoMode === "boolean";
 
-  if (!Number.isFinite(days) || days < 1) {
-    return res.status(400).json({ error: "Nieprawidłowa liczba dni licencji." });
+  if (!Number.isFinite(days) || days < 0) {
+    return res.status(400).json({ error: "Nieprawidłowa liczba dni licencji. Użyj wartości od 0 wzwyż." });
   }
 
   if (!Number.isFinite(maxActiveUsers) || maxActiveUsers < 1) {
@@ -2361,6 +2367,21 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
 
   const existing = db.licenses.get(licenseId);
   const previousLicense = existing ? { ...existing } : null;
+
+  if (days === 0) {
+    try {
+      await removeLicense(licenseId);
+      db.licenses.delete(licenseId);
+      await syncProfileLicenseState({ userId, activeLicense: null });
+      return res.json({ license: null, removed: true });
+    } catch (error) {
+      if (previousLicense) {
+        db.licenses.set(licenseId, previousLicense);
+      }
+      return res.status(500).json({ error: error.message || "Nie udało się usunąć licencji." });
+    }
+  }
+
   const license = {
     id: licenseId,
     key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,

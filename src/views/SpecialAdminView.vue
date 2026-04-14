@@ -172,7 +172,18 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 text-muted-foreground">
-                  <span v-if="user.license">do {{ formatDate(user.license.expiresAt) }}</span>
+                  <div v-if="user.license" class="space-y-1">
+                    <div>do {{ formatDate(user.license.expiresAt) }}</div>
+                    <div class="text-xs">
+                      Typ:
+                      <span
+                        :class="user.license.demoMode ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'"
+                        class="font-semibold"
+                      >
+                        {{ user.license.demoMode ? "Demo" : "Standard" }}
+                      </span>
+                    </div>
+                  </div>
                   <span v-else>Brak</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -307,7 +318,11 @@
         class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
         @click.self="closeModify"
       >
-        <div class="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
+        <form
+          class="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
+          @submit.prevent="saveAllChanges"
+          @keydown.enter="handleEditFormEnter"
+        >
           <h3 class="text-xl font-bold text-foreground">Modyfikuj konto</h3>
           <p class="mt-1 text-sm text-muted-foreground">{{ editUser.full_name || editUser.email || editUser.id }}</p>
 
@@ -347,9 +362,10 @@
                 <input
                   v-model.number="licenseDays"
                   type="number"
-                  min="1"
+                  min="0"
                   class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
                 />
+                <p class="mt-1 text-xs text-muted-foreground">Wpisz 0, aby odebrać licencję.</p>
               </label>
               <label class="block text-sm text-muted-foreground">
                 Limit aktywnych użytkowników
@@ -389,23 +405,14 @@
               Zamknij
             </button>
             <button
-              type="button"
+              type="submit"
               class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
               :disabled="isSubmitting"
-              @click="saveUserChanges"
             >
-              {{ isSubmitting ? "Zapisywanie..." : "Zapisz konto" }}
-            </button>
-            <button
-              type="button"
-              class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
-              :disabled="isSubmitting"
-              @click="grantLicense"
-            >
-              {{ isSubmitting ? "Nadawanie..." : "Przyznaj licencję" }}
+              {{ isSubmitting ? "Zapisywanie..." : "Zapisz zmiany" }}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </Teleport>
   </div>
@@ -554,7 +561,11 @@ function openModify(user) {
   editEmail.value = String(user.email || "");
   editPassword.value = "";
   showEditPassword.value = false;
-  licenseDays.value = 30;
+  const expiresAtMs = new Date(user.license?.expiresAt || "").getTime();
+  const daysLeft = Number.isFinite(expiresAtMs)
+    ? Math.max(0, Math.ceil((expiresAtMs - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  licenseDays.value = daysLeft;
   licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
   licenseDemoMode.value = user.license?.demoMode === true;
   actionError.value = "";
@@ -567,7 +578,19 @@ function closeModify() {
   showEditPassword.value = false;
 }
 
-async function saveUserChanges() {
+function handleEditFormEnter(event) {
+  const target = event?.target;
+  const tagName = String(target?.tagName || "").toLowerCase();
+  const inputType = String(target?.type || "").toLowerCase();
+
+  if (tagName === "textarea" || inputType === "button") return;
+  if (isSubmitting.value) return;
+
+  event.preventDefault();
+  void saveAllChanges();
+}
+
+async function saveAllChanges() {
   if (!editUser.value) return;
   isSubmitting.value = true;
   actionError.value = "";
@@ -575,47 +598,30 @@ async function saveUserChanges() {
     const headers = await getAuthHeader();
     headers["Content-Type"] = "application/json";
 
-    const payload = {
+    const accountPayload = {
       email: String(editEmail.value || "").trim(),
       password: String(editPassword.value || "").trim()
     };
 
-    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
+    const accountRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(accountPayload)
     });
-    const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udało się zapisać zmian konta.");
+    const accountData = await readApiPayload(accountRes);
+    if (!accountRes.ok) throw new Error(accountData.error || "Nie udało się zapisać zmian konta.");
 
-    await loadDashboard();
-    closeModify();
-  } catch (e) {
-    actionError.value = e.message;
-  } finally {
-    isSubmitting.value = false;
-  }
-}
-
-async function grantLicense() {
-  if (!editUser.value) return;
-  isSubmitting.value = true;
-  actionError.value = "";
-  try {
-    const headers = await getAuthHeader();
-    headers["Content-Type"] = "application/json";
-
-    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}/license`, {
+    const licenseRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}/license`, {
       method: "PATCH",
       headers,
       body: JSON.stringify({
-        days: Number(licenseDays.value || 30),
+        days: Number(licenseDays.value ?? 0),
         maxActiveUsers: Number(licenseMaxUsers.value || 1),
         demoMode: licenseDemoMode.value === true
       })
     });
-    const data = await readApiPayload(res);
-    if (!res.ok) throw new Error(data.error || "Nie udało się przyznać licencji.");
+    const licenseData = await readApiPayload(licenseRes);
+    if (!licenseRes.ok) throw new Error(licenseData.error || "Nie udało się zapisać zmian licencji.");
 
     await loadDashboard();
     closeModify();
