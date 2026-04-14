@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
-import { randomUUID } from "crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "crypto";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { toFile } from "openai/uploads";
@@ -26,10 +26,18 @@ const port = Number(process.env.PORT || 3001);
 const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
+const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
 const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+
+const OPENROUTER_MODEL_PRICING_USD_PER_1M = {
+  default: { prompt: 0.35, completion: 2.5 },
+  "google/gemma-2-9b-it:free": { prompt: 0, completion: 0 },
+  "google/gemini-2.5-flash": { prompt: 0.35, completion: 2.5 }
+};
+const AI_MIN_MARGIN_PLN = Number(process.env.AI_MIN_MARGIN_PLN || "0.05");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -68,6 +76,7 @@ const db = {
   licenses: new Map(),
   lessons: new Map(),
   costs: new Map(),
+  costEvents: [],
   notes: new Map()
 };
 
@@ -185,6 +194,36 @@ async function isRequestAdmin(req) {
   return data?.admin === true;
 }
 
+async function resolveAdminSchoolContext(req, res) {
+  if (!supabase) {
+    return { schoolId: defaultSchoolId, userId: defaultAdminId };
+  }
+
+  const user = await getRequestUser(req);
+  if (!user?.id) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("school_id, admin")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    res.status(500).json({ error: `Nie udało się odczytać profilu admina: ${profileError.message}` });
+    return null;
+  }
+
+  if (profile?.admin !== true) {
+    res.status(403).json({ error: "Brak uprawnień administratora." });
+    return null;
+  }
+
+  return { schoolId: String(profile?.school_id || defaultSchoolId), userId: user.id };
+}
+
 async function requireAdmin(req, res) {
   const admin = await isRequestAdmin(req);
   if (!admin) {
@@ -196,7 +235,7 @@ async function requireAdmin(req, res) {
 
 async function resolveTeacherContext(req, res) {
   if (!supabase) {
-    return { teacherId: defaultTeacherId, userId: defaultTeacherId };
+    return { teacherId: defaultTeacherId, userId: defaultTeacherId, schoolId: defaultSchoolId };
   }
   const user = await getRequestUser(req);
   if (!user?.id) {
@@ -206,7 +245,7 @@ async function resolveTeacherContext(req, res) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("teacher_id")
+    .select("teacher_id, school_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -216,12 +255,14 @@ async function resolveTeacherContext(req, res) {
   }
 
   let teacherId = String(profile?.teacher_id || "").trim();
+  const schoolId = String(profile?.school_id || defaultSchoolId).trim() || defaultSchoolId;
   if (!teacherId) {
     teacherId = `teacher-${randomUUID()}`;
     const { error: upsertError } = await supabase.from("profiles").upsert(
       {
         id: user.id,
         email: user.email || null,
+        school_id: schoolId,
         teacher_id: teacherId,
         updated_at: new Date().toISOString()
       },
@@ -233,7 +274,7 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
-  return { teacherId, userId: user.id };
+  return { teacherId, userId: user.id, schoolId };
 }
 
 function getActiveUserLicense(userId) {
@@ -261,8 +302,12 @@ function requireActiveLicenseForTeacher(teacher, res, featureName = "Funkcja AI"
   return null;
 }
 
-function countUserFileUploads(teacherId) {
-  const teacherLessons = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === String(teacherId));
+function countUserFileUploads(teacherId, schoolId = null) {
+  const teacherLessons = [...db.lessons.values()].filter((lesson) => {
+    if (String(lesson.teacherId) !== String(teacherId)) return false;
+    if (schoolId !== null && schoolId !== undefined && String(lesson.schoolId || "") !== String(schoolId)) return false;
+    return true;
+  });
   return teacherLessons.reduce((count, lesson) => {
     const files = Array.isArray(lesson.sourceFiles) ? lesson.sourceFiles : [];
     const lessonCount = files.filter((file) => {
@@ -275,13 +320,17 @@ function countUserFileUploads(teacherId) {
   }, 0);
 }
 
-function getOwnedLessonOrRespond(req, res, teacherId) {
+function getOwnedLessonOrRespond(req, res, teacherId, schoolId = null) {
   const lesson = db.lessons.get(req.params.lessonId);
   if (!lesson) {
     res.status(404).json({ error: "Lesson not found" });
     return null;
   }
   if (String(lesson.teacherId) !== String(teacherId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return null;
+  }
+  if (schoolId !== null && schoolId !== undefined && String(lesson.schoolId || "") !== String(schoolId)) {
     res.status(403).json({ error: "Forbidden" });
     return null;
   }
@@ -312,6 +361,7 @@ function rowToFinalNote(row) {
   return {
     id: row.id,
     lessonId: row.lesson_id,
+    schoolId: row.school_id || null,
     title: row.title || "",
     subject: row.subject || "",
     date: row.date || null,
@@ -326,6 +376,7 @@ function rowToFinalNote(row) {
 function rowToSavedNote(row) {
   return {
     id: row.id,
+    schoolId: row.school_id || null,
     teacherId: row.teacher_id,
     title: row.title || "",
     subject: row.subject || "",
@@ -361,6 +412,7 @@ function finalNoteToRow(finalNote, teacherId) {
   return {
     id: finalNote.id,
     lesson_id: finalNote.lessonId,
+    school_id: finalNote.schoolId || null,
     teacher_id: String(teacherId || defaultTeacherId),
     title: String(finalNote.title || ""),
     subject: String(finalNote.subject || ""),
@@ -376,6 +428,7 @@ function finalNoteToRow(finalNote, teacherId) {
 function savedNoteToRow(note, teacherId) {
   return {
     id: note.id,
+    school_id: note.schoolId || null,
     teacher_id: String(teacherId || defaultTeacherId),
     title: String(note.title || ""),
     subject: String(note.subject || ""),
@@ -413,6 +466,55 @@ function rowToLicense(row) {
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
   };
+}
+
+function roundMoney(value) {
+  return Number(Number(value || 0).toFixed(4));
+}
+
+function getOpenRouterPricing(model) {
+  return OPENROUTER_MODEL_PRICING_USD_PER_1M[model] || OPENROUTER_MODEL_PRICING_USD_PER_1M.default;
+}
+
+function estimateOpenRouterBaseUsdCost({ model, promptTokens = 0, completionTokens = 0 }) {
+  const pricing = getOpenRouterPricing(model);
+  return ((Number(promptTokens || 0) * pricing.prompt) + (Number(completionTokens || 0) * pricing.completion)) / 1_000_000;
+}
+
+function buildBilledCost(basePLN) {
+  const base = roundMoney(basePLN);
+  const marginFromRate = roundMoney(base * AI_MARKUP_RATE);
+  const margin = roundMoney(Math.max(marginFromRate, AI_MIN_MARGIN_PLN));
+  return {
+    basePLN: base,
+    marginPLN: margin,
+    totalPLN: roundMoney(base + margin)
+  };
+}
+
+function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, category, baseAmountPLN, providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
+  const cost = buildBilledCost(baseAmountPLN);
+  addCost({
+    lessonId,
+    schoolId,
+    teacherId,
+    provider,
+    model: model || provider,
+    feature: feature || category,
+    category,
+    baseAmountPLN: cost.basePLN,
+    marginAmountPLN: cost.marginPLN,
+    amountPLN: cost.totalPLN,
+    providerCostUsd,
+    costUsd,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    requestId,
+    latencyMs,
+    status,
+    errorMessage
+  });
 }
 
 async function persistLesson(lesson) {
@@ -543,6 +645,84 @@ async function loadSavedNotesFromSupabase() {
   }
 }
 
+function rowToCostEvent(row) {
+  return {
+    id: row.id,
+    lessonId: row.lesson_id || null,
+    schoolId: row.school_id || null,
+    teacherId: row.teacher_id || null,
+    provider: row.provider || "unknown",
+    category: row.feature || row.category || "other",
+    amountPLN: Number(row.cost_pln || 0),
+    baseAmountPLN: row.provider_cost_pln !== null && row.provider_cost_pln !== undefined ? Number(row.provider_cost_pln) : null,
+    marginAmountPLN: row.margin_pln !== null && row.margin_pln !== undefined ? Number(row.margin_pln) : null,
+    at: row.created_at || new Date().toISOString(),
+    model: row.model || null,
+    feature: row.feature || null,
+    promptTokens: Number(row.prompt_tokens || 0),
+    completionTokens: Number(row.completion_tokens || 0),
+    totalTokens: Number(row.total_tokens || 0),
+    costUsd: row.cost_usd !== null && row.cost_usd !== undefined ? Number(row.cost_usd) : null,
+    requestId: row.request_id || null,
+    latencyMs: row.latency_ms !== null && row.latency_ms !== undefined ? Number(row.latency_ms) : null,
+    status: row.status || "ok",
+    errorMessage: row.error_message || null
+  };
+}
+
+async function persistCostEvent(event) {
+  if (!supabase || !event) return;
+  const { error } = await supabase.from("openrouter_usage_events").insert({
+    id: event.id,
+    user_id: event.userId || null,
+    school_id: event.schoolId || null,
+    teacher_id: event.teacherId || null,
+    lesson_id: event.lessonId || null,
+    feature: event.category || event.feature || "other",
+    model: event.model || event.provider || "unknown",
+    prompt_tokens: Number(event.promptTokens || 0),
+    completion_tokens: Number(event.completionTokens || 0),
+    total_tokens: Number(event.totalTokens || 0),
+    cost_usd: event.costUsd ?? null,
+    cost_pln: event.amountPLN ?? null,
+    provider_cost_usd: event.providerCostUsd ?? null,
+    provider_cost_pln: event.baseAmountPLN ?? null,
+    margin_pln: event.marginAmountPLN ?? null,
+    status: event.status || "ok",
+    request_id: event.requestId || null,
+    latency_ms: event.latencyMs ?? null,
+    error_message: event.errorMessage || null,
+    created_at: event.at || new Date().toISOString()
+  });
+  if (error) throw new Error(`Supabase cost event insert failed: ${error.message}`);
+}
+
+async function persistCostEventSafe(event) {
+  try {
+    await persistCostEvent(event);
+  } catch (error) {
+    console.error(error.message);
+  }
+}
+
+async function loadCostEventsFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("openrouter_usage_events").select("*").order("created_at", { ascending: true });
+  if (error) throw new Error(`Supabase cost events load failed: ${error.message}`);
+
+  db.costEvents = [];
+  db.costs = new Map();
+
+  for (const row of data || []) {
+    const event = rowToCostEvent(row);
+    db.costEvents.push(event);
+    if (!event.lessonId) continue;
+    const events = db.costs.get(event.lessonId) || [];
+    events.push(event);
+    db.costs.set(event.lessonId, events);
+  }
+}
+
 function fallbackGeneratePlan(rawText) {
   const lines = String(rawText || "")
     .split(/\r?\n/)
@@ -581,6 +761,10 @@ function partToOpenRouterContent(part) {
   return { type: "text", text: "" };
 }
 
+function approximateTokensFromText(text) {
+  return Math.max(1, Math.ceil(String(text || "").length / 4));
+}
+
 async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens }) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing.");
@@ -588,6 +772,7 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens 
   const fallbackMaxTokens = Number.isFinite(OPENROUTER_MAX_TOKENS) ? Math.max(256, Math.min(OPENROUTER_MAX_TOKENS, 8192)) : 2000;
   const requestedMaxTokens = Number.isFinite(Number(maxTokens)) ? Number(maxTokens) : fallbackMaxTokens;
   const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
+  const startedAt = Date.now();
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -608,7 +793,35 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens 
   }
 
   const data = await response.json();
-  return String(data?.choices?.[0]?.message?.content || "").trim();
+  const text = String(data?.choices?.[0]?.message?.content || "").trim();
+  const usage = data?.usage || {};
+  const estimatedPromptTokens = approximateTokensFromText(
+    parts
+      .map((part) => (part.text ? part.text : part.inlineData?.mimeType ? "[image]" : ""))
+      .join("\n")
+  );
+  const estimatedCompletionTokens = approximateTokensFromText(text);
+  const promptTokens = Number(usage.prompt_tokens || estimatedPromptTokens);
+  const completionTokens = Number(usage.completion_tokens || estimatedCompletionTokens);
+  const totalTokens = Number(usage.total_tokens || promptTokens + completionTokens);
+  const baseUsd = estimateOpenRouterBaseUsdCost({
+    model,
+    promptTokens,
+    completionTokens
+  });
+
+  return {
+    text,
+    model,
+    usage: {
+      promptTokens,
+      completionTokens,
+      totalTokens
+    },
+    requestId: String(response.headers.get("x-request-id") || data?.id || ""),
+    latencyMs: Date.now() - startedAt,
+    baseUsd
+  };
 }
 
 function parseJsonFromModel(text) {
@@ -689,7 +902,7 @@ function mapPlanItem(item, index) {
   };
 }
 
-async function generatePlanWithLLM(rawText) {
+async function generatePlanWithLLM(rawText, context = {}) {
   if (!rawText?.trim()) return [];
 
   const parsedFromJson = parsePlanFromJsonText(rawText);
@@ -703,7 +916,24 @@ async function generatePlanWithLLM(rawText) {
       model: OPENROUTER_TEXT_MODEL,
       parts: [{ text: prompt }]
     });
-    const parsed = parseJsonFromModel(out);
+    recordCostFromBase({
+      lessonId: context.lessonId || null,
+      schoolId: context.schoolId || null,
+      teacherId: context.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "lesson_plan",
+      category: "lesson_plan",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+    const parsed = parseJsonFromModel(out.text);
     if (!Array.isArray(parsed)) throw new Error("Invalid plan JSON");
     return parsed.slice(0, 12).map((item, index) => mapPlanItem(item, index));
   } catch {
@@ -711,7 +941,7 @@ async function generatePlanWithLLM(rawText) {
   }
 }
 
-async function calculateCoverageWithLLM(plan, transcripts) {
+async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
   const transcript = (transcripts || []).map((item) => item.text).join(" ").slice(0, 25000);
   if (!plan?.length || !transcript.trim()) return plan || [];
   try {
@@ -727,7 +957,24 @@ Transkrypcja:
 ${transcript}
 `.trim();
     const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }] });
-    const statuses = parseJsonFromModel(out);
+    recordCostFromBase({
+      lessonId: context.lessonId || null,
+      schoolId: context.schoolId || null,
+      teacherId: context.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "live_coverage",
+      category: "live_coverage",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+    const statuses = parseJsonFromModel(out.text);
     const statusById = new Map((Array.isArray(statuses) ? statuses : []).map((item) => [item.id, item.status]));
     return plan.map((rawItem, index) => {
       const item = normalizePlanPoint(rawItem, index);
@@ -754,7 +1001,7 @@ ${transcript}
   }
 }
 
-async function generateFinalNoteWithLLM(lesson) {
+async function generateFinalNoteWithLLM(lesson, context = {}) {
   const transcript = (lesson.transcripts || []).map((item) => item.text).join(" ").slice(0, 20000);
   const prompt = `
 Utwórz kompletną "Złotą Notatkę" po lekcji.
@@ -771,7 +1018,25 @@ Plan: ${JSON.stringify(lesson.plan || [])}
 Transkrypcja: ${transcript}
 `.trim();
   try {
-    return await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: prompt }] });
+    const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: prompt }] });
+    recordCostFromBase({
+      lessonId: context.lessonId || lesson.id || null,
+      schoolId: context.schoolId || lesson.schoolId || null,
+      teacherId: context.teacherId || lesson.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "presentation",
+      category: "presentation",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+    return out.text;
   } catch {
     const missing = (lesson.plan || []).filter((item) => item.status !== "discussed");
     return `
@@ -786,7 +1051,7 @@ Transkrypcja: ${transcript}
   }
 }
 
-async function generateTeacherNoteWithLLM({ subject, topic, classLevel }) {
+async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context = {} }) {
   const cleanSubject = String(subject || "").trim();
   const cleanTopic = String(topic || "").trim();
   const cleanClass = String(classLevel || "").trim();
@@ -808,18 +1073,64 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel }) {
     maxTokens: Math.min(3000, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS : 2000)
   });
 
-  if (!note) {
+  if (!note?.text) {
     throw new Error("AI returned an empty note.");
   }
 
-  return note;
+  recordCostFromBase({
+    lessonId: context.lessonId || null,
+    schoolId: context.schoolId || null,
+    teacherId: context.teacherId || null,
+    provider: "openrouter",
+    model: note.model,
+    feature: "teacher_note",
+    category: "teacher_note",
+    baseAmountPLN: note.baseUsd * USD_TO_PLN,
+    providerCostUsd: note.baseUsd,
+    costUsd: note.baseUsd,
+    promptTokens: note.usage.promptTokens,
+    completionTokens: note.usage.completionTokens,
+    totalTokens: note.usage.totalTokens,
+    requestId: note.requestId,
+    latencyMs: note.latencyMs
+  });
+
+  return note.text;
 }
 
-function addCost(lessonId, provider, amountPLN) {
-  const events = db.costs.get(lessonId) || [];
-  const event = { id: randomUUID(), lessonId, provider, amountPLN, at: new Date().toISOString() };
-  events.push(event);
-  db.costs.set(lessonId, events);
+function addCost({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, amountPLN, baseAmountPLN = null, marginAmountPLN = null, category = "other", providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
+  const event = {
+    id: randomUUID(),
+    lessonId: lessonId || null,
+    schoolId: schoolId || null,
+    teacherId: teacherId || null,
+    provider,
+    model: model || provider,
+    feature: feature || category,
+    category,
+    amountPLN: roundMoney(amountPLN),
+    baseAmountPLN: baseAmountPLN === null ? null : roundMoney(baseAmountPLN),
+    marginAmountPLN: marginAmountPLN === null ? null : roundMoney(marginAmountPLN),
+    providerCostUsd: providerCostUsd === null ? null : roundMoney(providerCostUsd),
+    costUsd: costUsd === null ? null : roundMoney(costUsd),
+    promptTokens: Number(promptTokens || 0),
+    completionTokens: Number(completionTokens || 0),
+    totalTokens: Number(totalTokens || 0),
+    requestId,
+    latencyMs,
+    status,
+    errorMessage,
+    at: new Date().toISOString()
+  };
+
+  if (lessonId) {
+    const events = db.costs.get(lessonId) || [];
+    events.push(event);
+    db.costs.set(lessonId, events);
+  }
+
+  db.costEvents.push(event);
+  void persistCostEventSafe(event);
 }
 
 function getCostSummary(lessonId) {
@@ -857,7 +1168,7 @@ function checkLicenseForSchool(schoolId) {
   return { allowed: true, reason: "ok", license };
 }
 
-async function extractTextFromFile(file) {
+async function extractTextFromFile(file, context = {}) {
   if (file.mimetype === "text/plain") return file.buffer.toString("utf8").trim();
   if (file.mimetype === "application/pdf") {
     const pdfParseModule = await import("pdf-parse/lib/pdf-parse.js");
@@ -873,7 +1184,23 @@ async function extractTextFromFile(file) {
         { inlineData: { mimeType: file.mimetype, data: file.buffer.toString("base64") } }
       ]
     });
-    return out.trim();
+    recordCostFromBase({
+      lessonId: context.lessonId || null,
+      teacherId: context.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "lesson_plan",
+      category: "lesson_plan",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+    return out.text.trim();
   }
   throw new Error("Unsupported file type");
 }
@@ -924,9 +1251,10 @@ app.post("/api/lessons", async (req, res) => {
 
   const normalizedDate = normalizeLessonDate(date);
   const normalizedMonth = resolveLessonMonth(month, normalizedDate);
+  const lessonId = randomUUID();
   const lesson = {
-    id: randomUUID(),
-    schoolId: defaultSchoolId,
+    id: lessonId,
+    schoolId: teacher.schoolId,
     teacherId: teacher.teacherId,
     title,
     subject,
@@ -934,12 +1262,16 @@ app.post("/api/lessons", async (req, res) => {
     date: normalizedDate,
     status: "draft",
     sourceFiles: [],
-    plan: rawText && activeLicense ? await generatePlanWithLLM(rawText) : [],
+    plan: [],
     transcripts: [],
     finalNote: null,
     startedAt: null,
     finishedAt: null
   };
+
+  if (rawText && activeLicense) {
+    lesson.plan = await generatePlanWithLLM(rawText, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
+  }
 
   if (rawText && !activeLicense) {
     lesson.sourceFiles.push({
@@ -963,7 +1295,9 @@ app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
-  const lessons = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === teacher.teacherId);
+  const lessons = [...db.lessons.values()].filter((lesson) => {
+    return String(lesson.teacherId) === teacher.teacherId && String(lesson.schoolId || "") === String(teacher.schoolId || "");
+  });
   res.json({ lessons });
 });
 
@@ -971,7 +1305,7 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
   try {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
-    const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+    const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     const uploadPolicy = getUserUploadPolicy(teacher.userId);
@@ -983,14 +1317,14 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
         return res.status(413).json({ error: `Plik jest zbyt duży. Maksymalny rozmiar to ${limitMb} MB.` });
       }
 
-      const uploadsUsed = countUserFileUploads(teacher.teacherId);
+      const uploadsUsed = countUserFileUploads(teacher.teacherId, teacher.schoolId);
       if (uploadsUsed >= uploadPolicy.maxUploads) {
         return res.status(403).json({
           error: `Osiągnięto limit uploadów (${uploadPolicy.maxUploads}).`
         });
       }
 
-      extractedText = await extractTextFromFile(req.file);
+      extractedText = await extractTextFromFile(req.file, { lessonId: lesson.id, teacherId: teacher.teacherId });
       lesson.sourceFiles.push({
         id: randomUUID(),
         lessonId: lesson.id,
@@ -1025,10 +1359,9 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
       });
     }
 
-    lesson.plan = await generatePlanWithLLM(extractedText);
+    lesson.plan = await generatePlanWithLLM(extractedText, { lessonId: lesson.id, teacherId: teacher.teacherId });
     if (!lesson.plan.length) return res.status(400).json({ error: "Could not derive topics from material." });
     lesson.status = "ready";
-    addCost(lesson.id, "gemini", 0.2);
     db.lessons.set(lesson.id, lesson);
     await persistLessonSafe(lesson);
     return res.json({ lesson });
@@ -1056,7 +1389,7 @@ app.post("/api/notes/generate", async (req, res) => {
       return res.status(400).json({ error: "Subject and topic are required." });
     }
 
-    const note = await generateTeacherNoteWithLLM({ subject, topic, classLevel });
+    const note = await generateTeacherNoteWithLLM({ subject, topic, classLevel, context: { teacherId: teacher.teacherId, schoolId: teacher.schoolId } });
     return res.json({ note });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Failed to generate note." });
@@ -1067,7 +1400,7 @@ app.get("/api/notes", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
   const notes = [...db.notes.values()]
-    .filter((note) => String(note.teacherId) === String(teacher.teacherId))
+    .filter((note) => String(note.teacherId) === String(teacher.teacherId) && String(note.schoolId || "") === String(teacher.schoolId || ""))
     .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
   return res.json({ notes });
 });
@@ -1089,6 +1422,7 @@ app.post("/api/notes", async (req, res) => {
     const now = new Date().toISOString();
     const note = {
       id: randomUUID(),
+      schoolId: teacher.schoolId,
       teacherId: teacher.teacherId,
       title,
       subject,
@@ -1115,7 +1449,7 @@ app.delete("/api/notes/:noteId", async (req, res) => {
   if (!note) {
     return res.status(404).json({ error: "Note not found" });
   }
-  if (String(note.teacherId) !== String(teacher.teacherId)) {
+  if (String(note.teacherId) !== String(teacher.teacherId) || String(note.schoolId || "") !== String(teacher.schoolId || "")) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
@@ -1127,7 +1461,7 @@ app.delete("/api/notes/:noteId", async (req, res) => {
 app.put("/api/lessons/:lessonId/plan", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.plan = normalizePlanArray(req.body.plan || []);
   lesson.status = "ready";
@@ -1139,7 +1473,7 @@ app.put("/api/lessons/:lessonId/plan", async (req, res) => {
 app.put("/api/lessons/:lessonId/plan/:pointId/manual", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
   const pointId = String(req.params.pointId || "").trim();
@@ -1170,7 +1504,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
   if (!requireActiveLicenseForTeacher(teacher, res, "Rozpoczęcie lekcji")) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.status = "live";
   lesson.startedAt = new Date().toISOString();
@@ -1182,7 +1516,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
@@ -1195,7 +1529,14 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
     startedAtMs,
     createdAt: new Date().toISOString()
   });
-  addCost(lesson.id, "deepgram", 0.03);
+  recordCostFromBase({
+    lessonId: lesson.id,
+    schoolId: teacher.schoolId,
+    teacherId: teacher.teacherId,
+    provider: "deepgram",
+    category: "live_transcription",
+    baseAmountPLN: 0.03
+  });
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({ ok: true });
@@ -1205,9 +1546,9 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
   if (!requireActiveLicenseForTeacher(teacher, res, "Analiza pokrycia")) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
-  lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts);
+  lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   const missing = lesson.plan.filter((item) => item.status !== "discussed");
@@ -1218,14 +1559,15 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
   if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji i notatki końcowej")) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
-  const html = await generateFinalNoteWithLLM(lesson);
+  const html = await generateFinalNoteWithLLM(lesson, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
   const noteId = randomUUID();
   const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
   lesson.finalNote = {
     id: noteId,
     lessonId: lesson.id,
+    schoolId: lesson.schoolId,
     title: lesson.title || "Notatka",
     subject: lesson.subject || "Przedmiot",
     date: lesson.date || getTodayIsoDate(),
@@ -1237,7 +1579,6 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   lesson.status = "finished";
   lesson.finishedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
-  addCost(lesson.id, "gemini", 0.12);
   await persistLessonSafe(lesson);
   await persistFinalNoteSafe(lesson.finalNote, lesson.teacherId);
   return res.json({ finalNote: lesson.finalNote });
@@ -1246,7 +1587,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
 app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
@@ -1273,7 +1614,7 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
 app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
@@ -1287,7 +1628,7 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
 app.get("/api/lessons/:lessonId/costs", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId);
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   return res.json(getCostSummary(lesson.id));
 });
@@ -1310,9 +1651,13 @@ app.get("/api/admin/users", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.json({ users: [] });
 
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, admin, blocked, created_at")
+    .select("id, email, full_name, admin, blocked, school_id, created_at")
+    .eq("school_id", adminSchool.schoolId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1340,7 +1685,10 @@ app.get("/api/admin/users", async (req, res) => {
 app.get("/api/admin/dashboard", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
 
-  const lessons = [...db.lessons.values()];
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const lessons = [...db.lessons.values()].filter((lesson) => String(lesson.schoolId || defaultSchoolId) === adminSchool.schoolId);
   const finishedLessons = lessons.filter((lesson) => lesson.status === "finished");
   const costStats = getDashboardCostStats(lessons);
 
@@ -1366,7 +1714,8 @@ app.get("/api/admin/dashboard", async (req, res) => {
   if (supabase) {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, admin, blocked, created_at")
+      .select("id, email, full_name, admin, blocked, school_id, created_at")
+      .eq("school_id", adminSchool.schoolId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -1401,15 +1750,138 @@ app.get("/api/admin/dashboard", async (req, res) => {
   });
 });
 
+app.get("/api/admin/teacher-costs", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const sortByRaw = String(req.query.sortBy || "total").trim();
+  const directionRaw = String(req.query.direction || "desc").trim().toLowerCase();
+  const direction = directionRaw === "asc" ? "asc" : "desc";
+  const allowedSort = new Set(["teacher", "notes", "live", "presentation", "other", "total"]);
+  const sortBy = allowedSort.has(sortByRaw) ? sortByRaw : "total";
+
+  const teacherMeta = new Map();
+  if (supabase) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, teacher_id, full_name, email, school_id")
+      .eq("school_id", adminSchool.schoolId);
+    for (const profile of data || []) {
+      const teacherId = String(profile.teacher_id || "").trim();
+      if (!teacherId) continue;
+      teacherMeta.set(teacherId, {
+        userId: profile.id,
+        teacherId,
+        fullName: profile.full_name || "",
+        email: profile.email || ""
+      });
+    }
+  }
+
+  let costEvents = db.costEvents;
+  if (supabase) {
+    const { data: costRows, error } = await supabase
+      .from("openrouter_usage_events")
+      .select("*")
+      .eq("school_id", adminSchool.schoolId)
+      .order("created_at", { ascending: true });
+    if (error) {
+      return res.status(500).json({ error: `Nie udało się pobrać kosztów: ${error.message}` });
+    }
+    costEvents = (costRows || []).map(rowToCostEvent);
+  }
+
+  const grouped = new Map();
+  for (const event of costEvents) {
+    const teacherId = String(event.teacherId || "").trim();
+    if (!teacherId) continue;
+
+    const row = grouped.get(teacherId) || {
+      teacherId,
+      userId: teacherMeta.get(teacherId)?.userId || null,
+      fullName: teacherMeta.get(teacherId)?.fullName || "",
+      email: teacherMeta.get(teacherId)?.email || "",
+      base: 0,
+      margin: 0,
+      total: 0,
+      notes: 0,
+      live: 0,
+      presentation: 0,
+      other: 0,
+      billed: 0
+    };
+
+    const amount = Number(event.amountPLN || 0);
+    const baseAmount = Number(event.baseAmountPLN ?? amount);
+    const marginAmount = Number(event.marginAmountPLN ?? Math.max(0, amount - baseAmount));
+    const category = String(event.category || "other");
+
+    row.base += baseAmount;
+    row.margin += marginAmount;
+    row.total += amount;
+
+    if (category === "teacher_note") {
+      row.notes += amount;
+    } else if (category === "live_transcription" || category === "live_coverage") {
+      row.live += amount;
+    } else if (category === "presentation") {
+      row.presentation += amount;
+    } else {
+      row.other += amount;
+    }
+
+    row.billed += amount;
+    grouped.set(teacherId, row);
+  }
+
+  const rows = [...grouped.values()].map((row) => ({
+    platform: Number((row.total * 0.4).toFixed(4)),
+    provider: Number((row.total * 0.6).toFixed(4)),
+    ...row,
+    base: Number((row.total * 0.6).toFixed(4)),
+    margin: Number((row.total * 0.4).toFixed(4)),
+    total: Number(row.total.toFixed(4)),
+    notes: Number(row.notes.toFixed(4)),
+    live: Number(row.live.toFixed(4)),
+    presentation: Number(row.presentation.toFixed(4)),
+    other: Number(row.other.toFixed(4)),
+    billed: Number(row.billed.toFixed(4))
+  }));
+
+  rows.sort((a, b) => {
+    if (sortBy === "teacher") {
+      const nameA = String(a.fullName || a.email || a.teacherId).toLowerCase();
+      const nameB = String(b.fullName || b.email || b.teacherId).toLowerCase();
+      return direction === "asc" ? nameA.localeCompare(nameB, "pl") : nameB.localeCompare(nameA, "pl");
+    }
+
+    const aValue = Number(a[sortBy] || 0);
+    const bValue = Number(b[sortBy] || 0);
+    return direction === "asc" ? aValue - bValue : bValue - aValue;
+  });
+
+  return res.json({
+    sortBy,
+    direction,
+    rows
+  });
+});
+
 app.patch("/api/admin/users/:userId/block", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
 
   const blocked = req.body?.blocked === true;
   const { data, error } = await supabase
     .from("profiles")
     .update({ blocked, updated_at: new Date().toISOString() })
     .eq("id", req.params.userId)
+    .eq("school_id", adminSchool.schoolId)
     .select("id, blocked")
     .maybeSingle();
 
@@ -1424,6 +1896,9 @@ app.patch("/api/admin/users/:userId/block", async (req, res) => {
 app.patch("/api/admin/users/:userId", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
 
   const userId = req.params.userId;
   const email = String(req.body?.email || "").trim().toLowerCase();
@@ -1458,6 +1933,9 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
 app.patch("/api/admin/users/:userId/license", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
 
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
   const userId = req.params.userId;
   const days = Number(req.body?.days || 30);
   const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
@@ -1481,6 +1959,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
     maxActiveUsers,
     expiresAt,
     demoMode: false,
+    schoolId: adminSchool.schoolId,
     assignedUserId: userId
   };
 
@@ -1510,11 +1989,14 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
 
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
   const userId = req.params.userId;
 
   const { data: targetProfile, error: targetProfileError } = await supabase
     .from("profiles")
-    .select("teacher_id")
+    .select("teacher_id, school_id")
     .eq("id", userId)
     .maybeSingle();
 
@@ -1522,9 +2004,15 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
     return res.status(500).json({ error: `Nie udało się pobrać teacher_id użytkownika: ${targetProfileError.message}` });
   }
 
+  if (String(targetProfile?.school_id || defaultSchoolId) !== adminSchool.schoolId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const targetTeacherId = String(targetProfile?.teacher_id || userId);
 
-  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => String(lesson.teacherId) === targetTeacherId);
+  const lessonsToDelete = [...db.lessons.values()].filter((lesson) => {
+    return String(lesson.teacherId) === targetTeacherId && String(lesson.schoolId || defaultSchoolId) === adminSchool.schoolId;
+  });
   for (const lesson of lessonsToDelete) {
     db.lessons.delete(lesson.id);
     db.costs.delete(lesson.id);
@@ -1560,7 +2048,7 @@ app.get("/api/account/license-status", async (req, res) => {
 
   const activeLicense = getActiveUserLicense(teacher.userId);
   const uploadPolicy = getUserUploadPolicy(teacher.userId);
-  const uploadsUsed = countUserFileUploads(teacher.teacherId);
+  const uploadsUsed = countUserFileUploads(teacher.teacherId, teacher.schoolId);
 
   return res.json({
     hasActiveLicense: Boolean(activeLicense),
@@ -1587,7 +2075,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     if (!lessonId || !lesson) {
       return res.status(400).json({ error: "Valid lessonId is required." });
     }
-    if (String(lesson.teacherId) !== teacher.teacherId) {
+    if (String(lesson.teacherId) !== teacher.teacherId || String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
       return res.status(403).json({ error: "Forbidden" });
     }
     if (!req.file?.buffer) {
@@ -1616,7 +2104,14 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     const durationSec = Number(transcription.duration || 0);
     const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
     const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
-    addCost(lessonId, "openai", fragmentCost);
+    recordCostFromBase({
+      lessonId,
+      schoolId: teacher.schoolId,
+      teacherId: teacher.teacherId,
+      provider: "openai",
+      category: "live_transcription",
+      baseAmountPLN: fragmentCost
+    });
 
     const text = String(transcription.text || "").trim();
     return res.json({
@@ -1648,6 +2143,7 @@ loadLessonsFromSupabase()
   .then(() => loadLicensesFromSupabase())
   .then(() => loadFinalNotesFromSupabase())
   .then(() => loadSavedNotesFromSupabase())
+  .then(() => loadCostEventsFromSupabase())
   .catch((error) => {
     console.error(`Persistence bootstrap failed: ${error.message}`);
   })

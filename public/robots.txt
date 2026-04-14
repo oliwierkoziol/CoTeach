@@ -3,5 +3,7 @@ Allow: /
 
 Disallow: /api/
 Disallow: /admin/
+Disallow: /login
+Disallow: /register
 
-Sitemap: http://localhost:5173/sitemap.xml
+Sitemap: https://zesz.yt/sitemap.xml
