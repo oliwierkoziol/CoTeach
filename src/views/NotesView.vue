@@ -165,6 +165,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import cloudIcon from "../assets/cloud.svg";
 
@@ -196,6 +197,7 @@ async function getPdfMake() {
 }
 
 const { state, generateTeacherNote, saveTeacherNote } = useLessonStore();
+const router = useRouter();
 const classOptions = [
   "1 Klasa Szkoły Podstawowej",
   "2 Klasa Szkoły Podstawowej",
@@ -288,6 +290,7 @@ async function handleSave() {
       source: "ai"
     });
     info.value = "Notatka zapisana pomyślnie.";
+    await router.push("/archive");
   } catch (e) {
     error.value = e.message || "Nie udało się zapisać notatki.";
   } finally {
