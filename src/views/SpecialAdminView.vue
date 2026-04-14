@@ -256,6 +256,15 @@
                 />
               </label>
             </div>
+
+            <label class="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                v-model="licenseDemoMode"
+                type="checkbox"
+                class="h-4 w-4 rounded border-border bg-input-background text-primary focus:ring-primary/40"
+              />
+              Tryb demo (ograniczenia: krótsza lekcja live, mniejsze limity i watermark)
+            </label>
           </div>
 
           <div class="mt-6 flex flex-wrap justify-end gap-2">
@@ -339,6 +348,7 @@ const editEmail = ref("");
 const editPassword = ref("");
 const licenseDays = ref(30);
 const licenseMaxUsers = ref(1);
+const licenseDemoMode = ref(false);
 const isSubmitting = ref(false);
 
 function formatDate(value) {
@@ -428,6 +438,7 @@ function openModify(user) {
   editPassword.value = "";
   licenseDays.value = 30;
   licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
+  licenseDemoMode.value = user.license?.demoMode === true;
   actionError.value = "";
 }
 
@@ -480,7 +491,8 @@ async function grantLicense() {
       headers,
       body: JSON.stringify({
         days: Number(licenseDays.value || 30),
-        maxActiveUsers: Number(licenseMaxUsers.value || 1)
+        maxActiveUsers: Number(licenseMaxUsers.value || 1),
+        demoMode: licenseDemoMode.value === true
       })
     });
     const data = await readApiPayload(res);

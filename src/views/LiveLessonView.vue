@@ -15,7 +15,7 @@
               class="rounded-lg border border-border bg-input-background px-2 py-1.5 text-sm text-foreground outline-none"
               :disabled="isRecording"
             >
-              <option v-for="option in lessonDurationOptions" :key="option.minutes" :value="option.minutes">
+              <option v-for="option in availableLessonDurationOptions" :key="option.minutes" :value="option.minutes">
                 {{ option.label }}
               </option>
             </select>
@@ -126,6 +126,9 @@
             </p>
             <p class="mt-2 text-sm text-muted-foreground">
               Lekcja zatrzyma się automatycznie po upływie tego czasu.
+            </p>
+            <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
             </p>
           </div>
 
@@ -318,12 +321,20 @@ const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
 const lastCoverageRefreshMs = ref(0);
 const coverageRefreshTimer = ref(null);
+const demoMaxLiveMinutes = ref(null);
 let apiPingTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
 const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
 const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
+const isDemoLicense = computed(() => Number.isFinite(Number(demoMaxLiveMinutes.value)) && Number(demoMaxLiveMinutes.value) > 0);
+const availableLessonDurationOptions = computed(() => {
+  if (!isDemoLicense.value) return lessonDurationOptions;
+  const maxMinutes = Number(demoMaxLiveMinutes.value);
+  const filtered = lessonDurationOptions.filter((option) => option.minutes <= maxMinutes);
+  return filtered.length ? filtered : [{ label: `${maxMinutes} min`, minutes: maxMinutes }];
+});
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
 const durationLabel = computed(() => {
   const minutes = activeSessionDurationMinutes.value || selectedLessonDurationMinutes.value || 45;
@@ -351,6 +362,7 @@ const apiStatusLabel = computed(() => {
 onMounted(async () => {
   await loadMicDevices();
   await checkApiHealth();
+  await fetchLicenseStatus();
   apiPingTimer = setInterval(checkApiHealth, 10000);
   if (!state.lesson) {
     const lessons = await fetchLessons();
@@ -381,6 +393,33 @@ async function refreshCoverageThrottled(force = false) {
   }
 }
 
+async function fetchLicenseStatus() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) {
+      demoMaxLiveMinutes.value = null;
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/account/license-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return;
+
+    const maxMinutes = Number(payload?.demoLimits?.maxLiveMinutes || 0);
+    demoMaxLiveMinutes.value = maxMinutes > 0 ? maxMinutes : null;
+
+    if (maxMinutes > 0 && selectedLessonDurationMinutes.value > maxMinutes) {
+      selectedLessonDurationMinutes.value = maxMinutes;
+      info.value = `Tryb demo ogranicza czas lekcji live do ${maxMinutes} minut.`;
+    }
+  } catch {
+    demoMaxLiveMinutes.value = null;
+  }
+}
+
 function scheduleCoverageRefresh() {
   if (!state.lesson?.id) return;
 
@@ -403,6 +442,7 @@ function scheduleCoverageRefresh() {
 async function startSession() {
   try {
     error.value = "";
+    await fetchLicenseStatus();
     if (!state.lesson) {
       error.value = "Brak lekcji. Najpierw utwórz plan.";
       return;
