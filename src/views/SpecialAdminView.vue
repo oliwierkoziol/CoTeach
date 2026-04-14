@@ -200,6 +200,63 @@
         </div>
       </section>
 
+      <section class="rounded-2xl border border-border bg-card p-6">
+        <h2 class="text-lg font-semibold text-foreground">Utwórz konto służbowe</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Administrator może utworzyć konto ze specjalnym loginem i hasłem.
+        </p>
+
+        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <label class="block text-sm text-muted-foreground">
+            Imię i nazwisko
+            <input
+              v-model.trim="newBusinessFullName"
+              type="text"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="Jan Kowalski"
+            />
+          </label>
+          <label class="block text-sm text-muted-foreground">
+            Login służbowy
+            <input
+              v-model.trim="newBusinessLogin"
+              type="text"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="jan.kowalski"
+            />
+          </label>
+          <label class="block text-sm text-muted-foreground">
+            Hasło
+            <div class="mt-1 flex gap-2">
+              <input
+                v-model="newBusinessPassword"
+                :type="showNewBusinessPassword ? 'text' : 'password'"
+                class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                placeholder="Minimum 8 znaków"
+              />
+              <button
+                type="button"
+                class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40"
+                @click="showNewBusinessPassword = !showNewBusinessPassword"
+              >
+                {{ showNewBusinessPassword ? "Ukryj" : "Pokaż" }}
+              </button>
+            </div>
+          </label>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+          <button
+            type="button"
+            class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+            :disabled="isCreatingBusinessUser"
+            @click="createBusinessUser"
+          >
+            {{ isCreatingBusinessUser ? "Tworzenie..." : "Utwórz konto służbowe" }}
+          </button>
+        </div>
+      </section>
+
       <div v-if="actionError" class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         {{ actionError }}
       </div>
@@ -228,12 +285,21 @@
 
             <label class="block text-sm text-muted-foreground">
               Nowe hasło
-              <input
-                v-model="editPassword"
-                type="password"
-                class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                placeholder="Pozostaw puste, aby nie zmieniać"
-              />
+              <div class="mt-1 flex gap-2">
+                <input
+                  v-model="editPassword"
+                  :type="showEditPassword ? 'text' : 'password'"
+                  class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                  placeholder="Pozostaw puste, aby nie zmieniać"
+                />
+                <button
+                  type="button"
+                  class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40"
+                  @click="showEditPassword = !showEditPassword"
+                >
+                  {{ showEditPassword ? "Ukryj" : "Pokaż" }}
+                </button>
+              </div>
             </label>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -329,9 +395,15 @@ const costDirection = ref("desc");
 const editUser = ref(null);
 const editEmail = ref("");
 const editPassword = ref("");
+const showEditPassword = ref(false);
 const licenseDays = ref(30);
 const licenseMaxUsers = ref(1);
 const isSubmitting = ref(false);
+const newBusinessFullName = ref("");
+const newBusinessLogin = ref("");
+const newBusinessPassword = ref("");
+const showNewBusinessPassword = ref(false);
+const isCreatingBusinessUser = ref(false);
 
 function formatDate(value) {
   if (!value) return "—";
@@ -418,6 +490,7 @@ function openModify(user) {
   editUser.value = user;
   editEmail.value = String(user.email || "");
   editPassword.value = "";
+  showEditPassword.value = false;
   licenseDays.value = 30;
   licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
   actionError.value = "";
@@ -427,6 +500,7 @@ function closeModify() {
   editUser.value = null;
   editEmail.value = "";
   editPassword.value = "";
+  showEditPassword.value = false;
 }
 
 async function saveUserChanges() {
@@ -484,6 +558,36 @@ async function grantLicense() {
     actionError.value = e.message;
   } finally {
     isSubmitting.value = false;
+  }
+}
+
+async function createBusinessUser() {
+  isCreatingBusinessUser.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}/api/admin/users/special-account`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        fullName: String(newBusinessFullName.value || "").trim(),
+        login: String(newBusinessLogin.value || "").trim().toLowerCase(),
+        password: String(newBusinessPassword.value || "")
+      })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się utworzyć konta służbowego.");
+
+    newBusinessFullName.value = "";
+    newBusinessLogin.value = "";
+    newBusinessPassword.value = "";
+    showNewBusinessPassword.value = false;
+    await loadDashboard();
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isCreatingBusinessUser.value = false;
   }
 }
 

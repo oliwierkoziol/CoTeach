@@ -1969,6 +1969,70 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
   return res.json({ user: { id: userId, email: data?.user?.email || email || null } });
 });
 
+app.post("/api/admin/users/special-account", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const login = String(req.body?.login || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").trim();
+  const fullName = String(req.body?.fullName || "").trim();
+
+  if (!/^[a-z0-9._-]{3,64}$/.test(login)) {
+    return res.status(400).json({ error: "Login służbowy musi mieć 3-64 znaki: litery, cyfry, kropka, myślnik lub podkreślenie." });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Hasło musi mieć co najmniej 8 znaków." });
+  }
+
+  const email = `${login}@sluzbowe.coteach.local`;
+  const teacherId = `teacher-${randomUUID()}`;
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName || null,
+      account_type: "business",
+      business_login: login
+    }
+  });
+
+  if (createError || !created?.user?.id) {
+    return res.status(500).json({ error: createError?.message || "Nie udało się utworzyć konta służbowego." });
+  }
+
+  const userId = created.user.id;
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email,
+      full_name: fullName || null,
+      teacher_id: teacherId,
+      school_id: adminSchool.schoolId,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileError) {
+    await supabase.auth.admin.deleteUser(userId);
+    return res.status(500).json({ error: `Nie udało się zapisać profilu konta służbowego: ${profileError.message}` });
+  }
+
+  return res.status(201).json({
+    user: {
+      id: userId,
+      full_name: fullName || null,
+      email,
+      businessLogin: login
+    }
+  });
+});
+
 app.patch("/api/admin/users/:userId/license", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
 
