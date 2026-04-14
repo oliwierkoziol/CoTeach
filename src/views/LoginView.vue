@@ -1,5 +1,5 @@
 <template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] bg-gradient-to-br from-sidebar via-background to-card lg:bg-none lg:grid-cols-2">
+  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#1f2937_0%,#111827_45%,#0b1220_100%)] lg:bg-none lg:grid-cols-2">
     <div
       class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-sidebar via-background to-card p-10 text-foreground lg:flex"
     >
@@ -156,7 +156,7 @@ const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = "sluzbowe.coteach.local";
 const route = useRoute();
 const router = useRouter();
-const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3001")
+const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
   .replace(/\/$/, "");
 

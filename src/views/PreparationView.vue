@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
     <template v-if="!lesson || !lesson.plan?.length">
@@ -51,13 +51,13 @@
       </div>
   
       <!-- Card 2: Wybierz notatke -->
-      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
-        <div class="flex items-center justify-between mb-8 w-full">
+      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 sm:p-8 w-full relative z-10 mb-7">
+        <div class="mb-8 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
             Wybierz notatkę
           </h3>
           <!-- Create new button -->
-          <RouterLink to="/notes" type="button" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]">
+          <RouterLink to="/notes" type="button" class="bg-[#0c3dfe] text-center text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-6 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] w-full sm:w-auto">
             Utwórz nową
           </RouterLink>
         </div>
@@ -69,7 +69,7 @@
             :key="note.id"
             @click="selectedNoteId = note.id"
             :class="[
-              'flex items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left w-[200px]', 
+              'flex w-full sm:w-[200px] items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left', 
               selectedNoteId === note.id 
                 ? 'bg-[#0c3dfe] text-white shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]' 
                 : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)]'
@@ -101,13 +101,13 @@
         <div v-if="error" class="mb-4 text-sm text-destructive font-['Plus_Jakarta_Sans'] font-semibold">
           {{ error }}
         </div>
-        <div class="flex items-center justify-end gap-3 w-full">
+        <div class="flex w-full flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
           <!-- Button Anuluj -->
-          <button type="button" @click="resetForm" class="bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
+          <button type="button" @click="resetForm" class="bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto">
             Anuluj
           </button>
           <!-- Button Rozpocznij lekcję -->
-          <button type="button" :disabled="isGenerating" @click="handleGenerate" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50">
+          <button type="button" :disabled="isGenerating" @click="handleGenerate" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto">
             {{ isGenerating ? "Przetwarzam..." : "Rozpocznij lekcję" }}
           </button>
         </div>

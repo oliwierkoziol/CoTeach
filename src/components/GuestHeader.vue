@@ -1,13 +1,13 @@
 <template>
   <header
-    class="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur-md sm:h-16 sm:px-6"
+    class="sticky top-0 z-50 flex h-14 min-w-0 items-center justify-between gap-2 border-b border-border bg-card/95 px-3 backdrop-blur-md sm:h-16 sm:px-6"
   >
-    <RouterLink to="/" class="flex items-center font-semibold text-foreground no-underline">
-      <div class="flex h-10 w-[150px] items-center overflow-hidden sm:h-16 sm:w-[280px] lg:h-24 lg:w-[380px]">
+    <RouterLink to="/" class="flex min-w-0 items-center font-semibold text-foreground no-underline">
+      <div class="flex h-10 w-[112px] items-center overflow-hidden sm:h-16 sm:w-[280px] lg:h-24 lg:w-[380px]">
         <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-16 lg:h-20" />
       </div>
     </RouterLink>
-    <div v-if="showActions" class="flex items-center gap-2 text-sm">
+    <div v-if="showActions" class="flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-sm sm:gap-2">
       <button
         type="button"
         class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground transition hover:bg-muted/60"
@@ -53,7 +53,7 @@
       <RouterLink
         v-if="route.path === '/register'"
         to="/login"
-        class="rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground"
+        class="hidden rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground sm:inline-flex"
       >
         Logowanie
       </RouterLink>
@@ -67,7 +67,7 @@
       <RouterLink
         v-if="isLanding"
         to="/login"
-        class="rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground"
+        class="hidden rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground sm:inline-flex"
       >
         Logowanie
       </RouterLink>

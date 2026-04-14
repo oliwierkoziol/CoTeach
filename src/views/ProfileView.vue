@@ -38,7 +38,7 @@
         <div class="space-y-6">
           <div>
             <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
-            <div class="flex gap-2">
+            <div class="flex flex-col gap-2 sm:flex-row">
               <input
                 v-model.trim="userProfile.full_name"
                 type="text"
@@ -48,7 +48,7 @@
               />
               <button
                 type="button"
-                class="shrink-0 rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                class="w-full shrink-0 rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
                 :disabled="isSavingName"
                 @click.prevent="saveFullName"
               >
@@ -346,7 +346,7 @@ function normalizeBaseUrl(url) {
     .replace(/\/$/, "");
 }
 
-const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 
 const userInitials = computed(() => {
   if (!userProfile.value.full_name) return "U";
