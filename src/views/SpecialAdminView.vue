@@ -45,6 +45,66 @@
       </section>
 
       <section class="rounded-2xl border border-border bg-card p-6">
+        <h2 class="text-lg font-semibold text-foreground">Kalkulator kosztów</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Kalkulator opiera się na aktualnych stawkach modeli, które używamy aby zapewnić najlepszą jakość.
+        </p>
+
+        <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <label class="block text-sm text-muted-foreground">
+            Liczba lekcji w całym okresie licencji
+            <input
+              v-model.number="calcLessonsCount"
+              type="number"
+              min="0"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            />
+          </label>
+
+          <label class="block text-sm text-muted-foreground">
+            Długość lekcji
+            <select
+              v-model.number="calcLessonDurationMinutes"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            >
+              <option v-for="option in calcDurationOptions" :key="option.minutes" :value="option.minutes">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="block text-sm text-muted-foreground">
+            Okres licencji (dni)
+            <input
+              v-model.number="calcLicenseDays"
+              type="number"
+              min="0"
+              class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+            />
+          </label>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-xl border border-border bg-muted/20 p-4">
+            <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Koszt 1 lekcji {{ calcDurationLabel }}</p>
+            <p class="mt-2 text-2xl font-black text-foreground">{{ calcCurrency(calcScaledLessonCost) }}</p>
+          </article>
+          <article class="rounded-xl border border-border bg-muted/20 p-4">
+            <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Maks. lekcji w oknie</p>
+            <p class="mt-2 text-2xl font-black text-foreground">{{ calcLessonsInLicenseWindow }}</p>
+          </article>
+          <article class="rounded-xl border border-border bg-muted/20 p-4">
+            <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Koszt wybranych lekcji</p>
+            <p class="mt-2 text-2xl font-black text-foreground">{{ calcCurrency(calcSelectedLessonsCost) }}</p>
+          </article>
+          <article class="rounded-xl border border-border bg-muted/20 p-4">
+            <p class="text-xs uppercase tracking-[0.16em] text-muted-foreground">Koszt okresu licencji</p>
+            <p class="mt-2 text-2xl font-black text-foreground">{{ calcCurrency(calcLicensePeriodCost) }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-border bg-card p-6">
         <h2 class="mb-4 text-lg font-semibold text-foreground">Pokrycie według przedmiotów</h2>
         <div v-if="!coverageBySubject.length" class="text-sm text-muted-foreground">Brak danych pokrycia.</div>
         <div v-else class="overflow-x-auto">
@@ -419,7 +479,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { supabase } from "../supabase";
 
 function normalizeBaseUrl(url) {
@@ -473,6 +533,24 @@ const schoolName = ref("");
 const businessEmailDomain = ref("");
 const isSavingSchoolSettings = ref(false);
 
+const calcDurationOptions = [
+  { label: "45 min", minutes: 45 },
+  { label: "1h 30 min", minutes: 90 },
+  { label: "2h", minutes: 120 },
+  { label: "2h 15 min", minutes: 135 },
+  { label: "3h", minutes: 180 }
+];
+const calcLessonsCount = ref(10);
+const calcLessonDurationMinutes = ref(45);
+const calcLicenseDays = ref(30);
+const calcUsdToPln = 4.0;
+const calcWhisperUsdPerMinute = 0.006;
+const calcOpenRouterInputUsdPerMillion = 0.214;
+const calcOpenRouterOutputUsdPerMillion = 2.5;
+const calcEstimatedInputTokensPerLesson = 1500;
+const calcEstimatedOutputTokensPerLesson = 400;
+const calcDeveloperMarginPln = 0.71;
+
 function formatDate(value) {
   if (!value) return "—";
   const date = new Date(value);
@@ -483,6 +561,38 @@ function formatDate(value) {
 function currency(value) {
   return `${Number(value || 0).toFixed(2)} PLN`;
 }
+
+function calcCurrency(value) {
+  return `~${Number(value || 0).toFixed(2)} zł`;
+}
+
+const calcDurationMultiplier = computed(() => Number(calcLessonDurationMinutes.value || 45) / 45);
+const calcDurationLabel = computed(() => {
+  const minutes = Number(calcLessonDurationMinutes.value || 45);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (remainder === 0) return `${hours}h`;
+  return `${hours}h ${remainder} min`;
+});
+const calcWhisperCost45MinPln = computed(() => 45 * calcWhisperUsdPerMinute * calcUsdToPln);
+const calcModelApiCost45MinPln = computed(() => {
+  const inputCostUsd = (calcEstimatedInputTokensPerLesson / 1_000_000) * calcOpenRouterInputUsdPerMillion;
+  const outputCostUsd = (calcEstimatedOutputTokensPerLesson / 1_000_000) * calcOpenRouterOutputUsdPerMillion;
+  return (inputCostUsd + outputCostUsd) * calcUsdToPln;
+});
+const calcBaseLessonCost45MinPln = computed(() =>
+  Number((calcWhisperCost45MinPln.value + calcModelApiCost45MinPln.value + calcDeveloperMarginPln).toFixed(2))
+);
+const calcScaledLessonCost = computed(() => calcBaseLessonCost45MinPln.value * calcDurationMultiplier.value);
+const calcSelectedLessonsCost = computed(() => Number(calcLessonsCount.value || 0) * calcScaledLessonCost.value);
+const calcLessonsInLicenseWindow = computed(() => Number(calcLessonsCount.value || 0));
+const calcLicensePeriodCost = computed(() => {
+  const days = Math.max(0, Number(calcLicenseDays.value || 0));
+  if (days <= 0) return 0;
+  const scale = days / 30;
+  return calcSelectedLessonsCost.value * scale;
+});
 
 async function loadTeacherCosts() {
   isLoadingCosts.value = true;

@@ -114,6 +114,7 @@
           {{ item.label }}
         </a>
       </RouterLink>
+<<<<<<< Updated upstream
     </nav>
     <div class="p-3 pt-2">
       <button
@@ -123,6 +124,97 @@
       >
         Wyloguj
       </button>
+=======
+
+      <!-- Divider + nav links -->
+      <div class="flex-1 space-y-1 border-t border-black/10 pt-4">
+
+        <!-- Panel startowy -->
+        <RouterLink to="/" custom v-slot="{ href, navigate, isActive, isExactActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isExactActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect width="7" height="9" x="3" y="3" rx="1" />
+              <rect width="7" height="5" x="14" y="3" rx="1" />
+              <rect width="7" height="9" x="14" y="12" rx="1" />
+              <rect width="7" height="5" x="3" y="16" rx="1" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
+          </a>
+        </RouterLink>
+
+        <!-- Dodaj materiały -->
+        <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="M12 18v-6" />
+              <path d="M9 15l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
+          </a>
+        </RouterLink>
+
+         <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Notatki</p>
+          </a>
+        </RouterLink>
+
+        <!-- Prezentacja -->
+        <RouterLink :to="presentationLink" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+          </a>
+        </RouterLink>
+
+        <!-- Archiwum -->
+        <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M20 7h-3a2 2 0 0 1-2-2V2" />
+              <path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z" />
+              <path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
+          </a>
+        </RouterLink>
+
+        <!-- Monitoring -->
+        <RouterLink to="/monitoring" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Monitoring</p>
+          </a>
+        </RouterLink>
+
+        <!-- Admin -->
+        <RouterLink to="/admin" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
+          </a>
+        </RouterLink>
+      </div>
+
+>>>>>>> Stashed changes
     </div>
   </aside>
 </template>
@@ -146,6 +238,24 @@ const userAvatarUrl = ref("");
 const userFullName = ref("");
 const isAdmin = ref(false);
 const sessionUserId = ref("");
+
+function hasAdminFlag(value) {
+  return value === true || value === 1 || value === "1" || value === "true";
+}
+
+function hasAdminRole(roles) {
+  if (!Array.isArray(roles)) return false;
+  return roles.some((role) => String(role || "").toLowerCase() === "admin");
+}
+
+function detectAdminFromSession(session) {
+  return (
+    hasAdminFlag(session?.user?.user_metadata?.admin) ||
+    hasAdminFlag(session?.user?.app_metadata?.admin) ||
+    hasAdminRole(session?.user?.user_metadata?.roles) ||
+    hasAdminRole(session?.user?.app_metadata?.roles)
+  );
+}
 
 let authListener = null;
 let authDebounceTimer = null;
@@ -200,7 +310,8 @@ async function loadUserProfile(userId) {
     .maybeSingle();
   userAvatarUrl.value = profile?.avatar_url || "";
   userFullName.value = String(profile?.full_name || "").trim();
-  isAdmin.value = profile?.admin === true;
+  const profileAdmin = hasAdminFlag(profile?.admin);
+  isAdmin.value = profileAdmin || isAdmin.value;
 }
 
 function applySession(session) {
@@ -208,6 +319,7 @@ function applySession(session) {
     userEmail.value = session.user.email || "";
     userFullName.value = String(session.user.user_metadata?.full_name || "").trim();
     sessionUserId.value = session.user.id;
+    isAdmin.value = detectAdminFromSession(session);
     return loadUserProfile(session.user.id);
   }
   userEmail.value = "";
