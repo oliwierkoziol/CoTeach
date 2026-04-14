@@ -303,6 +303,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import { fetchLicenseStatusCached } from "../composables/useLicenseStatus";
 import { createTemporarySupabaseClient, supabase } from "../supabase";
 import { clearLessonStoreAuthCache } from "../composables/useLessonStore";
 
@@ -454,19 +455,7 @@ const loadUserProfile = async () => {
 async function loadLicenseStatus(token) {
   licenseStatus.value = null;
   if (!token) return;
-  try {
-    const response = await fetch(`${API_BASE}/api/account/license-status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      licenseStatus.value = null;
-      return;
-    }
-    licenseStatus.value = data;
-  } catch {
-    licenseStatus.value = null;
-  }
+  licenseStatus.value = await fetchLicenseStatusCached({ token, apiBase: API_BASE });
 }
 
 const SAVE_NAME_TIMEOUT_MS = 15000;
