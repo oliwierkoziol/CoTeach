@@ -51,7 +51,7 @@ function normalizeBaseUrl(url) {
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
 const minimalChrome = computed(() => {
   const p = route.path;
-  return p === "/" || p === "/login" || p === "/register" || p.startsWith("/share/");
+  return p === "/" || p === "/login" || p === "/register" || p === "/reset-password" || p.startsWith("/share/");
 });
 
 /** Pełny ekran — bez lewego panelu (nakładka fixed ma sensowny układ). */

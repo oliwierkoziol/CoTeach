@@ -144,8 +144,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 import blockedImage from "../assets/czarek.jpg";
@@ -155,6 +155,7 @@ const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
 const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = "sluzbowe.coteach.local";
 const route = useRoute();
+const router = useRouter();
 const API_BASE = String(import.meta.env.VITE_API_BASE_URL || "http://localhost:3001")
   .trim()
   .replace(/\/$/, "");
@@ -187,9 +188,17 @@ function storeCachedBusinessDomain(domain) {
 const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
 const infoMessage = ref("");
+let googleAuthSubscription = null;
 const shouldShowBlockedImage = computed(() =>
   String(errorMessage.value || "").toLowerCase().includes("zablokowane")
 );
+
+function resolvePostLoginPath() {
+  const redirect = String(route.query.redirect || "").trim();
+  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) return "/dashboard";
+  if (redirect === "/login" || redirect === "/register" || redirect === "/reset-password") return "/dashboard";
+  return redirect;
+}
 
 function setBlockedError() {
   errorMessage.value = "To konto jest obecnie zablokowane.";
@@ -320,7 +329,7 @@ async function handleLogin() {
     // Login should still succeed even if profile sync fails transiently.
   }
 
-  window.location.assign("/dashboard");
+  await router.replace(resolvePostLoginPath());
 }
 
 function toBusinessEmail(loginValue) {
@@ -384,7 +393,7 @@ async function handleBusinessLogin() {
   } catch {
     // Login should still succeed even if profile sync fails transiently.
   }
-  window.location.assign("/dashboard");
+  await router.replace(resolvePostLoginPath());
 }
 
 async function handleGoogleAuth() {
@@ -416,7 +425,7 @@ async function handlePasswordReset() {
     return;
   }
 
-  const redirectTo = `${window.location.origin}/login`;
+  const redirectTo = `${window.location.origin}/reset-password`;
   const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
   if (error) {
     errorMessage.value = mapLoginErrorMessage(error, "individual");
@@ -432,11 +441,15 @@ async function handleGoogleIntentAfterRedirect() {
 
   const { data } = await supabase.auth.getSession();
   const session = data?.session;
-  if (!session?.user?.id) return;
+  if (!session?.user?.id) {
+    infoMessage.value = "Finalizuję logowanie Google...";
+    return;
+  }
 
   const provider = String(session.user?.app_metadata?.provider || "").toLowerCase();
   if (provider !== "google") {
     localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
+    infoMessage.value = "";
     return;
   }
 
@@ -471,7 +484,8 @@ async function handleGoogleIntentAfterRedirect() {
   }
 
   localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
-  window.location.assign("/dashboard");
+  infoMessage.value = "";
+  await router.replace(resolvePostLoginPath());
 }
 
 onMounted(async () => {
@@ -489,6 +503,18 @@ onMounted(async () => {
   if (String(route.query.blocked || "") === "1") {
     setBlockedError();
   }
+
+  const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
+    if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user?.id) {
+      void handleGoogleIntentAfterRedirect();
+    }
+  });
+  googleAuthSubscription = authData.subscription;
+
   await handleGoogleIntentAfterRedirect();
+});
+
+onUnmounted(() => {
+  googleAuthSubscription?.unsubscribe?.();
 });
 </script>

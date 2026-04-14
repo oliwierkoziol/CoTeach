@@ -1965,7 +1965,21 @@ app.get("/api/admin/dashboard", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
-  const lessons = [...db.lessons.values()].filter((lesson) => String(lesson.schoolId || defaultSchoolId) === adminSchool.schoolId);
+  let lessons = [...db.lessons.values()].filter((lesson) => String(lesson.schoolId || "") === adminSchool.schoolId);
+  if (supabase) {
+    const { data: lessonRows, error: lessonError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("school_id", adminSchool.schoolId)
+      .order("updated_at", { ascending: false });
+
+    if (lessonError) {
+      return res.status(500).json({ error: `Nie udało się pobrać lekcji: ${lessonError.message}` });
+    }
+
+    lessons = (lessonRows || []).map(rowToLesson);
+  }
+
   const finishedLessons = lessons.filter((lesson) => lesson.status === "finished");
   const costStats = getDashboardCostStats(lessons);
 
