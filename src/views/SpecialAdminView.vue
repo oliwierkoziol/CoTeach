@@ -261,6 +261,14 @@
           <div class="mt-6 flex flex-wrap justify-end gap-2">
             <button
               type="button"
+              class="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-500/20 disabled:opacity-40 dark:text-red-300"
+              :disabled="isSubmitting"
+              @click="deleteUserAccount"
+            >
+              {{ isSubmitting ? "Usuwanie..." : "Usuń konto" }}
+            </button>
+            <button
+              type="button"
               class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40"
               @click="closeModify"
             >
@@ -477,6 +485,33 @@ async function grantLicense() {
     });
     const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się przyznać licencji.");
+
+    await loadDashboard();
+    closeModify();
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function deleteUserAccount() {
+  if (!editUser.value) return;
+
+  const label = editUser.value.email || editUser.value.full_name || editUser.value.id;
+  const shouldDelete = window.confirm(`Na pewno chcesz usunąć konto ${label}? Tej operacji nie można cofnąć.`);
+  if (!shouldDelete) return;
+
+  isSubmitting.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
+      method: "DELETE",
+      headers
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się usunąć konta.");
 
     await loadDashboard();
     closeModify();
