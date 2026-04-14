@@ -16,7 +16,12 @@ const app = express();
 const MB = 1024 * 1024;
 const UPLOAD_LIMITS = {
   licensed: { maxUploads: 30, maxFileSizeBytes: 50 * MB },
+  demo: { maxUploads: 8, maxFileSizeBytes: 10 * MB },
   unlicensed: { maxUploads: 3, maxFileSizeBytes: 5 * MB }
+};
+const DEMO_POLICY = {
+  maxLiveMinutes: 10,
+  watermarkText: "[TRYB DEMO] Material wygenerowany w wersji demonstracyjnej CoTeach."
 };
 
 // Hard cap for multipart parsing in memory. Per-user limits are checked in route handlers.
@@ -458,7 +463,39 @@ async function syncProfileLicenseStateSafe(params) {
 
 function getUserUploadPolicy(userId) {
   const activeLicense = getActiveUserLicense(userId);
-  return activeLicense ? UPLOAD_LIMITS.licensed : UPLOAD_LIMITS.unlicensed;
+  if (!activeLicense) return UPLOAD_LIMITS.unlicensed;
+  return activeLicense.demoMode ? UPLOAD_LIMITS.demo : UPLOAD_LIMITS.licensed;
+}
+
+function enforceDemoLiveLimit(license, lesson, res) {
+  if (!license?.demoMode) return true;
+  const startedAtMs = new Date(lesson?.startedAt || 0).getTime();
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return true;
+
+  const limitMs = DEMO_POLICY.maxLiveMinutes * 60 * 1000;
+  const elapsedMs = Math.max(0, Date.now() - startedAtMs);
+  if (elapsedMs <= limitMs) return true;
+
+  return res.status(402).json({
+    code: "DEMO_LIVE_LIMIT_REACHED",
+    error: `Tryb demo pozwala na maksymalnie ${DEMO_POLICY.maxLiveMinutes} minut lekcji live.`,
+    demo: {
+      isDemo: true,
+      maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
+    }
+  });
+}
+
+function applyDemoTextWatermark(text, isDemoLicense) {
+  if (!isDemoLicense) return String(text || "").trim();
+  const clean = String(text || "").trim();
+  return `${DEMO_POLICY.watermarkText}\n\n${clean}`.trim();
+}
+
+function applyDemoHtmlWatermark(html, isDemoLicense) {
+  if (!isDemoLicense) return String(html || "");
+  const banner = `<div style="margin-bottom:12px;padding:10px 12px;border:1px solid #f59e0b;background:#fef3c7;color:#92400e;border-radius:8px;font-size:13px;font-weight:600;">${DEMO_POLICY.watermarkText}</div>`;
+  return `${banner}${String(html || "")}`;
 }
 
 function requireActiveLicenseForTeacher(teacher, res, featureName = "Funkcja AI") {
@@ -650,10 +687,11 @@ function estimateOpenRouterBaseUsdCost({ model, promptTokens = 0, completionToke
   return ((Number(promptTokens || 0) * pricing.prompt) + (Number(completionTokens || 0) * pricing.completion)) / 1_000_000;
 }
 
-function buildBilledCost(basePLN) {
+function buildBilledCost(basePLN, options = {}) {
+  const enforceMinMargin = options?.enforceMinMargin !== false;
   const base = roundMoney(basePLN);
   const marginFromRate = roundMoney(base * AI_MARKUP_RATE);
-  const margin = roundMoney(Math.max(marginFromRate, AI_MIN_MARGIN_PLN));
+  const margin = roundMoney(enforceMinMargin ? Math.max(marginFromRate, AI_MIN_MARGIN_PLN) : marginFromRate);
   return {
     basePLN: base,
     marginPLN: margin,
@@ -661,8 +699,8 @@ function buildBilledCost(basePLN) {
   };
 }
 
-function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, category, baseAmountPLN, providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
-  const cost = buildBilledCost(baseAmountPLN);
+function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, category, baseAmountPLN, providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null, enforceMinMargin = true }) {
+  const cost = buildBilledCost(baseAmountPLN, { enforceMinMargin });
   addCost({
     lessonId,
     schoolId,
@@ -684,6 +722,16 @@ function recordCostFromBase({ lessonId = null, schoolId = null, teacherId = null
     status,
     errorMessage
   });
+}
+
+function estimateLiveTranscriptionBasePln(text) {
+  const words = String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const estimatedMinutes = words > 0 ? words / 150 : 0;
+  const estimatedUsd = estimatedMinutes * WHISPER_PRICE_PER_MIN_USD;
+  return roundMoney(estimatedUsd * USD_TO_PLN);
 }
 
 async function persistLesson(lesson) {
@@ -1230,10 +1278,10 @@ Transkrypcja: ${transcript}
       requestId: out.requestId,
       latencyMs: out.latencyMs
     });
-    return out.text;
+    return applyDemoHtmlWatermark(out.text, context.isDemoLicense === true);
   } catch {
     const missing = (lesson.plan || []).filter((item) => item.status !== "discussed");
-    return `
+    const fallbackHtml = `
       <article>
         <h1>Zlota Notatka: ${lesson.title}</h1>
         <h2>Plan i pokrycie</h2>
@@ -1242,6 +1290,7 @@ Transkrypcja: ${transcript}
         <ul>${missing.map((item) => `<li><b>${item.title}</b>: ${item.description}</li>`).join("") || "<li>Brak</li>"}</ul>
       </article>
     `;
+    return applyDemoHtmlWatermark(fallbackHtml, context.isDemoLicense === true);
   }
 }
 
@@ -1289,7 +1338,7 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
     latencyMs: note.latencyMs
   });
 
-  return note.text;
+  return applyDemoTextWatermark(note.text, context.isDemoLicense === true);
 }
 
 function addCost({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, amountPLN, baseAmountPLN = null, marginAmountPLN = null, category = "other", providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
@@ -1583,7 +1632,17 @@ app.post("/api/notes/generate", async (req, res) => {
       return res.status(400).json({ error: "Subject and topic are required." });
     }
 
-    const note = await generateTeacherNoteWithLLM({ subject, topic, classLevel, context: { teacherId: teacher.teacherId, schoolId: teacher.schoolId } });
+    const activeLicense = getActiveUserLicense(teacher.userId);
+    const note = await generateTeacherNoteWithLLM({
+      subject,
+      topic,
+      classLevel,
+      context: {
+        teacherId: teacher.teacherId,
+        schoolId: teacher.schoolId,
+        isDemoLicense: activeLicense?.demoMode === true
+      }
+    });
     return res.json({ note });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Failed to generate note." });
@@ -1697,21 +1756,31 @@ app.put("/api/lessons/:lessonId/plan/:pointId/manual", async (req, res) => {
 app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  if (!requireActiveLicenseForTeacher(teacher, res, "Rozpoczęcie lekcji")) return;
+  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Rozpoczęcie lekcji");
+  if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.status = "live";
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
-  return res.json({ lesson });
+  return res.json({
+    lesson,
+    demo: {
+      isDemo: activeLicense.demoMode === true,
+      maxLiveMinutes: activeLicense.demoMode ? DEMO_POLICY.maxLiveMinutes : null
+    }
+  });
 });
 
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Transkrypcja lekcji live");
+  if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
+  if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
 
@@ -1729,7 +1798,8 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
     teacherId: teacher.teacherId,
     provider: "deepgram",
     category: "live_transcription",
-    baseAmountPLN: 0.03
+    baseAmountPLN: estimateLiveTranscriptionBasePln(text),
+    enforceMinMargin: false
   });
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -1752,10 +1822,16 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
 app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji i notatki końcowej")) return;
+  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji i notatki końcowej");
+  if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
-  const html = await generateFinalNoteWithLLM(lesson, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
+  const html = await generateFinalNoteWithLLM(lesson, {
+    lessonId: lesson.id,
+    schoolId: teacher.schoolId,
+    teacherId: teacher.teacherId,
+    isDemoLicense: activeLicense.demoMode === true
+  });
   const noteId = randomUUID();
   const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
   lesson.finalNote = {
@@ -1867,7 +1943,8 @@ app.get("/api/admin/users", async (req, res) => {
             id: assignedLicense.id,
             key: assignedLicense.key,
             expiresAt: assignedLicense.expiresAt,
-            maxActiveUsers: assignedLicense.maxActiveUsers
+            maxActiveUsers: assignedLicense.maxActiveUsers,
+            demoMode: assignedLicense.demoMode === true
           }
         : null
     };
@@ -1925,7 +2002,8 @@ app.get("/api/admin/dashboard", async (req, res) => {
               id: assignedLicense.id,
               key: assignedLicense.key,
               expiresAt: assignedLicense.expiresAt,
-              maxActiveUsers: assignedLicense.maxActiveUsers
+              maxActiveUsers: assignedLicense.maxActiveUsers,
+              demoMode: assignedLicense.demoMode === true
             }
           : null
       };
@@ -2101,11 +2179,11 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
   }
 
   const rows = [...grouped.values()].map((row) => ({
-    platform: Number((row.total * 0.4).toFixed(4)),
-    provider: Number((row.total * 0.6).toFixed(4)),
+    platform: Number(row.margin.toFixed(4)),
+    provider: Number(row.base.toFixed(4)),
     ...row,
-    base: Number((row.total * 0.6).toFixed(4)),
-    margin: Number((row.total * 0.4).toFixed(4)),
+    base: Number(row.base.toFixed(4)),
+    margin: Number(row.margin.toFixed(4)),
     total: Number(row.total.toFixed(4)),
     notes: Number(row.notes.toFixed(4)),
     live: Number(row.live.toFixed(4)),
@@ -2268,6 +2346,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   const userId = req.params.userId;
   const days = Number(req.body?.days || 30);
   const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
+  const hasDemoModeInput = typeof req.body?.demoMode === "boolean";
 
   if (!Number.isFinite(days) || days < 1) {
     return res.status(400).json({ error: "Nieprawidłowa liczba dni licencji." });
@@ -2287,7 +2366,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
     key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
     maxActiveUsers,
     expiresAt,
-    demoMode: false,
+    demoMode: hasDemoModeInput ? req.body.demoMode === true : Boolean(existing?.demoMode),
     schoolId: adminSchool.schoolId,
     assignedUserId: userId
   };
@@ -2311,7 +2390,8 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
       key: license.key,
       expiresAt: license.expiresAt,
       maxActiveUsers: license.maxActiveUsers,
-      daysLeft: getRemainingLicenseDays(license.expiresAt)
+    demoMode: license.demoMode === true,
+    daysLeft: getRemainingLicenseDays(license.expiresAt)
     }
   });
 });
@@ -2384,13 +2464,20 @@ app.get("/api/account/license-status", async (req, res) => {
 
   return res.json({
     hasActiveLicense: Boolean(activeLicense),
+    isDemoLicense: activeLicense?.demoMode === true,
     license: activeLicense
       ? {
           id: activeLicense.id,
           key: activeLicense.key,
           expiresAt: activeLicense.expiresAt,
           maxActiveUsers: activeLicense.maxActiveUsers,
+          demoMode: activeLicense.demoMode === true,
           daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
+        }
+      : null,
+    demoLimits: activeLicense?.demoMode
+      ? {
+          maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
         }
       : null,
     uploadPolicy,
@@ -2402,7 +2489,8 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
-    if (!requireActiveLicenseForTeacher(teacher, res, "Transkrypcja AI")) return;
+    const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Transkrypcja AI");
+    if (!activeLicense) return;
     const lessonId = String(req.body.lessonId || "");
     const lesson = db.lessons.get(lessonId);
     if (!lessonId || !lesson) {
@@ -2411,6 +2499,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     if (String(lesson.teacherId) !== teacher.teacherId || String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
       return res.status(403).json({ error: "Forbidden" });
     }
+    if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
     if (!req.file?.buffer) {
       return res.status(400).json({ error: "Audio file is required." });
     }

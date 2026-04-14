@@ -361,9 +361,26 @@
                 />
               </label>
             </div>
+
+            <label class="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                v-model="licenseDemoMode"
+                type="checkbox"
+                class="h-4 w-4 rounded border-border bg-input-background text-primary focus:ring-primary/40"
+              />
+              Tryb demo (ograniczenia: krótsza lekcja live, mniejsze limity i watermark)
+            </label>
           </div>
 
           <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-500/20 disabled:opacity-40 dark:text-red-300"
+              :disabled="isSubmitting"
+              @click="deleteUserAccount"
+            >
+              {{ isSubmitting ? "Usuwanie..." : "Usuń konto" }}
+            </button>
             <button
               type="button"
               class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40"
@@ -438,6 +455,7 @@ const editPassword = ref("");
 const showEditPassword = ref(false);
 const licenseDays = ref(30);
 const licenseMaxUsers = ref(1);
+const licenseDemoMode = ref(false);
 const isSubmitting = ref(false);
 const newBusinessFullName = ref("");
 const newBusinessLogin = ref("");
@@ -538,6 +556,7 @@ function openModify(user) {
   showEditPassword.value = false;
   licenseDays.value = 30;
   licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
+  licenseDemoMode.value = user.license?.demoMode === true;
   actionError.value = "";
 }
 
@@ -591,11 +610,39 @@ async function grantLicense() {
       headers,
       body: JSON.stringify({
         days: Number(licenseDays.value || 30),
-        maxActiveUsers: Number(licenseMaxUsers.value || 1)
+        maxActiveUsers: Number(licenseMaxUsers.value || 1),
+        demoMode: licenseDemoMode.value === true
       })
     });
     const data = await readApiPayload(res);
     if (!res.ok) throw new Error(data.error || "Nie udało się przyznać licencji.");
+
+    await loadDashboard();
+    closeModify();
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function deleteUserAccount() {
+  if (!editUser.value) return;
+
+  const label = editUser.value.email || editUser.value.full_name || editUser.value.id;
+  const shouldDelete = window.confirm(`Na pewno chcesz usunąć konto ${label}? Tej operacji nie można cofnąć.`);
+  if (!shouldDelete) return;
+
+  isSubmitting.value = true;
+  actionError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
+      method: "DELETE",
+      headers
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się usunąć konta.");
 
     await loadDashboard();
     closeModify();
