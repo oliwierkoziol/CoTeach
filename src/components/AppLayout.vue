@@ -177,6 +177,17 @@
             </a>
           </RouterLink>
 
+          <!-- Panel admina -->
+          <RouterLink to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
+            </a>
+          </RouterLink>
+
         </div>
       </div>
     </aside>
