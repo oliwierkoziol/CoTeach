@@ -80,7 +80,7 @@
       </RouterLink>
     </div>
     <RouterLink
-      v-else-if="isShare"
+      v-else-if="isShare && !isAuthenticated"
       to="/login"
       class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
     >
@@ -90,12 +90,32 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useTheme } from "../composables/useTheme";
+import { supabase } from "../supabase";
 
 const route = useRoute();
 const { isDark, toggleTheme } = useTheme();
+const isAuthenticated = ref(false);
+let authSubscription = null;
+
+onMounted(async () => {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  isAuthenticated.value = Boolean(session);
+
+  const { data } = supabase.auth.onAuthStateChange((_event, sessionData) => {
+    isAuthenticated.value = Boolean(sessionData);
+  });
+  authSubscription = data.subscription;
+});
+
+onUnmounted(() => {
+  authSubscription?.unsubscribe();
+});
+
 const isAuthPage = computed(() => route.path === "/login" || route.path === "/register");
 const isLanding = computed(() => route.path === "/");
 const showActions = computed(() => isAuthPage.value || isLanding.value);

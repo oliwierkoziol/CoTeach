@@ -3,12 +3,6 @@
     <div class="flex-1">
       <template v-if="minimalChrome">
         <GuestHeader />
-        <div
-          v-if="showLicenseWarning"
-          class="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 sm:mx-5"
-        >
-          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
-        </div>
         <RouterView />
       </template>
       <template v-else-if="presentationMode">

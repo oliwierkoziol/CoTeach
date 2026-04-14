@@ -15,7 +15,11 @@
         >
           Wróć do notatek
         </RouterLink>
-        <RouterLink to="/login" class="text-sm font-semibold text-primary hover:underline sm:text-right">
+        <RouterLink
+          v-if="!isAuthenticated"
+          to="/login"
+          class="text-sm font-semibold text-primary hover:underline sm:text-right"
+        >
           Zaloguj się do CoTeach
         </RouterLink>
       </div>
@@ -24,20 +28,37 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { supabase } from "../supabase";
 
 const route = useRoute();
 const { fetchSharedNote } = useLessonStore();
 const html = ref("");
+const isAuthenticated = ref(false);
+let authSubscription = null;
 
 onMounted(async () => {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  isAuthenticated.value = Boolean(session);
+
+  const { data: authData } = supabase.auth.onAuthStateChange((_event, sessionData) => {
+    isAuthenticated.value = Boolean(sessionData);
+  });
+  authSubscription = authData.subscription;
+
   try {
     const data = await fetchSharedNote(route.params.noteId);
     html.value = data.finalNote?.html || "";
   } catch {
     html.value = "";
   }
+});
+
+onUnmounted(() => {
+  authSubscription?.unsubscribe();
 });
 </script>
