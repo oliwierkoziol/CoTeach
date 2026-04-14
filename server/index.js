@@ -387,6 +387,34 @@ function savedNoteToRow(note, teacherId) {
   };
 }
 
+function licenseToRow(license) {
+  return {
+    id: String(license.id || ""),
+    key: String(license.key || ""),
+    assigned_user_id: license.assignedUserId ? String(license.assignedUserId) : null,
+    max_active_users: Number(license.maxActiveUsers || 1),
+    expires_at: license.expiresAt || null,
+    demo_mode: Boolean(license.demoMode),
+    school_id: license.schoolId ? String(license.schoolId) : null,
+    created_at: license.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function rowToLicense(row) {
+  return {
+    id: row.id,
+    key: row.key,
+    assignedUserId: row.assigned_user_id || undefined,
+    maxActiveUsers: Number(row.max_active_users || 1),
+    expiresAt: row.expires_at,
+    demoMode: row.demo_mode === true,
+    schoolId: row.school_id || undefined,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  };
+}
+
 async function persistLesson(lesson) {
   if (!supabase) return;
   const { error } = await supabase.from("lessons").upsert(lessonToRow(lesson), { onConflict: "id" });
@@ -458,6 +486,24 @@ async function removeFinalNoteSafe(lessonId) {
     await removeFinalNote(lessonId);
   } catch (error) {
     console.error(error.message);
+  }
+}
+
+async function persistLicense(license) {
+  if (!supabase || !license) return;
+  const { error } = await supabase
+    .from("user_licenses")
+    .upsert(licenseToRow(license), { onConflict: "id" });
+  if (error) throw new Error(`Supabase license upsert failed: ${error.message}`);
+}
+
+async function loadLicensesFromSupabase() {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("user_licenses").select("*");
+  if (error) throw new Error(`Supabase licenses load failed: ${error.message}`);
+  for (const row of data || []) {
+    const license = rowToLicense(row);
+    db.licenses.set(license.id, license);
   }
 }
 
@@ -1428,6 +1474,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   const licenseId = `license-user-${userId}`;
 
   const existing = db.licenses.get(licenseId);
+  const previousLicense = existing ? { ...existing } : null;
   const license = {
     id: licenseId,
     key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
@@ -1437,7 +1484,17 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
     assignedUserId: userId
   };
 
-  db.licenses.set(licenseId, license);
+  try {
+    await persistLicense(license);
+    db.licenses.set(licenseId, license);
+  } catch (error) {
+    if (previousLicense) {
+      db.licenses.set(licenseId, previousLicense);
+    } else {
+      db.licenses.delete(licenseId);
+    }
+    return res.status(500).json({ error: error.message || "Nie udało się zapisać licencji." });
+  }
 
   return res.json({
     license: {
@@ -1588,6 +1645,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 loadLessonsFromSupabase()
+  .then(() => loadLicensesFromSupabase())
   .then(() => loadFinalNotesFromSupabase())
   .then(() => loadSavedNotesFromSupabase())
   .catch((error) => {
