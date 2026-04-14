@@ -1,14 +1,15 @@
-<template>
+﻿<template>
   <div class="min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
     <header
-      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5 dark:border-sidebar-border dark:bg-sidebar/95"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
           type="button"
           class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-foreground md:hidden"
           aria-label="Menu"
-          @click="open = true"
+          :aria-expanded="open ? 'true' : 'false'"
+          @click="open = !open"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -25,8 +26,8 @@
         <button
           type="button"
           class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground transition hover:bg-muted/60"
-          :title="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
-          :aria-label="isDark ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'"
+          :title="isDark ? 'PrzeĹ‚Ä…cz na tryb jasny' : 'PrzeĹ‚Ä…cz na tryb ciemny'"
+          :aria-label="isDark ? 'PrzeĹ‚Ä…cz na tryb jasny' : 'PrzeĹ‚Ä…cz na tryb ciemny'"
           @click="toggleTheme"
         >
           <svg
@@ -88,7 +89,7 @@
 
     <aside
       :class="[
-        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0 dark:border-sidebar-border dark:bg-sidebar',
         open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -109,7 +110,7 @@
               <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
             </svg>
             <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
-              Rozpocznij lekcję
+              Rozpocznij lekcjÄ™
             </span>
           </a>
         </RouterLink>
@@ -127,13 +128,13 @@
             </a>
           </RouterLink>
 
-          <!-- Dodaj materiały -->
+          <!-- Dodaj materiaĹ‚y -->
           <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
               <svg class="h-5 w-4 shrink-0" fill="none" viewBox="0 0 16 20">
                 <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="#566166"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiaĹ‚y</p>
             </a>
           </RouterLink>
 
@@ -147,41 +148,64 @@
           </a>
         </RouterLink>
 
+        <!-- Divider + nav links -->
+        <div class="flex-1 space-y-1 border-t border-black/30 pt-4 dark:border-sidebar-border">
+
+          <!-- Panel startowy -->
+          <RouterLink to="/dashboard" custom v-slot="{ href, navigate, isExactActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isExactActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-[18px] w-[18px] shrink-0 text-[#566166] dark:text-slate-300" fill="none" viewBox="0 0 18 18">
+                <path d="M10 6V0H18V6H10ZM0 10V0H8V10H0ZM10 18V8H18V18H10ZM0 18V12H8V18H0ZM2 8H6V2H2V8ZM12 16H16V10H12V16ZM12 4H16V2H12V4ZM2 16H6V14H2V16Z" fill="currentColor"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isExactActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
+            </a>
+          </RouterLink>
+
+          <!-- Dodaj materiaĹ‚y -->
+          <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <svg class="h-5 w-4 shrink-0 text-[#566166] dark:text-slate-300" fill="none" viewBox="0 0 16 20">
+                <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="currentColor"/>
+              </svg>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiaĹ‚y</p>
+            </a>
+          </RouterLink>
+
+          <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
+            <svg class="h-[18px] w-[18px] shrink-0 text-[#566166] dark:text-slate-300" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="4" width="20" height="14" rx="2" />
+              <path d="M12 8v6 M9 11l3-3 3 3" />
+            </svg>
+            <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Notatki</p>
+          </a>
+        </RouterLink>
+
           <!-- Prezentacja -->
           <RouterLink :to="presentationHref" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
-              <svg class="h-4 w-5 shrink-0" fill="none" viewBox="0 0 20 16">
-                <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="#566166"/>
+              <svg class="h-4 w-5 shrink-0 text-[#566166] dark:text-slate-300" fill="none" viewBox="0 0 20 16">
+                <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
             </a>
           </RouterLink>
 
           <!-- Archiwum -->
           <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
-              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
-                <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="#566166"/>
+              <svg class="h-[18px] w-[18px] shrink-0 text-[#566166] dark:text-slate-300" fill="none" viewBox="0 0 20 20">
+                <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
-            </a>
-          </RouterLink>
-
-          <!-- Monitoring -->
-          <RouterLink to="/monitoring" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
-              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 18 18">
-                <path d="M0 18V16L2 14V18H0ZM4 18V12L6 10V18H4ZM8 18V10L10 12.025V18H8ZM12 18V12.025L14 10.025V18H12ZM16 18V8L18 6V18H16ZM0 12.825V10L7 3L11 7L18 0V2.825L11 9.825L7 5.825L0 12.825Z" fill="#566166"/>
-              </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Monitoring</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
             </a>
           </RouterLink>
 
           <!-- Panel admina -->
-          <RouterLink to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
+          <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
               <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe] dark:text-sky-300' : 'text-[#475569] dark:text-slate-300']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
             </a>
           </RouterLink>
 
@@ -192,7 +216,7 @@
     <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
-          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+          Do Twojego konta nie jest przypisana ĹĽadna licencja. Skontaktuj siÄ™ ze swojÄ… organizacjÄ….
         </div>
       </div>
       <div class="min-h-[calc(100vh-4rem)]">
@@ -371,7 +395,7 @@ async function loadHeaderUser() {
   const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url, admin").eq("id", user.id).maybeSingle();
 
   const name = String(profile?.full_name || user.user_metadata?.full_name || "").trim();
-  displayName.value = name || user.email?.split("@")[0] || "Użytkownik";
+  displayName.value = name || user.email?.split("@")[0] || "UĹĽytkownik";
   avatarUrl.value = profile?.avatar_url || "";
   isAdmin.value = profile?.admin === true;
 }

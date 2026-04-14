@@ -199,6 +199,17 @@ export function useLessonStore() {
     return String(data.note || "");
   }
 
+  async function extractNoteTextFromFile(file) {
+    if (!file) throw new Error("Plik jest wymagany.");
+    const form = new FormData();
+    form.set("file", file);
+    const data = await api("/api/notes/extract", {
+      method: "POST",
+      body: form
+    });
+    return String(data.text || "");
+  }
+
   async function saveTeacherNote(payload) {
     const data = await api("/api/notes", {
       method: "POST",
@@ -238,6 +249,7 @@ export function useLessonStore() {
     fetchAdmin,
     fetchSharedNote,
     generateTeacherNote,
+    extractNoteTextFromFile,
     saveTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes

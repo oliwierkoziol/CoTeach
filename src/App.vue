@@ -21,6 +21,7 @@ import { useRoute, useRouter } from "vue-router";
 import AppLayout from "./components/AppLayout.vue";
 import GuestHeader from "./components/GuestHeader.vue";
 import { initTheme } from "./composables/useTheme";
+import { clearLicenseStatusCache, fetchLicenseStatusCached } from "./composables/useLicenseStatus";
 import { supabase } from "./supabase";
 
 const route = useRoute();
@@ -105,22 +106,12 @@ async function refreshLicenseWarning() {
   const token = session?.access_token;
   if (!token) {
     showLicenseWarning.value = false;
+    clearLicenseStatusCache();
     return;
   }
 
-  try {
-    const response = await fetch(`${API_BASE}/api/account/license-status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      showLicenseWarning.value = false;
-      return;
-    }
-    showLicenseWarning.value = data?.hasActiveLicense !== true;
-  } catch {
-    showLicenseWarning.value = false;
-  }
+  const data = await fetchLicenseStatusCached({ token, apiBase: API_BASE });
+  showLicenseWarning.value = data?.hasActiveLicense !== true;
 }
 
 onMounted(() => {
@@ -143,6 +134,7 @@ onMounted(() => {
       void refreshLicenseWarning();
       return;
     }
+    clearLicenseStatusCache();
     clearActivityCookie();
     showLicenseWarning.value = false;
   });
@@ -150,7 +142,7 @@ onMounted(() => {
 });
 
 watch(
-  () => route.fullPath,
+  () => route.path,
   () => {
     void refreshLicenseWarning();
   }

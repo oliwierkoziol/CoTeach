@@ -28,10 +28,10 @@
               Załóż konto
             </RouterLink>
             <RouterLink
-              to="/dashboard"
+              to="/login"
               class="rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted/40"
             >
-              Przejdź do panelu
+              Zaloguj się do panelu
             </RouterLink>
           </div>
 

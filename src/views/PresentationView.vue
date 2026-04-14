@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="isPresenting" class="fixed inset-0 bg-black text-white">
     <button class="absolute right-4 top-4 z-50 rounded-lg bg-white/20 px-3 py-2 text-white" @click="exitPresentation">X</button>
 
@@ -28,7 +28,7 @@
           </button>
           <div>{{ slideIndex + 1 }} / {{ slides.length }}</div>
           <button :disabled="slideIndex === slides.length - 1" @click="slideIndex += 1" class="px-3 py-2 rounded border border-white/30 disabled:opacity-30">
-            Następny
+            NastÄ™pny
           </button>
         </div>
       </div>
@@ -37,63 +37,63 @@
 
   <div v-else-if="isGenerating" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900 to-pink-900 text-white">
     <div class="text-center text-white">
-      <h2 class="text-3xl font-bold mb-2">Generuję prezentację...</h2>
-      <p class="text-purple-200">Tworzę slajdy z nieomówionych punktów.</p>
+      <h2 class="text-3xl font-bold mb-2">GenerujÄ™ prezentacjÄ™...</h2>
+      <p class="text-purple-200">TworzÄ™ slajdy z nieomĂłwionych punktĂłw.</p>
     </div>
   </div>
 
-  <div v-else class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+  <div v-else class="bg-[#f7f9fc] dark:bg-background min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
     <header class="mb-7 relative z-10 w-full text-left">
-      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] dark:text-foreground text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
         Generator prezentacji
       </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px] font-normal">
-        Twórz prezentacje z wybranej lekcji i wracaj do poprzednich wersji.
+      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] dark:text-muted-foreground text-[18px] leading-[28px] font-normal">
+        TwĂłrz prezentacje z wybranej lekcji i wracaj do poprzednich wersji.
       </p>
     </header>
 
-    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
-      <h3 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-6">
+    <div class="bg-white dark:bg-card border border-transparent dark:border-border rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
+      <h3 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] dark:text-foreground text-[18px] leading-[28px] mb-6">
         Podstawowe informacje
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
         <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Wybierz lekcję</label>
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] dark:text-muted-foreground text-[14px]">Wybierz lekcjÄ™</label>
           <select
             v-model="selectedLessonId"
             :disabled="!hasLessons"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
+            class="bg-[#e0e3e6] dark:bg-input-background border border-transparent dark:border-border h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] dark:text-foreground font-['Plus_Jakarta_Sans'] outline-none focus:ring-2 focus:ring-[#0c3dfe]/50"
           >
-            <option v-if="!hasLessons" value="">Brak dostępnych lekcji</option>
+            <option v-if="!hasLessons" value="">Brak dostÄ™pnych lekcji</option>
             <option v-for="lesson in availableLessons" :key="lesson.id" :value="lesson.id">
-              {{ lesson.title || "Bez tytułu" }}{{ lesson.subject ? ` (${lesson.subject})` : "" }}
+              {{ lesson.title || "Bez tytuĹ‚u" }}{{ lesson.subject ? ` (${lesson.subject})` : "" }}
             </option>
           </select>
         </div>
         <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Zakres prezentacji</label>
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] dark:text-muted-foreground text-[14px]">Zakres prezentacji</label>
           <select
             v-model="presentationScope"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
+            class="bg-[#e0e3e6] dark:bg-input-background border border-transparent dark:border-border h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] dark:text-foreground font-['Plus_Jakarta_Sans'] outline-none focus:ring-2 focus:ring-[#0c3dfe]/50"
           >
-            <option value="full">Cała lekcja</option>
-            <option value="pending">Tylko nieomówione punkty</option>
+            <option value="full">CaĹ‚a lekcja</option>
+            <option value="pending">Tylko nieomĂłwione punkty</option>
           </select>
         </div>
       </div>
-      <p class="mt-5 font-['Plus_Jakarta_Sans'] text-[14px] text-[#454652]">
-        Liczba slajdów do wygenerowania: <span class="font-bold text-[#191c1e]">{{ preparedSlides.length }}</span>
+      <p class="mt-5 font-['Plus_Jakarta_Sans'] text-[14px] text-[#454652] dark:text-muted-foreground">
+        Liczba slajdĂłw do wygenerowania: <span class="font-bold text-[#191c1e] dark:text-foreground">{{ preparedSlides.length }}</span>
       </p>
       <p v-if="!hasLessons" class="mt-2 font-['Plus_Jakarta_Sans'] text-[13px] text-[#b54747]">
-        Brak lekcji w archiwum. Najpierw utwórz lekcję, aby wygenerować prezentację.
+        Brak lekcji w archiwum. Najpierw utwĂłrz lekcjÄ™, aby wygenerowaÄ‡ prezentacjÄ™.
       </p>
     </div>
 
-    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
+    <div class="bg-white dark:bg-card border border-transparent dark:border-border rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
       <div class="flex items-center justify-between mb-8 w-full">
-        <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+        <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] dark:text-foreground text-[18px] leading-[28px]">
           Poprzednie prezentacje
         </h3>
         <button
@@ -102,7 +102,7 @@
           :disabled="!preparedSlides.length"
           @click="startGeneratedPresentation"
         >
-          Generuj prezentację
+          Generuj prezentacjÄ™
         </button>
       </div>
 
@@ -128,23 +128,23 @@
               class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[180px] mt-0.5"
               :class="selectedPresentation?.id === item.id ? 'text-white' : 'text-[#454652]'"
             >
-              {{ item.createdAtLabel }} • {{ item.slideCount }} slajdów
+              {{ item.createdAtLabel }} â€˘ {{ item.slideCount }} slajdĂłw
             </p>
           </div>
         </button>
 
         <p v-if="!presentationHistory.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
-          Brak dostępnych prezentacji. Wygeneruj prezentację klikając przycisk.
+          Brak dostÄ™pnych prezentacji. Wygeneruj prezentacjÄ™ klikajÄ…c przycisk.
         </p>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 w-full relative z-10 mb-7">
+    <div class="bg-white dark:bg-card border border-transparent dark:border-border rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 w-full relative z-10 mb-7">
       <div class="flex items-center justify-end gap-3 w-full">
         <button
           type="button"
           @click="$router.back()"
-          class="bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors"
+          class="bg-[#f2f2f2] dark:bg-muted text-[#454652] dark:text-foreground font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] dark:hover:bg-muted/80 transition-colors"
         >
           Anuluj
         </button>
@@ -154,7 +154,7 @@
           @click="openSavedPresentation(selectedPresentation)"
           class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
         >
-          Otwórz wybraną
+          OtwĂłrz wybranÄ…
         </button>
       </div>
     </div>
@@ -227,7 +227,7 @@ function persistPresentationHistory() {
 
 function buildPresentationTitle() {
   const subject = selectedLesson.value?.subject || selectedLesson.value?.title || "Prezentacja";
-  const scopeLabel = presentationScope.value === "full" ? "cała lekcja" : "nieomówione punkty";
+  const scopeLabel = presentationScope.value === "full" ? "caĹ‚a lekcja" : "nieomĂłwione punkty";
   return `${subject} - ${scopeLabel} (${new Date().toLocaleDateString("pl-PL")})`;
 }
 
