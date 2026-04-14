@@ -73,6 +73,75 @@
         </div>
       </section>
 
+      <section class="rounded-2xl border border-border bg-card p-6">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-foreground">Koszty AI per nauczyciel</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              v-model="costSortBy"
+              class="rounded-lg border border-border bg-input-background px-3 py-2 text-xs font-semibold text-foreground"
+            >
+              <option value="total">Sortuj: koszt całkowity</option>
+              <option value="teacher">Sortuj: nauczyciel</option>
+              <option value="notes">Sortuj: notatki</option>
+              <option value="live">Sortuj: lekcje live</option>
+              <option value="presentation">Sortuj: prezentacje</option>
+              <option value="other">Sortuj: inne</option>
+            </select>
+
+            <select
+              v-model="costDirection"
+              class="rounded-lg border border-border bg-input-background px-3 py-2 text-xs font-semibold text-foreground"
+            >
+              <option value="desc">Malejąco</option>
+              <option value="asc">Rosnąco</option>
+            </select>
+
+            <button
+              type="button"
+              class="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+              :disabled="isLoadingCosts"
+              @click="loadTeacherCosts"
+            >
+              {{ isLoadingCosts ? "Ładowanie..." : "Odśwież koszty" }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!teacherCosts.length" class="text-sm text-muted-foreground">Brak danych kosztów nauczycieli.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                <th class="px-3 py-2 font-medium">Nauczyciel</th>
+                <th class="px-3 py-2 font-medium">Koszt dostawcy</th>
+                <th class="px-3 py-2 font-medium">Koszt platformy</th>
+                <th class="px-3 py-2 font-medium">Razem</th>
+                <th class="px-3 py-2 font-medium">Notatki</th>
+                <th class="px-3 py-2 font-medium">Lekcje live</th>
+                <th class="px-3 py-2 font-medium">Prezentacje</th>
+                <th class="px-3 py-2 font-medium">Inne</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in teacherCosts" :key="row.teacherId" class="border-b border-border/60">
+                <td class="px-3 py-3">
+                  <div class="font-medium text-foreground">{{ row.fullName || "Brak nazwy" }}</div>
+                  <div class="text-xs text-muted-foreground">{{ row.email || row.teacherId }}</div>
+                </td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.base) }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.margin) }}</td>
+                <td class="px-3 py-3 font-semibold text-foreground">{{ currency(row.total) }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.notes) }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.live) }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.presentation) }}</td>
+                <td class="px-3 py-3 text-muted-foreground">{{ currency(row.other) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="rounded-2xl border border-border bg-card">
         <div class="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 class="text-lg font-semibold text-foreground">Konta użytkowników ({{ users.length }})</h2>
@@ -221,7 +290,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { supabase } from "../supabase";
 
 function normalizeBaseUrl(url) {
@@ -252,6 +321,10 @@ const actionUserId = ref("");
 const stats = ref({ totalLessons: 0, finishedLessons: 0, usersCount: 0 });
 const coverageBySubject = ref([]);
 const users = ref([]);
+const teacherCosts = ref([]);
+const isLoadingCosts = ref(false);
+const costSortBy = ref("total");
+const costDirection = ref("desc");
 
 const editUser = ref(null);
 const editEmail = ref("");
@@ -267,6 +340,29 @@ function formatDate(value) {
   return date.toLocaleDateString("pl-PL");
 }
 
+function currency(value) {
+  return `${Number(value || 0).toFixed(2)} PLN`;
+}
+
+async function loadTeacherCosts() {
+  isLoadingCosts.value = true;
+  try {
+    const headers = await getAuthHeader();
+    const params = new URLSearchParams({
+      sortBy: String(costSortBy.value || "total"),
+      direction: String(costDirection.value || "desc")
+    });
+    const res = await fetch(`${API_BASE}/api/admin/teacher-costs?${params.toString()}`, { headers });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać kosztów nauczycieli.");
+    teacherCosts.value = data.rows || [];
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isLoadingCosts.value = false;
+  }
+}
+
 async function loadDashboard() {
   isLoading.value = true;
   loadError.value = "";
@@ -278,12 +374,17 @@ async function loadDashboard() {
     stats.value = data.stats || { totalLessons: 0, finishedLessons: 0, usersCount: 0 };
     coverageBySubject.value = data.coverageBySubject || [];
     users.value = data.users || [];
+    await loadTeacherCosts();
   } catch (e) {
     loadError.value = e.message;
   } finally {
     isLoading.value = false;
   }
 }
+
+watch([costSortBy, costDirection], () => {
+  void loadTeacherCosts();
+});
 
 async function toggleBlock(user, blocked) {
   const shouldProceed = window.confirm(
