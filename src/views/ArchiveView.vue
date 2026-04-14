@@ -132,13 +132,14 @@ const isQrModalOpen = ref(false);
 
 onMounted(async () => {
   await fetchLessons();
-  if (state.lessons.length) selectLesson(state.lessons[0]);
+  if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
 });
 
 const filteredLessons = computed(() => {
+  const archivedLessons = state.lessons.filter((lesson) => Boolean(lesson?.finalNote));
   const q = searchQuery.value.toLowerCase().trim();
-  if (!q) return state.lessons;
-  return state.lessons.filter((l) => {
+  if (!q) return archivedLessons;
+  return archivedLessons.filter((l) => {
     const noteTitle = l.finalNote?.title || l.title || "";
     const noteSubject = l.finalNote?.subject || l.subject || "";
     return `${noteTitle} ${noteSubject} ${l.month || ""}`.toLowerCase().includes(q);
@@ -182,10 +183,21 @@ async function handleDeleteFinalNote() {
   if (!selected.value?.id || !selected.value?.finalNote) return;
   const confirmed = window.confirm("Na pewno usunąć notatkę końcową dla tej lekcji?");
   if (!confirmed) return;
+  const deletedLessonId = selected.value.id;
   try {
     saving.value = true;
-    const lesson = await deleteFinalNote(selected.value.id);
-    selectLesson(lesson);
+    await deleteFinalNote(deletedLessonId);
+
+    const nextLesson = filteredLessons.value.find((lesson) => lesson.id !== deletedLessonId) || null;
+    if (nextLesson) {
+      selectLesson(nextLesson);
+    } else {
+      selected.value = null;
+      editTitle.value = "";
+      editSubject.value = "";
+      editDate.value = "";
+      isQrModalOpen.value = false;
+    }
   } finally {
     saving.value = false;
   }

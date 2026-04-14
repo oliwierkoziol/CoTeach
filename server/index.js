@@ -1249,20 +1249,88 @@ ${transcript}
   }
 }
 
+function getFinalNoteCoverageBuckets(plan) {
+  const normalizedPlan = (Array.isArray(plan) ? plan : []).map((item, index) => normalizePlanPoint(item, index));
+  const discussed = normalizedPlan.filter((item) => item.status === "discussed");
+  const partiallyDiscussed = normalizedPlan.filter((item) => item.status === "skipped");
+  const notDiscussed = normalizedPlan.filter((item) => item.status !== "discussed" && item.status !== "skipped");
+  return {
+    total: normalizedPlan.length,
+    discussed,
+    partiallyDiscussed,
+    notDiscussed
+  };
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderCoverageListItems(items) {
+  if (!items.length) return "<li>Brak</li>";
+  return items
+    .map((item) => `<li><b>${escapeHtml(item.title)}</b>${item.description ? `: ${escapeHtml(item.description)}` : ""}</li>`)
+    .join("");
+}
+
+function buildFinalNoteHtml({ lesson, coveredText, summaryText }) {
+  const buckets = getFinalNoteCoverageBuckets(lesson.plan || []);
+  const notCovered = [...buckets.partiallyDiscussed, ...buckets.notDiscussed];
+
+  return `
+    <article>
+      <h1>Złota Notatka po Lekcji</h1>
+
+      <h2>Tytuł i przedmiot</h2>
+      <p><b>Temat lekcji:</b> ${escapeHtml(lesson.title || "Notatka")}</p>
+      <p><b>Przedmiot:</b> ${escapeHtml(lesson.subject || "Przedmiot")}</p>
+
+      <h2>Co zostało omówione</h2>
+      <p>${escapeHtml(coveredText || "Brak dodatkowego opisu.")}</p>
+
+      <h2>Czego nie omówiono (z planu)</h2>
+      <ul>${renderCoverageListItems(notCovered)}</ul>
+
+      <h2>Krótkie podsumowanie dla ucznia</h2>
+      <p>${escapeHtml(summaryText || "Brak podsumowania.")}</p>
+
+      <h3>Weryfikacja pokrycia planu</h3>
+      <p>Omówione: <b>${buckets.discussed.length}</b> / ${buckets.total}, częściowo: <b>${buckets.partiallyDiscussed.length}</b>, nieomówione: <b>${buckets.notDiscussed.length}</b>.</p>
+    </article>
+  `;
+}
+
 async function generateFinalNoteWithLLM(lesson, context = {}) {
   const transcript = (lesson.transcripts || []).map((item) => item.text).join(" ").slice(0, 20000);
+  const coverageBuckets = getFinalNoteCoverageBuckets(lesson.plan || []);
+  const coverageFacts = {
+    total: coverageBuckets.total,
+    discussed: coverageBuckets.discussed.map((item) => ({ title: item.title, status: item.status })),
+    partiallyDiscussed: coverageBuckets.partiallyDiscussed.map((item) => ({ title: item.title, status: item.status })),
+    notDiscussed: coverageBuckets.notDiscussed.map((item) => ({ title: item.title, status: item.status }))
+  };
+
   const prompt = `
-Utwórz kompletną "Złotą Notatkę" po lekcji.
-Sekcje:
-1) Tytuł i przedmiot
-2) Co zostało omówione
-3) Czego nie omówiono (z planu)
-4) Krótkie podsumowanie dla ucznia
-Format: HTML (bez <html>, bez <body>, tylko treść artykułu).
+Przygotuj dwa krótkie opisy po lekcji na podstawie danych.
+Zwróć WYŁĄCZNIE JSON o strukturze:
+{
+  "covered": "1-3 akapity o tym, co faktycznie omówiono",
+  "studentSummary": "krótkie podsumowanie dla ucznia"
+}
+WYMAGANIA KRYTYCZNE:
+- Traktuj dane "RZECZYWISTE POKRYCIE PLANU" jako prawdę nadrzędną.
+- Jeżeli "notDiscussed" lub "partiallyDiscussed" nie są puste, NIE WOLNO pisać, że wszystkie tematy zostały omówione.
+- Nie używaj HTML ani markdown, sam czysty tekst.
 Dane:
 Tytuł: ${lesson.title}
 Przedmiot: ${lesson.subject}
 Plan: ${JSON.stringify(lesson.plan || [])}
+RZECZYWISTE POKRYCIE PLANU: ${JSON.stringify(coverageFacts)}
 Transkrypcja: ${transcript}
 `.trim();
   try {
@@ -1284,18 +1352,21 @@ Transkrypcja: ${transcript}
       requestId: out.requestId,
       latencyMs: out.latencyMs
     });
-    return applyDemoHtmlWatermark(out.text, context.isDemoLicense === true);
+    const parsed = parseJsonFromModel(out.text);
+    const coveredText = String(parsed?.covered || "").trim();
+    const studentSummary = String(parsed?.studentSummary || "").trim();
+    const html = buildFinalNoteHtml({
+      lesson,
+      coveredText,
+      summaryText: studentSummary
+    });
+    return applyDemoHtmlWatermark(html, context.isDemoLicense === true);
   } catch {
-    const missing = (lesson.plan || []).filter((item) => item.status !== "discussed");
-    const fallbackHtml = `
-      <article>
-        <h1>Zlota Notatka: ${lesson.title}</h1>
-        <h2>Plan i pokrycie</h2>
-        <ul>${(lesson.plan || []).map((item) => `<li><b>${item.title}</b> - status: ${item.status}</li>`).join("")}</ul>
-        <h2>Nieomowione punkty</h2>
-        <ul>${missing.map((item) => `<li><b>${item.title}</b>: ${item.description}</li>`).join("") || "<li>Brak</li>"}</ul>
-      </article>
-    `;
+    const fallbackHtml = buildFinalNoteHtml({
+      lesson,
+      coveredText: "Notatka wygenerowana awaryjnie na podstawie stanu planu i transkrypcji.",
+      summaryText: "Kontynuuj kolejną lekcję od punktów oznaczonych jako częściowo omówione lub nieomówione."
+    });
     return applyDemoHtmlWatermark(fallbackHtml, context.isDemoLicense === true);
   }
 }
