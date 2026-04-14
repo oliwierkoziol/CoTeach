@@ -120,6 +120,28 @@
             </div>
           </div>
 
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Licencja</label>
+            <div class="border-b border-border pb-2 text-lg text-foreground">
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+                  :class="licenseStatus?.hasActiveLicense ? 'bg-primary/15 text-primary' : 'bg-destructive/10 text-destructive'"
+                >
+                  {{ licenseStatus?.hasActiveLicense ? "Aktywna" : "Brak aktywnej" }}
+                </span>
+                <span v-if="licenseStatus?.license?.expiresAt" class="text-sm text-muted-foreground">
+                  Wygasa: {{ formatDate(licenseStatus.license.expiresAt) }}
+                </span>
+              </div>
+
+              <div v-if="licenseStatus" class="mt-2 text-sm text-muted-foreground">
+                Limit uploadów: {{ licenseStatus.uploadPolicy?.maxUploads ?? "—" }} ·
+                Wykorzystane: {{ licenseStatus.uploadsUsed ?? "—" }}
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div v-if="isUploading" class="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
@@ -316,6 +338,7 @@ const pwSuccess = ref("");
 const errorMessage = ref("");
 const successMessage = ref("");
 const fileInput = ref(null);
+const licenseStatus = ref(null);
 
 function normalizeBaseUrl(url) {
   return String(url || "")
@@ -368,6 +391,7 @@ const loadUserProfile = async () => {
   errorMessage.value = "";
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
+  const token = sessionData?.session?.access_token || "";
   if (!user?.id) {
     router.push({ path: "/login", query: { redirect: "/profile" } });
     return;
@@ -378,6 +402,8 @@ const loadUserProfile = async () => {
   authUserId.value = user.id;
   authEmail.value = user.email || "";
   newEmail.value = user.email || "";
+
+  void loadLicenseStatus(token);
 
   const { data: row, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
@@ -424,6 +450,24 @@ const loadUserProfile = async () => {
     );
   }
 };
+
+async function loadLicenseStatus(token) {
+  licenseStatus.value = null;
+  if (!token) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/account/license-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      licenseStatus.value = null;
+      return;
+    }
+    licenseStatus.value = data;
+  } catch {
+    licenseStatus.value = null;
+  }
+}
 
 const SAVE_NAME_TIMEOUT_MS = 15000;
 

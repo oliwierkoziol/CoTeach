@@ -20,6 +20,7 @@ const router = createRouter({
     { path: "/admin/cost-calculator", component: () => import("../views/AdminCostCalculatorView.vue") },
     { path: "/admin/users", component: () => import("../views/SpecialAdminView.vue") },
     { path: "/login", component: () => import("../views/LoginView.vue") },
+    { path: "/reset-password", component: () => import("../views/ResetPasswordView.vue") },
     { path: "/register", component: () => import("../views/RegisterView.vue") },
     { path: "/share/:noteId", component: () => import("../views/ShareView.vue") }
   ]
@@ -52,7 +53,7 @@ router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
   if (to.path === "/") return true;
   if (to.path.startsWith("/share/")) return true;
-  if (to.path === "/login" || to.path === "/register") return true;
+  if (to.path === "/login" || to.path === "/register" || to.path === "/reset-password") return true;
 
   const { timedOut, session } = await getSessionWithTimeout();
   if (timedOut) return true;

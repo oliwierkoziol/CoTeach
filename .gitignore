@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 
 # Local AI prompt files
 prompty_do_ai/
+# Supabase schema generated for local setup only
+supabase/schema.sql

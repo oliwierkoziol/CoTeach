@@ -15,7 +15,7 @@
               class="rounded-lg border border-border bg-input-background px-2 py-1.5 text-sm text-foreground outline-none"
               :disabled="isRecording"
             >
-              <option v-for="option in lessonDurationOptions" :key="option.minutes" :value="option.minutes">
+              <option v-for="option in availableLessonDurationOptions" :key="option.minutes" :value="option.minutes">
                 {{ option.label }}
               </option>
             </select>
@@ -126,6 +126,9 @@
             </p>
             <p class="mt-2 text-sm text-muted-foreground">
               Lekcja zatrzyma się automatycznie po upływie tego czasu.
+            </p>
+            <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
             </p>
           </div>
 
@@ -274,6 +277,7 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "http://localhost:3001";
+const COVERAGE_REFRESH_MIN_INTERVAL_MS = 90_000;
 
 const lessonDurationOptions = [
   { label: "45 min", minutes: 45 },
@@ -315,12 +319,22 @@ const shouldKeepListening = ref(false);
 const manualUpdateLoadingId = ref("");
 const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
+const lastCoverageRefreshMs = ref(0);
+const coverageRefreshTimer = ref(null);
+const demoMaxLiveMinutes = ref(null);
 let apiPingTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
 const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
 const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
+const isDemoLicense = computed(() => Number.isFinite(Number(demoMaxLiveMinutes.value)) && Number(demoMaxLiveMinutes.value) > 0);
+const availableLessonDurationOptions = computed(() => {
+  if (!isDemoLicense.value) return lessonDurationOptions;
+  const maxMinutes = Number(demoMaxLiveMinutes.value);
+  const filtered = lessonDurationOptions.filter((option) => option.minutes <= maxMinutes);
+  return filtered.length ? filtered : [{ label: `${maxMinutes} min`, minutes: maxMinutes }];
+});
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
 const durationLabel = computed(() => {
   const minutes = activeSessionDurationMinutes.value || selectedLessonDurationMinutes.value || 45;
@@ -348,6 +362,7 @@ const apiStatusLabel = computed(() => {
 onMounted(async () => {
   await loadMicDevices();
   await checkApiHealth();
+  await fetchLicenseStatus();
   apiPingTimer = setInterval(checkApiHealth, 10000);
   if (!state.lesson) {
     const lessons = await fetchLessons();
@@ -359,14 +374,93 @@ onMounted(async () => {
 onUnmounted(() => {
   if (timer.value) clearInterval(timer.value);
   if (analyserTimer.value) clearInterval(analyserTimer.value);
+  if (coverageRefreshTimer.value) clearTimeout(coverageRefreshTimer.value);
   if (apiPingTimer) clearInterval(apiPingTimer);
   stopMicMeter();
   recognition.value?.stop();
 });
 
+async function refreshCoverageThrottled(force = false) {
+  if (!state.lesson?.id) return;
+  const now = Date.now();
+  if (!force && now - lastCoverageRefreshMs.value < COVERAGE_REFRESH_MIN_INTERVAL_MS) return;
+
+  lastCoverageRefreshMs.value = now;
+  try {
+    await refreshCoverage(state.lesson.id);
+  } catch (e) {
+    info.value = `Błąd odświeżania pokrycia: ${e.message || "nieznany"}`;
+  }
+}
+
+async function fetchLicenseStatus() {
+  const demoInfoPrefix = "Tryb demo ogranicza czas lekcji live";
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) {
+      demoMaxLiveMinutes.value = null;
+      if (String(info.value || "").startsWith(demoInfoPrefix)) {
+        info.value = "";
+      }
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/account/license-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      demoMaxLiveMinutes.value = null;
+      if (String(info.value || "").startsWith(demoInfoPrefix)) {
+        info.value = "";
+      }
+      return;
+    }
+
+    const isDemo = payload?.isDemoLicense === true || payload?.license?.demoMode === true;
+    const maxMinutes = Number(payload?.demoLimits?.maxLiveMinutes || 0);
+    demoMaxLiveMinutes.value = isDemo && maxMinutes > 0 ? maxMinutes : null;
+
+    if (!isDemo && String(info.value || "").startsWith(demoInfoPrefix)) {
+      info.value = "";
+    }
+
+    if (isDemo && maxMinutes > 0 && selectedLessonDurationMinutes.value > maxMinutes) {
+      selectedLessonDurationMinutes.value = maxMinutes;
+      info.value = `Tryb demo ogranicza czas lekcji live do ${maxMinutes} minut.`;
+    }
+  } catch {
+    demoMaxLiveMinutes.value = null;
+    if (String(info.value || "").startsWith(demoInfoPrefix)) {
+      info.value = "";
+    }
+  }
+}
+
+function scheduleCoverageRefresh() {
+  if (!state.lesson?.id) return;
+
+  const now = Date.now();
+  const elapsedSinceLast = now - lastCoverageRefreshMs.value;
+  const delay = Math.max(0, COVERAGE_REFRESH_MIN_INTERVAL_MS - elapsedSinceLast);
+
+  if (delay === 0) {
+    void refreshCoverageThrottled(false);
+    return;
+  }
+
+  if (coverageRefreshTimer.value) return;
+  coverageRefreshTimer.value = setTimeout(() => {
+    coverageRefreshTimer.value = null;
+    void refreshCoverageThrottled(false);
+  }, delay);
+}
+
 async function startSession() {
   try {
     error.value = "";
+    await fetchLicenseStatus();
     if (!state.lesson) {
       error.value = "Brak lekcji. Najpierw utwórz plan.";
       return;
@@ -404,6 +498,11 @@ function stopSession() {
   analyserTimer.value = null;
   stopMicMeter();
   sttStatus.value = "idle";
+  if (coverageRefreshTimer.value) {
+    clearTimeout(coverageRefreshTimer.value);
+    coverageRefreshTimer.value = null;
+  }
+  void refreshCoverageThrottled(true);
 }
 
 async function beginMic() {
@@ -451,7 +550,7 @@ async function beginMic() {
       // Fire and forget to keep UI captions responsive.
       if (state.lesson?.id) {
         sendTranscript(state.lesson.id, finalText)
-          .then(() => refreshCoverage(state.lesson.id))
+          .then(() => scheduleCoverageRefresh())
           .catch((e) => {
             info.value = `Błąd wysyłki transkrypcji: ${e.message || "nieznany"}`;
           });
@@ -549,7 +648,7 @@ async function beginWhisperMode() {
         lastFinalCaption.value = text;
         transcription.value.push(text);
         await sendTranscript(state.lesson.id, text);
-        await refreshCoverage(state.lesson.id);
+        scheduleCoverageRefresh();
         interimCaption.value = "";
       }
       if (data.limitReached) {
