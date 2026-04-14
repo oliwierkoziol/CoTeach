@@ -75,10 +75,15 @@
                 : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)]'
             ]"
           >
-            <!-- Document Icon -->
-            <svg class="h-[20px] w-[20px] shrink-0 fill-current opacity-90" viewBox="0 0 20 20">
-              <path d="M7 2h7l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2h3zm1 0v4h4L8 2zm8 16V7h-5V2H4v16h14zm-4-4v2H7v-2h7zm2-4v2H7v-2h9z" />
-            </svg>
+            <!-- Note Icon -->
+            <img
+              :src="archiveIcon"
+              alt="Archive icon"
+              :class="[
+                'h-[20px] w-[20px] shrink-0 opacity-90 transition-all',
+                selectedNoteId === note.id ? 'brightness-0 invert' : ''
+              ]"
+            />
             <div class="flex flex-col justify-center font-['Plus_Jakarta_Sans'] font-bold text-[14px]">
               <p class="leading-[18px] truncate max-w-[130px]">{{ note.title || 'Brak tytułu' }}</p>
               <p class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[130px] mt-0.5" :class="selectedNoteId === note.id ? 'text-white' : 'text-[#454652]'">{{ note.subject || 'Brak przedmiotu' }}</p>
@@ -168,6 +173,7 @@
 import { computed, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import archiveIcon from "../assets/archive.svg";
 
 const router = useRouter();
 const { state, createLesson, uploadLessonMaterial, savePlan, fetchTeacherNotes } = useLessonStore();

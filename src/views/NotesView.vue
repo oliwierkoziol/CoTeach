@@ -116,9 +116,7 @@
             <div class="flex flex-col items-center justify-center p-[34px] xl:pb-[34px] xl:pt-[11px] size-full">
               <!-- Icon -->
               <div class="bg-[#e6e8eb] flex items-center justify-center rounded-full shrink-0 size-[64px] mb-[24px]">
-                <svg class="w-[28px] h-[20px]" fill="none" viewBox="0 0 28 20">
-                   <path d="M19.35 7.04C18.67 3.05 15.33 0 11.25 0C7.81 0 4.88 2.34 3.79 5.6C1.61 6.13 0 8.08 0 10.5C0 13.54 2.46 16 5.5 16H19.5C21.98 16 24 13.98 24 11.5C24 9.14 22.18 7.24 19.35 7.04ZM14.25 10V13H8.25V10H4.5L11.25 3L18 10H14.25Z" fill="#0C3DFE" />
-                </svg>
+                <img :src="cloudIcon" alt="Cloud upload icon" class="w-[28px] h-[20px]" />
               </div>
               <!-- Texts -->
               <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-[20px] text-black text-center leading-[28px] max-w-[236px]">Prześlij plik z materiałem</h4>
@@ -168,6 +166,7 @@
 <script setup>
 import { ref } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
+import cloudIcon from "../assets/cloud.svg";
 
 let pdfMakeInstance = null;
 
@@ -179,7 +178,19 @@ async function getPdfMake() {
   ]);
   const pdfMake = pdfMakeModule.default || pdfMakeModule;
   const pdfFonts = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.vfs;
+
+  const resolvedVfs =
+    pdfFonts?.vfs ||
+    pdfFonts?.pdfMake?.vfs ||
+    pdfFonts?.default?.vfs ||
+    pdfFonts?.default?.pdfMake?.vfs;
+
+  if (typeof pdfMake.addVirtualFileSystem === "function" && resolvedVfs) {
+    pdfMake.addVirtualFileSystem(resolvedVfs);
+  } else if (resolvedVfs) {
+    pdfMake.vfs = resolvedVfs;
+  }
+
   pdfMakeInstance = pdfMake;
   return pdfMake;
 }
@@ -343,7 +354,28 @@ async function downloadNotePdf() {
   const fileName = `${sanitizeFileName(noteTitle)}.pdf`;
   try {
     const pdfMake = await getPdfMake();
-    pdfMake.createPdf(docDefinition).download(fileName);
+    const pdfDocument = pdfMake.createPdf(docDefinition);
+
+    if (typeof pdfDocument?.download === "function") {
+      pdfDocument.download(fileName);
+      return;
+    }
+
+    if (typeof pdfDocument?.getBlob === "function") {
+      pdfDocument.getBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
+      return;
+    }
+
+    throw new Error("Biblioteka PDF nie obsługuje pobierania.");
   } catch (e) {
     error.value = e?.message || "Nie udało się przygotować pliku PDF.";
   }
