@@ -90,6 +90,7 @@ import { supabase } from "../supabase";
 import blockedImage from "../assets/czarek.jpg";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
+const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
 const route = useRoute();
 
 const email = ref("");
@@ -126,6 +127,9 @@ async function syncProfileAfterLogin(session) {
   const pending = readPendingProfileSeed();
   const authEmail = String(user.email || "").trim().toLowerCase();
   const metadataName = String(user.user_metadata?.full_name || "").trim();
+  const metadataAvatar = String(
+    user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.photo_url || ""
+  ).trim();
   const fullName =
     pending && pending.email === authEmail && pending.full_name ? pending.full_name : metadataName;
 
@@ -142,6 +146,7 @@ async function syncProfileAfterLogin(session) {
       id: user.id,
       email: authEmail || null,
       full_name: fullName || null,
+      avatar_url: metadataAvatar || null,
       teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
@@ -202,7 +207,8 @@ async function handleLogin() {
 async function handleGoogleAuth() {
   errorMessage.value = "";
 
-  const redirectTo = `${window.location.origin}/dashboard`;
+  localStorage.setItem(GOOGLE_AUTH_INTENT_KEY, "login");
+  const redirectTo = `${window.location.origin}/login`;
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -211,13 +217,63 @@ async function handleGoogleAuth() {
   });
 
   if (error) {
+    localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
     errorMessage.value = error.message;
   }
 }
 
-onMounted(() => {
+async function handleGoogleIntentAfterRedirect() {
+  const intent = String(localStorage.getItem(GOOGLE_AUTH_INTENT_KEY) || "").trim();
+  if (!intent) return;
+
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session;
+  if (!session?.user?.id) return;
+
+  const provider = String(session.user?.app_metadata?.provider || "").toLowerCase();
+  if (provider !== "google") {
+    localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
+    return;
+  }
+
+  if (intent === "login") {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, blocked")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (!profileError && profile?.blocked === true) {
+      await supabase.auth.signOut({ scope: "local" });
+      localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
+      setBlockedError();
+      return;
+    }
+
+    if (!profile || profileError) {
+      await supabase.auth.signOut({ scope: "local" });
+      localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
+      errorMessage.value = "To konto nie jest zarejestrowane przez Google. Użyj najpierw rejestracji.";
+      return;
+    }
+  }
+
+  if (intent === "register") {
+    try {
+      await syncProfileAfterLogin(session);
+    } catch {
+      // Keep OAuth flow working even if profile sync fails transiently.
+    }
+  }
+
+  localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
+  window.location.assign("/dashboard");
+}
+
+onMounted(async () => {
   if (String(route.query.blocked || "") === "1") {
     setBlockedError();
   }
+  await handleGoogleIntentAfterRedirect();
 });
 </script>

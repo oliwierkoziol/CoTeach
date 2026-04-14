@@ -93,6 +93,7 @@ import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
+const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
 
 const router = useRouter();
 const name = ref("");
@@ -180,7 +181,8 @@ async function handleGoogleAuth() {
     );
   }
 
-  const redirectTo = `${window.location.origin}/dashboard`;
+  localStorage.setItem(GOOGLE_AUTH_INTENT_KEY, "register");
+  const redirectTo = `${window.location.origin}/login`;
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -189,6 +191,7 @@ async function handleGoogleAuth() {
   });
 
   if (error) {
+    localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
     errorMessage.value = error.message;
   }
 }
