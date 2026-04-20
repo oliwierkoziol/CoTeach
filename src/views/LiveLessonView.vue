@@ -216,14 +216,14 @@
             </h3>
           </div>
           <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#0053db] text-[14px]">
-            {{ Math.floor(elapsedSec / 60) }} / {{ activeSessionDurationMinutes }} Minutes
+            {{ lessonProgressTimeLabel }}
           </p>
         </div>
 
         <div class="bg-[#d9e4ea] h-8 rounded-2xl overflow-hidden relative">
           <div 
             class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
-            :style="{ width: `${Math.min(100, Math.floor((elapsedSec / (activeSessionDurationMinutes * 60)) * 100))}%` }" 
+            :style="{ width: `${lessonProgressPercent}%` }" 
           />
           <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30" />
           <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
@@ -351,6 +351,12 @@ const availableLessonDurationOptions = computed(() => {
   return filtered.length ? filtered : [{ label: `${maxMinutes} min`, minutes: maxMinutes }];
 });
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
+const elapsedMinutes = computed(() => Math.floor(elapsedSec.value / 60));
+const elapsedSecondsRemainder = computed(() => elapsedSec.value % 60);
+const lessonProgressTimeLabel = computed(
+  () =>
+    `${elapsedMinutes.value} minut ${elapsedSecondsRemainder.value} sekund / ${activeSessionDurationMinutes.value} minut`
+);
 const durationLabel = computed(() => {
   const minutes = activeSessionDurationMinutes.value || selectedLessonDurationMinutes.value || 45;
   const hours = Math.floor(minutes / 60);
@@ -374,21 +380,53 @@ const apiStatusLabel = computed(() => {
   return "sprawdzanie";
 });
 
+const lessonProgressPercent = computed(() => {
+  const totalSeconds = Math.max(1, activeSessionDurationMinutes.value * 60);
+  return Math.min(100, Math.floor((elapsedSec.value / totalSeconds) * 100));
+});
+
+function resolveLessonDurationMinutes(lesson) {
+  const parsedLength = Number(lesson?.length);
+  let minutes = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
+  if (isDemoLicense.value && Number(demoMaxLiveMinutes.value) > 0) {
+    minutes = Math.min(minutes, Number(demoMaxLiveMinutes.value));
+  }
+  return Math.max(1, minutes);
+}
+
+function hydrateLessonProgressFromState() {
+  if (!state.lesson) return;
+  activeSessionDurationMinutes.value = resolveLessonDurationMinutes(state.lesson);
+  const startedAtMs = new Date(state.lesson?.startedAt || 0).getTime();
+  const nowMs = Date.now();
+  startAt.value = Number.isFinite(startedAtMs) && startedAtMs > 0 ? startedAtMs : nowMs;
+  elapsedSec.value = Math.max(0, Math.floor((nowMs - startAt.value) / 1000));
+}
+
 onMounted(async () => {
-  await loadMicDevices();
-  await checkApiHealth();
-  await fetchLicenseStatus();
-  apiPingTimer = setInterval(checkApiHealth, 10000);
   const routeLessonId = String(route.params.lessonId || "").trim();
   const currentLessonId = String(state.lesson?.id || "").trim();
+  let cachedRouteLesson = null;
   if (routeLessonId) {
-    const cachedRouteLesson = hydrateLessonFromCache(routeLessonId);
+    cachedRouteLesson = hydrateLessonFromCache(routeLessonId);
+    if (cachedRouteLesson) {
+      hydrateLessonProgressFromState();
+    }
+  }
+
+  // Do not block lesson UI hydration on secondary async tasks.
+  void loadMicDevices();
+  void checkApiHealth();
+  void fetchLicenseStatus();
+  apiPingTimer = setInterval(checkApiHealth, 10000);
+  if (routeLessonId) {
     if (routeLessonId !== currentLessonId) {
       if (cachedRouteLesson) {
         // Render instantly from local cache, then silently refresh.
         void fetchLesson(routeLessonId);
       } else {
         await fetchLesson(routeLessonId);
+        hydrateLessonProgressFromState();
       }
     } else {
       // Keep UI instant when returning, but refresh lesson in background.
@@ -397,7 +435,12 @@ onMounted(async () => {
   } else if (!state.lesson) {
     const lessons = await fetchLessons();
     const target = lessons[0];
-    if (target) state.lesson = target;
+    if (target) {
+      state.lesson = target;
+      hydrateLessonProgressFromState();
+    }
+  } else {
+    hydrateLessonProgressFromState();
   }
   if (!isRecording.value) {
     startSession();
@@ -498,14 +541,12 @@ async function startSession() {
       error.value = "Brak lekcji. Najpierw utwórz plan.";
       return;
     }
-    activeSessionDurationMinutes.value = selectedLessonDurationMinutes.value || 45;
+    hydrateLessonProgressFromState();
     if (state.lesson.status !== "live") {
       await startLive(state.lesson.id);
+      hydrateLessonProgressFromState();
     }
-    await beginMic();
-    isRecording.value = true;
-    elapsedSec.value = 0;
-    startAt.value = Date.now();
+    if (timer.value) clearInterval(timer.value);
     timer.value = setInterval(() => {
       elapsedSec.value = Math.floor((Date.now() - startAt.value) / 1000);
       if (elapsedSec.value >= activeSessionDurationMinutes.value * 60) {
@@ -513,6 +554,8 @@ async function startSession() {
         stopSession();
       }
     }, 1000);
+    await beginMic();
+    isRecording.value = true;
   } catch (e) {
     error.value = e.message;
     sttStatus.value = "error";
