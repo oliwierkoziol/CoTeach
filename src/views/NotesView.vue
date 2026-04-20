@@ -309,6 +309,9 @@ function sanitizeFileName(value) {
 }
 
 async function downloadNotePdf() {
+  error.value = "";
+  info.value = "";
+
   const noteTitle = String(title.value || "Notatka").trim();
   const noteSubject = String(subject.value || "").trim();
   const noteClass = String(classLevel.value || "").trim();
@@ -361,26 +364,56 @@ async function downloadNotePdf() {
 
     if (typeof pdfDocument?.download === "function") {
       pdfDocument.download(fileName);
+      info.value = "Pobieranie notatki rozpoczęte.";
       return;
     }
 
     if (typeof pdfDocument?.getBlob === "function") {
-      pdfDocument.getBlob((blob) => {
+      const maybePromise = pdfDocument.getBlob((blob) => {
+        if (!blob) return;
+        if (window.navigator?.msSaveOrOpenBlob) {
+          window.navigator.msSaveOrOpenBlob(blob, fileName);
+          return;
+        }
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.download = fileName;
+        link.rel = "noopener";
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
-      return;
+
+      if (maybePromise && typeof maybePromise.then === "function") {
+        const blob = await maybePromise;
+        if (blob) {
+          if (window.navigator?.msSaveOrOpenBlob) {
+            window.navigator.msSaveOrOpenBlob(blob, fileName);
+          } else {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            link.rel = "noopener";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }
+          info.value = "Pobieranie notatki rozpoczęte.";
+          return;
+        }
+      } else {
+        info.value = "Pobieranie notatki rozpoczęte.";
+        return;
+      }
     }
 
-    throw new Error("Biblioteka PDF nie obsługuje pobierania.");
+    throw new Error("Biblioteka PDF nie obsługuje pobierania pliku.");
   } catch (e) {
-    error.value = e?.message || "Nie udało się przygotować pliku PDF.";
+    error.value = e?.message || "Nie udało się pobrać notatki jako PDF.";
   }
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
+  <div class="app-shell min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
     <header
-      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 text-foreground backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
