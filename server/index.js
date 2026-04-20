@@ -551,6 +551,8 @@ function getOwnedLessonOrRespond(req, res, teacherId, schoolId = null) {
 }
 
 function rowToLesson(row) {
+  const parsedLength = Number(row.length);
+  const normalizedLength = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
   return {
     id: row.id,
     schoolId: row.school_id,
@@ -560,6 +562,7 @@ function rowToLesson(row) {
     month: row.month,
     date: row.date,
     status: row.status,
+    length: normalizedLength,
     sourceFiles: parseJsonArray(row.source_files),
     plan: parseJsonArray(row.plan),
     transcripts: parseJsonArray(row.transcripts),
@@ -602,6 +605,8 @@ function rowToSavedNote(row) {
 }
 
 function lessonToRow(lesson) {
+  const parsedLength = Number(lesson.length);
+  const normalizedLength = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
   return {
     id: lesson.id,
     school_id: lesson.schoolId,
@@ -611,6 +616,7 @@ function lessonToRow(lesson) {
     month: lesson.month,
     date: lesson.date,
     status: lesson.status,
+    length: normalizedLength,
     source_files: lesson.sourceFiles || [],
     plan: lesson.plan || [],
     transcripts: lesson.transcripts || [],
@@ -753,6 +759,39 @@ async function persistLessonSafe(lesson) {
   } catch (error) {
     console.error(error.message);
   }
+}
+
+function resolveLessonLengthMinutes(lesson) {
+  const parsedLength = Number(lesson?.length);
+  if (!Number.isFinite(parsedLength) || parsedLength <= 0) return 45;
+  return Math.round(parsedLength);
+}
+
+function shouldAutoFinishLesson(lesson, nowMs = Date.now()) {
+  if (!lesson || lesson.status !== "live") return false;
+  const startedAtMs = new Date(lesson.startedAt || 0).getTime();
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return false;
+  const targetMs = startedAtMs + resolveLessonLengthMinutes(lesson) * 60 * 1000;
+  return nowMs >= targetMs;
+}
+
+function markLessonFinished(lesson, nowIso = new Date().toISOString()) {
+  lesson.status = "finished";
+  lesson.finishedAt = lesson.finishedAt || nowIso;
+}
+
+async function autoFinishDueLessons() {
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const dueLessons = [...db.lessons.values()].filter((lesson) => shouldAutoFinishLesson(lesson, nowMs));
+  if (!dueLessons.length) return;
+  await Promise.all(
+    dueLessons.map(async (lesson) => {
+      markLessonFinished(lesson, nowIso);
+      db.lessons.set(lesson.id, lesson);
+      await persistLessonSafe(lesson);
+    })
+  );
 }
 
 async function persistFinalNote(finalNote, teacherId) {
@@ -1594,7 +1633,7 @@ app.post("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
-  const { title, subject, month, date, rawText = "" } = req.body || {};
+  const { title, subject, month, date, rawText = "", length } = req.body || {};
   if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
   const activeLicense = getActiveUserLicense(teacher.userId);
@@ -1611,6 +1650,7 @@ app.post("/api/lessons", async (req, res) => {
     month: normalizedMonth,
     date: normalizedDate,
     status: "draft",
+    length: resolveLessonLengthMinutes({ length }),
     sourceFiles: [],
     plan: [],
     transcripts: [],
@@ -1644,6 +1684,7 @@ app.post("/api/lessons", async (req, res) => {
 app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await autoFinishDueLessons();
 
   const lessons = [...db.lessons.values()].filter((lesson) => {
     return String(lesson.teacherId) === teacher.teacherId && String(lesson.schoolId || "") === String(teacher.schoolId || "");
@@ -1868,6 +1909,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.status = "live";
+  lesson.finishedAt = null;
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -1887,6 +1929,12 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
+  if (shouldAutoFinishLesson(lesson)) {
+    markLessonFinished(lesson);
+    db.lessons.set(lesson.id, lesson);
+    await persistLessonSafe(lesson);
+    return res.status(409).json({ error: "Lekcja została automatycznie zakończona po upływie ustawionego czasu." });
+  }
   if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
@@ -2799,6 +2847,11 @@ loadSchoolsFromSupabase()
     console.error(`Persistence bootstrap failed: ${error.message}`);
   })
   .finally(() => {
+    setInterval(() => {
+      autoFinishDueLessons().catch((error) => {
+        console.error("Auto-finish due lessons failed:", error.message || error);
+      });
+    }, 10_000);
     app.listen(port, () => {
       console.log(`API listening at http://localhost:${port}`);
     });

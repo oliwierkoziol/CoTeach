@@ -16,7 +16,7 @@
         Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
       </h1>
       <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-        Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.
+        Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
       </p>
     </div>
 
@@ -474,7 +474,9 @@ async function startSession() {
       return;
     }
     activeSessionDurationMinutes.value = selectedLessonDurationMinutes.value || 45;
-    await startLive(state.lesson.id);
+    if (state.lesson.status !== "live") {
+      await startLive(state.lesson.id);
+    }
     await beginMic();
     isRecording.value = true;
     elapsedSec.value = 0;
@@ -777,8 +779,21 @@ function goPresentation() {
 
 async function finalizeNow() {
   if (!state.lesson) return;
-  const note = await finalizeLesson(state.lesson.id, window.location.origin);
-  router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
+  try {
+    error.value = "";
+    stopSession();
+    const note = await finalizeLesson(state.lesson.id, window.location.origin);
+    if (state.lesson) {
+      state.lesson = {
+        ...state.lesson,
+        status: "finished",
+        finishedAt: new Date().toISOString()
+      };
+    }
+    router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
+  } catch (e) {
+    error.value = e.message || "Nie udało się zakończyć lekcji.";
+  }
 }
 
 async function toggleManualApproval(point) {

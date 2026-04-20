@@ -9,6 +9,15 @@ function normalizeBaseUrl(url) {
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 
+function upsertLessonInState(lesson) {
+  if (!lesson?.id) return;
+  const existingLessons = Array.isArray(state.lessons) ? state.lessons : [];
+  const exists = existingLessons.some((item) => item?.id === lesson.id);
+  state.lessons = exists
+    ? existingLessons.map((item) => (item?.id === lesson.id ? lesson : item))
+    : [lesson, ...existingLessons];
+}
+
 const state = reactive({
   lesson: null,
   lessons: [],
@@ -80,6 +89,7 @@ export function useLessonStore() {
       body: JSON.stringify(payload)
     });
     state.lesson = data.lesson;
+    upsertLessonInState(data.lesson);
     return data.lesson;
   }
 
@@ -91,6 +101,7 @@ export function useLessonStore() {
     if (file) form.set("file", file);
     const data = await api(`/api/lessons/${lessonId}/upload`, { method: "POST", body: form });
     state.lesson = data.lesson;
+    upsertLessonInState(data.lesson);
     state.info = `Analiza zakonczona. Wykryto ${data.lesson.plan.length} tematow.`;
     return data.lesson;
   }
@@ -102,12 +113,14 @@ export function useLessonStore() {
       body: JSON.stringify({ plan })
     });
     state.lesson = data.lesson;
+    upsertLessonInState(data.lesson);
     return data.lesson;
   }
 
   async function startLive(lessonId) {
     const data = await api(`/api/lessons/${lessonId}/live/start`, { method: "POST" });
     state.lesson = data.lesson;
+    upsertLessonInState(data.lesson);
     return data.lesson;
   }
 
@@ -148,6 +161,12 @@ export function useLessonStore() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ baseUrl })
     });
+    if (state.lesson?.id === lessonId) {
+      const nowIso = new Date().toISOString();
+      const finishedLesson = { ...state.lesson, status: "finished", finishedAt: nowIso };
+      state.lesson = finishedLesson;
+      upsertLessonInState(finishedLesson);
+    }
     state.shareUrl = data.finalNote.shareUrl;
     return data.finalNote;
   }
