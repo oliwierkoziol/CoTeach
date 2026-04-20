@@ -30,6 +30,7 @@ const port = Number(process.env.PORT || 3001);
 
 const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
 const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
@@ -64,6 +65,10 @@ const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
 );
 const PLAN_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_planu_lekcji_json.txt"),
+  "utf8"
+);
+const PRESENTATION_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_prezentacji_json.txt"),
   "utf8"
 );
 
@@ -1157,6 +1162,134 @@ function mapPlanItem(item, index) {
   };
 }
 
+function normalizePresentationSlide(rawSlide, index) {
+  const allowedTypes = new Set(["title", "agenda", "concept", "example", "comparison", "practice", "summary", "next_steps"]);
+  const normalizedType = String(rawSlide?.type || "").trim().toLowerCase();
+  const title = String(rawSlide?.title || rawSlide?.tytul || "").trim() || `Slajd ${index + 1}`;
+  const subtitle = String(rawSlide?.subtitle || rawSlide?.podtytul || "").trim();
+  const summary = String(rawSlide?.summary || rawSlide?.streszczenie || "").trim();
+  const detailsRaw = Array.isArray(rawSlide?.details)
+    ? rawSlide.details
+    : Array.isArray(rawSlide?.punkty)
+      ? rawSlide.punkty
+      : [];
+  const details = detailsRaw
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  const visualHint = String(rawSlide?.visualHint || rawSlide?.wskazowkaWizualna || "").trim();
+
+  return {
+    id: rawSlide?.id || randomUUID(),
+    type: allowedTypes.has(normalizedType) ? normalizedType : "concept",
+    title: title.slice(0, 120),
+    subtitle: subtitle.slice(0, 180),
+    summary: summary.slice(0, 500),
+    details,
+    visualHint: visualHint.slice(0, 220)
+  };
+}
+
+function fallbackPresentationSlides({ lessonTitle, scope, plan, noteContent, maxSlides = 12 }) {
+  const safePlan = Array.isArray(plan) ? plan : [];
+  const fallbackTypes = ["title", "agenda", "concept", "example", "practice", "summary"];
+  if (safePlan.length) {
+    return safePlan.slice(0, maxSlides).map((point, index) => ({
+      id: randomUUID(),
+      type: fallbackTypes[Math.min(index, fallbackTypes.length - 1)] || "concept",
+      title: String(point?.title || `Slajd ${index + 1}`).slice(0, 120),
+      subtitle: index === 0 ? `${lessonTitle || "Prezentacja"} • ${scope === "full" ? "cała lekcja" : "nieomówione punkty"}` : "",
+      summary: String(point?.description || "").slice(0, 450),
+      details: Array.isArray(point?.keywords) ? point.keywords.slice(0, 5) : [],
+      visualHint: index % 2 === 0 ? "diagram procesu" : "lista punktów"
+    }));
+  }
+
+  const chunks = String(noteContent || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxSlides);
+
+  return chunks.map((line, index) => ({
+    id: randomUUID(),
+    type: fallbackTypes[Math.min(index, fallbackTypes.length - 1)] || "concept",
+    title: `Slajd ${index + 1}`,
+    subtitle: "",
+    summary: line.slice(0, 450),
+    details: [],
+    visualHint: "lista punktów"
+  }));
+}
+
+async function generatePresentationWithLLM({
+  noteContent,
+  lessonTitle,
+  lessonSubject,
+  classLevel,
+  scope,
+  plan,
+  maxSlides = 12,
+  context = {}
+}) {
+  const safeMaxSlides = Math.max(4, Math.min(Number(maxSlides || 12), 20));
+  const safeScope = scope === "full" ? "full" : "pending";
+  const safeNote = String(noteContent || "").trim();
+  const safePlan = Array.isArray(plan) ? plan : [];
+  if (!safeNote && !safePlan.length) return [];
+
+  const prompt = PRESENTATION_PROMPT_TEMPLATE
+    .replace("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
+    .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
+    .replace("[KLASA]", String(classLevel || "Nie podano"))
+    .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
+    .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
+    .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
+    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
+
+  try {
+    const out = await callOpenRouter({
+      model: OPENROUTER_PRESENTATION_MODEL,
+      parts: [{ text: prompt }],
+      maxTokens: Math.max(2500, Math.min(5000, OPENROUTER_MAX_TOKENS + 1000))
+    });
+    const parsed = parseJsonFromModel(out.text);
+    const slidesRaw = Array.isArray(parsed?.slides) ? parsed.slides : Array.isArray(parsed) ? parsed : [];
+    const slides = slidesRaw.slice(0, safeMaxSlides).map((slide, index) => normalizePresentationSlide(slide, index));
+    if (!slides.length) {
+      throw new Error("Empty slides");
+    }
+
+    recordCostFromBase({
+      lessonId: context.lessonId || null,
+      schoolId: context.schoolId || null,
+      teacherId: context.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "presentation_generation",
+      category: "presentation",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+
+    return slides;
+  } catch {
+    return fallbackPresentationSlides({
+      lessonTitle,
+      scope: safeScope,
+      plan: safePlan,
+      noteContent: safeNote,
+      maxSlides: safeMaxSlides
+    });
+  }
+}
+
 async function generatePlanWithLLM(rawText, context = {}) {
   if (!rawText?.trim()) return [];
 
@@ -1730,6 +1863,84 @@ app.post("/api/notes/generate", async (req, res) => {
     return res.json({ note });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Failed to generate note." });
+  }
+});
+
+app.post("/api/presentations/generate", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji AI")) return;
+
+    const lessonId = String(req.body?.lessonId || "").trim();
+    const noteId = String(req.body?.noteId || "").trim();
+    const classLevel = String(req.body?.classLevel || "").trim();
+    const scope = String(req.body?.scope || "pending").trim() === "full" ? "full" : "pending";
+    const maxSlides = Number(req.body?.maxSlides || 12);
+
+    let lesson = null;
+    if (lessonId) {
+      lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+      if (!lesson) return;
+    } else {
+      lesson = [...db.lessons.values()].find((item) => {
+        return String(item.teacherId) === String(teacher.teacherId) && String(item.schoolId || "") === String(teacher.schoolId || "");
+      }) || null;
+    }
+
+    let note = null;
+    if (noteId) {
+      const candidate = db.notes.get(noteId);
+      if (!candidate) return res.status(404).json({ error: "Note not found" });
+      if (String(candidate.teacherId) !== String(teacher.teacherId) || String(candidate.schoolId || "") !== String(teacher.schoolId || "")) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      note = candidate;
+    }
+
+    const lessonPlan = Array.isArray(lesson?.plan) ? lesson.plan : [];
+    const scopedPlan = scope === "full" ? lessonPlan : lessonPlan.filter((point) => point?.status !== "discussed");
+    const noteContent = String(
+      note?.content ||
+      lesson?.sourceFiles?.[lesson.sourceFiles.length - 1]?.extractedText ||
+      ""
+    ).trim();
+
+    if (!scopedPlan.length && !noteContent) {
+      return res.status(400).json({ error: "Brak danych do wygenerowania prezentacji (plan i notatka są puste)." });
+    }
+
+    const slides = await generatePresentationWithLLM({
+      noteContent,
+      lessonTitle: lesson?.title || note?.title || "Prezentacja",
+      lessonSubject: lesson?.subject || note?.subject || "",
+      classLevel: classLevel || note?.classLevel || "",
+      scope,
+      plan: scopedPlan,
+      maxSlides,
+      context: {
+        lessonId: lesson?.id || null,
+        schoolId: teacher.schoolId,
+        teacherId: teacher.teacherId
+      }
+    });
+
+    const presentation = {
+      id: randomUUID(),
+      lessonId: lesson?.id || null,
+      noteId: note?.id || null,
+      scope,
+      classLevel: classLevel || note?.classLevel || "",
+      title: `${lesson?.title || note?.title || "Prezentacja"} (${new Date().toLocaleDateString("pl-PL")})`,
+      subject: lesson?.subject || note?.subject || "",
+      slideCount: slides.length,
+      slides,
+      createdAt: new Date().toISOString()
+    };
+
+    return res.json({ presentation });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Nie udało się wygenerować prezentacji." });
   }
 });
 
@@ -2737,6 +2948,7 @@ app.get("/api/health", (_req, res) => {
     service: "lesson-planning-api",
     aiProvider: "openrouter+openai-whisper",
     textModel: OPENROUTER_TEXT_MODEL,
+    presentationModel: OPENROUTER_PRESENTATION_MODEL,
     visionModel: OPENROUTER_VISION_MODEL,
     sttModel: "whisper-1",
     whisperEnabled: Boolean(openai),

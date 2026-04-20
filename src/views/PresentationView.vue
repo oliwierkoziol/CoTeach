@@ -7,15 +7,17 @@
         <div class="max-w-5xl w-full">
           <div class="rounded-3xl bg-gradient-to-br from-purple-600 to-pink-600 p-12 text-white shadow-2xl">
             <div class="mb-8">
-              <h1 class="text-5xl font-bold mb-4">{{ current.point.title }}</h1>
+              <p class="mb-3 text-sm uppercase tracking-[0.18em] text-white/70">{{ slideTypeLabel(current.type) }}</p>
+              <h1 class="text-5xl font-bold mb-4">{{ current.title }}</h1>
+              <p v-if="current.subtitle" class="mb-5 text-lg text-white/85">{{ current.subtitle }}</p>
               <div class="flex flex-wrap gap-2">
-                <span v-for="k in current.point.keywords" :key="k" class="px-4 py-2 bg-white/20 rounded-full text-lg">{{ k }}</span>
+                <span v-for="k in current.details" :key="k" class="px-4 py-2 bg-white/20 rounded-full text-lg">{{ k }}</span>
               </div>
             </div>
-            <p class="text-2xl leading-relaxed opacity-90 mb-8">{{ current.point.description }}</p>
+            <p class="text-2xl leading-relaxed opacity-90 mb-8">{{ current.summary }}</p>
             <div class="bg-white/10 rounded-2xl p-8 border-2 border-white/20">
               <div class="aspect-video bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center">
-                <p class="text-xl opacity-70">[Grafika DALL-E 3]</p>
+                <p class="text-xl opacity-70 text-center px-6">{{ current.visualHint || "[Sugerowana wizualizacja slajdu]" }}</p>
               </div>
             </div>
           </div>
@@ -38,7 +40,7 @@
   <div v-else-if="isGenerating" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900 to-pink-900 text-white">
     <div class="text-center text-white">
       <h2 class="text-3xl font-bold mb-2">Generuję prezentację...</h2>
-      <p class="text-purple-200">Tworzę slajdy z nieomówionych punktów.</p>
+      <p class="text-purple-200">Tworzę slajdy na podstawie notatki, planu i poziomu klasy.</p>
     </div>
   </div>
 
@@ -50,7 +52,7 @@
         Generator prezentacji
       </h2>
       <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px] font-normal">
-        Twórz prezentacje z wybranej lekcji i wracaj do poprzednich wersji.
+        Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.
       </p>
     </header>
 
@@ -83,6 +85,30 @@
           </select>
         </div>
       </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-5">
+        <div class="flex flex-col gap-2 w-full">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Notatka źródłowa</label>
+          <select
+            v-model="selectedNoteId"
+            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
+          >
+            <option value="">Automatycznie z lekcji</option>
+            <option v-for="note in availableNotes" :key="note.id" :value="note.id">
+              {{ note.title || "Bez tytułu" }}{{ note.subject ? ` (${note.subject})` : "" }}
+            </option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-2 w-full">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Poziom klasy</label>
+          <input
+            v-model="selectedClassLevel"
+            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
+            placeholder="np. 6 Szkoła Podstawowa"
+          />
+        </div>
+      </div>
+
       <p class="mt-5 font-['Plus_Jakarta_Sans'] text-[14px] text-[#454652]">
         Liczba slajdów do wygenerowania: <span class="font-bold text-[#191c1e]">{{ preparedSlides.length }}</span>
       </p>
@@ -99,7 +125,7 @@
         <button
           type="button"
           class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
-          :disabled="!preparedSlides.length"
+          :disabled="!preparedSlides.length || isGenerating"
           @click="startGeneratedPresentation"
         >
           Generuj prezentację
@@ -169,7 +195,7 @@ import { useLessonStore } from "../composables/useLessonStore";
 const PRESENTATION_HISTORY_KEY = "coteach:presentation-history";
 
 const route = useRoute();
-const { state, fetchLessons } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, generatePresentation } = useLessonStore();
 
 const isGenerating = ref(false);
 const isPresenting = ref(false);
@@ -179,35 +205,44 @@ const presentationHistory = ref([]);
 const selectedPresentation = ref(null);
 const selectedLessonId = ref("");
 const presentationScope = ref("pending");
+const selectedNoteId = ref("");
+const selectedClassLevel = ref("");
 
-const current = computed(() => slides.value[slideIndex.value] || { point: { title: "", keywords: [], description: "" } });
+const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
 const hasLessons = computed(() => availableLessons.value.length > 0);
+const availableNotes = computed(() => (Array.isArray(state.notes) ? state.notes : []));
 const selectedLesson = computed(() => availableLessons.value.find((lesson) => lesson.id === selectedLessonId.value) || null);
+const selectedNote = computed(() => availableNotes.value.find((note) => note.id === selectedNoteId.value) || null);
 const preparedSlides = computed(() => {
   const plan = Array.isArray(selectedLesson.value?.plan) ? selectedLesson.value.plan : [];
   if (presentationScope.value === "full") {
-    return plan.map((point) => ({ point, imageUrl: "" }));
+    return plan;
   }
-  return plan
-    .filter((point) => point.status !== "discussed")
-    .map((point) => ({ point, imageUrl: "" }));
+  return plan.filter((point) => point.status !== "discussed");
 });
 
 onMounted(async () => {
-  const lessonsResponse = await fetchLessons();
+  const [lessonsResponse] = await Promise.all([fetchLessons(), fetchTeacherNotes()]);
   const lessons = Array.isArray(lessonsResponse) ? lessonsResponse : [];
   const routeLessonId = String(route.params.lessonId || "");
   const byRoute = lessons.find((lesson) => lesson.id === routeLessonId);
   const byCurrent = state.lesson?.id ? lessons.find((lesson) => lesson.id === state.lesson.id) : null;
   const initialLesson = byRoute || byCurrent || lessons[0] || null;
   selectedLessonId.value = initialLesson?.id || "";
+  selectedClassLevel.value = selectedNote.value?.classLevel || "";
   state.lesson = initialLesson;
   loadPresentationHistory();
 });
 
 watch(selectedLesson, (lesson) => {
   state.lesson = lesson || null;
+});
+
+watch(selectedNote, (note) => {
+  if (!selectedClassLevel.value && note?.classLevel) {
+    selectedClassLevel.value = note.classLevel;
+  }
 });
 
 function loadPresentationHistory() {
@@ -222,11 +257,11 @@ function loadPresentationHistory() {
 }
 
 function persistPresentationHistory() {
-  localStorage.setItem(PRESENTATION_HISTORY_KEY, JSON.stringify(presentationHistory.value.slice(0, 15)));
+  localStorage.setItem(PRESENTATION_HISTORY_KEY, JSON.stringify(presentationHistory.value.slice(0, 20)));
 }
 
 function buildPresentationTitle() {
-  const subject = selectedLesson.value?.subject || selectedLesson.value?.title || "Prezentacja";
+  const subject = selectedLesson.value?.subject || selectedLesson.value?.title || selectedNote.value?.title || "Prezentacja";
   const scopeLabel = presentationScope.value === "full" ? "cała lekcja" : "nieomówione punkty";
   return `${subject} - ${scopeLabel} (${new Date().toLocaleDateString("pl-PL")})`;
 }
@@ -250,24 +285,37 @@ function startPresentation(currentSlides) {
   isPresenting.value = true;
 }
 
-function startGeneratedPresentation() {
+async function startGeneratedPresentation() {
   if (!preparedSlides.value.length) return;
 
   isGenerating.value = true;
-  setTimeout(() => {
-    const generatedSlides = preparedSlides.value.map((slide) => ({
-      point: {
-        title: slide.point.title,
-        keywords: Array.isArray(slide.point.keywords) ? slide.point.keywords : [],
-        description: slide.point.description || ""
-      },
-      imageUrl: ""
-    }));
+  try {
+    const generated = await generatePresentation({
+      lessonId: selectedLesson.value?.id || "",
+      noteId: selectedNote.value?.id || "",
+      classLevel: selectedClassLevel.value || selectedNote.value?.classLevel || "",
+      scope: presentationScope.value,
+      maxSlides: 12
+    });
+    const generatedSlides = (generated?.slides || [])
+      .map((slide) => ({
+        id: slide.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        type: String(slide.type || "concept").trim().toLowerCase(),
+        title: String(slide.title || "").trim(),
+        subtitle: String(slide.subtitle || "").trim(),
+        summary: String(slide.summary || "").trim(),
+        details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : [],
+        visualHint: String(slide.visualHint || "").trim()
+      }))
+      .filter((slide) => slide.title || slide.summary || slide.details.length);
+
+    if (!generatedSlides.length) return;
     savePresentationSnapshot(generatedSlides);
     startPresentation(generatedSlides);
-    isGenerating.value = false;
     loadPresentationHistory();
-  }, 900);
+  } finally {
+    isGenerating.value = false;
+  }
 }
 
 function openSavedPresentation(item) {
@@ -278,5 +326,18 @@ function openSavedPresentation(item) {
 
 function exitPresentation() {
   isPresenting.value = false;
+}
+
+function slideTypeLabel(type) {
+  const value = String(type || "").toLowerCase();
+  if (value === "title") return "Slajd tytułowy";
+  if (value === "agenda") return "Agenda";
+  if (value === "concept") return "Koncepcja";
+  if (value === "example") return "Przykład";
+  if (value === "comparison") return "Porównanie";
+  if (value === "practice") return "Ćwiczenie";
+  if (value === "summary") return "Podsumowanie";
+  if (value === "next_steps") return "Następne kroki";
+  return "Slajd";
 }
 </script>
