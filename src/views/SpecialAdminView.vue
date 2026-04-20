@@ -386,6 +386,13 @@
               />
               Tryb demo (ograniczenia: krótsza lekcja live, mniejsze limity i watermark)
             </label>
+
+            <div
+              v-if="actionError"
+              class="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              {{ actionError }}
+            </div>
           </div>
 
           <div class="mt-6 flex flex-wrap justify-end gap-2">
@@ -598,18 +605,25 @@ async function saveAllChanges() {
     const headers = await getAuthHeader();
     headers["Content-Type"] = "application/json";
 
-    const accountPayload = {
-      email: String(editEmail.value || "").trim(),
-      password: String(editPassword.value || "").trim()
-    };
+    const normalizedEmail = String(editEmail.value || "").trim().toLowerCase();
+    const originalEmail = String(editUser.value.email || "").trim().toLowerCase();
+    const trimmedPassword = String(editPassword.value || "").trim();
+    const shouldUpdateAccount = normalizedEmail !== originalEmail || Boolean(trimmedPassword);
 
-    const accountRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify(accountPayload)
-    });
-    const accountData = await readApiPayload(accountRes);
-    if (!accountRes.ok) throw new Error(accountData.error || "Nie udało się zapisać zmian konta.");
+    if (shouldUpdateAccount) {
+      const accountPayload = {
+        email: normalizedEmail,
+        password: trimmedPassword
+      };
+
+      const accountRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(accountPayload)
+      });
+      const accountData = await readApiPayload(accountRes);
+      if (!accountRes.ok) throw new Error(accountData.error || "Nie udało się zapisać zmian konta.");
+    }
 
     const licenseRes = await fetch(`${API_BASE}/api/admin/users/${editUser.value.id}/license`, {
       method: "PATCH",

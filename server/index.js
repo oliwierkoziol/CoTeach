@@ -432,6 +432,13 @@ function getRemainingLicenseDays(expiresAt) {
   return Math.ceil(remainingMs / DAY_MS);
 }
 
+function getErrorMessage(error, fallbackMessage) {
+  if (!error) return fallbackMessage;
+  if (typeof error === "string") return error;
+  if (typeof error.message === "string" && error.message.trim()) return error.message;
+  return fallbackMessage;
+}
+
 async function syncProfileLicenseState({ userId, activeLicense = null, profileSnapshot = null }) {
   if (!supabase || !userId) return;
 
@@ -1998,13 +2005,9 @@ app.get("/api/admin/users", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.json({ users: [] });
 
-  const adminSchool = await resolveAdminSchoolContext(req, res);
-  if (!adminSchool) return;
-
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, admin, blocked, school_id, created_at")
-    .eq("school_id", adminSchool.schoolId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -2077,7 +2080,6 @@ app.get("/api/admin/dashboard", async (req, res) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, admin, blocked, school_id, created_at")
-      .eq("school_id", adminSchool.schoolId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -2450,6 +2452,47 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   const days = Number(req.body?.days ?? 30);
   const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
   const hasDemoModeInput = typeof req.body?.demoMode === "boolean";
+  let licenseSchoolId = null;
+
+  if (supabase) {
+    const { data: targetProfile, error: targetProfileError } = await supabase
+      .from("profiles")
+      .select("id, school_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (targetProfileError) {
+      return res.status(500).json({ error: `Nie udało się pobrać profilu użytkownika: ${targetProfileError.message}` });
+    }
+    if (!targetProfile) {
+      return res.status(404).json({ error: "Użytkownik nie istnieje." });
+    }
+
+    const targetSchoolId = String(targetProfile.school_id || "").trim();
+    if (targetSchoolId && targetSchoolId !== adminSchool.schoolId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    if (targetSchoolId) {
+      licenseSchoolId = targetSchoolId;
+    }
+
+    if (licenseSchoolId) {
+      const { data: schoolRow, error: schoolError } = await supabase
+        .from("schools")
+        .select("id")
+        .eq("id", licenseSchoolId)
+        .maybeSingle();
+
+      if (schoolError) {
+        return res.status(500).json({ error: `Nie udało się zweryfikować szkoły użytkownika: ${schoolError.message}` });
+      }
+      if (!schoolRow) {
+        // Nie blokuj zwykłych użytkowników bez poprawnego school_id.
+        // Gdy wskazanie szkoły jest nieprawidłowe, zapisujemy licencję bez school_id.
+        licenseSchoolId = null;
+      }
+    }
+  }
 
   if (!Number.isFinite(days) || days < 0) {
     return res.status(400).json({ error: "Nieprawidłowa liczba dni licencji. Użyj wartości od 0 wzwyż." });
@@ -2460,22 +2503,34 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   }
 
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-  const licenseId = `license-user-${userId}`;
+  const fallbackLicenseId = randomUUID();
+  const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === userId) || null;
+  const licenseId = assignedLicense?.id || fallbackLicenseId;
 
-  const existing = db.licenses.get(licenseId);
+  const existing = db.licenses.get(licenseId) || assignedLicense;
   const previousLicense = existing ? { ...existing } : null;
 
   if (days === 0) {
     try {
-      await removeLicense(licenseId);
-      db.licenses.delete(licenseId);
-      await syncProfileLicenseState({ userId, activeLicense: null });
+      if (existing?.id) {
+        await removeLicense(existing.id);
+        db.licenses.delete(existing.id);
+      } else {
+        await removeLicense(licenseId);
+        db.licenses.delete(licenseId);
+      }
+      await syncProfileLicenseStateSafe({ userId, activeLicense: null });
       return res.json({ license: null, removed: true });
     } catch (error) {
+      console.error("[license-remove]", {
+        userId,
+        licenseId,
+        error
+      });
       if (previousLicense) {
         db.licenses.set(licenseId, previousLicense);
       }
-      return res.status(500).json({ error: error.message || "Nie udało się usunąć licencji." });
+      return res.status(500).json({ error: getErrorMessage(error, "Nie udało się usunąć licencji.") });
     }
   }
 
@@ -2485,21 +2540,32 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
     maxActiveUsers,
     expiresAt,
     demoMode: hasDemoModeInput ? req.body.demoMode === true : Boolean(existing?.demoMode),
-    schoolId: adminSchool.schoolId,
+    schoolId: licenseSchoolId,
     assignedUserId: userId
   };
 
   try {
     await persistLicense(license);
     db.licenses.set(licenseId, license);
-    await syncProfileLicenseState({ userId, activeLicense: license });
+    await syncProfileLicenseStateSafe({ userId, activeLicense: license });
   } catch (error) {
+    console.error("[license-upsert]", {
+      userId,
+      licenseId,
+      payload: {
+        maxActiveUsers,
+        expiresAt,
+        demoMode: hasDemoModeInput ? req.body.demoMode === true : Boolean(existing?.demoMode),
+        schoolId: licenseSchoolId
+      },
+      error
+    });
     if (previousLicense) {
       db.licenses.set(licenseId, previousLicense);
     } else {
       db.licenses.delete(licenseId);
     }
-    return res.status(500).json({ error: error.message || "Nie udało się zapisać licencji." });
+    return res.status(500).json({ error: getErrorMessage(error, "Nie udało się zapisać licencji.") });
   }
 
   return res.json({
