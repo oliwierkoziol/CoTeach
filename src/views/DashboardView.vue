@@ -78,26 +78,17 @@
       <!-- Card 4 -->
       <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 col-span-full">
         <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(0,83,219,0.08)] text-[#0053db]">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 5.5C4 4.67 4.67 4 5.5 4H18.5C19.33 4 20 4.67 20 5.5V18.5C20 19.33 19.33 20 18.5 20H5.5C4.67 20 4 19.33 4 18.5V5.5Z"
-                stroke="currentColor"
-                stroke-width="1.8"
-              />
-              <path d="M8 9H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-              <path d="M8 13H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-              <path d="M8 17H11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(76,0,128,0.1)] text-[#582300]">
+            <img :src="iconFour" alt="" class="h-5 w-5" />
           </div>
-          <div class="px-2 py-1 rounded bg-[rgba(0,83,219,0.05)] text-[#0053db]">
+          <div class="px-2 py-1 rounded bg-[rgba(76,0,128,0.05)] text-[#4c0080]">
             <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Powtórka</span>
           </div>
         </div>
 
-        <div v-if="previousLiveLesson" class="space-y-4">
-          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja live</p>
-          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[20px] leading-7 line-clamp-2">
+        <div v-if="previousLiveLesson" class="space-y-3">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja na żywo</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-7 line-clamp-2">
             {{ previousLiveLessonTitle }}
           </p>
           <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">
@@ -110,24 +101,24 @@
           </div>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-5 py-2.5 font-['Inter'] font-semibold text-[14px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer"
+            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer"
           >
-            <img :src="sparklesIcon" alt="" class="h-4 w-4" />
-            Wygeneruj podsumowanie
+          Wygeneruj podsumowanie AI
+          <img :src="sparklesIcon" alt="" class="h-4 w-4" />
           </button>
         </div>
-        <div v-else class="space-y-4">
-          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja live</p>
+        <div v-else class="space-y-3">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja na żywo</p>
           <p class="font-['Inter'] font-medium text-[#454652] text-[13px] leading-5">
             Brak zakończonych lekcji do powtórki.
           </p>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-5 py-2.5 font-['Inter'] font-semibold text-[14px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             disabled
           >
-            <img :src="sparklesIcon" alt="" class="h-4 w-4" />
-            Wygeneruj podsumowanie
+          Wygeneruj podsumowanie AI
+          <img :src="sparklesIcon" alt="" class="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -143,6 +134,7 @@ import { supabase } from "../supabase";
 import iconOne from "../assets/1.svg";
 import iconTwo from "../assets/2.svg";
 import iconThree from "../assets/3.svg";
+import iconFour from "../assets/4.svg";
 import sparklesIcon from "../assets/sparkles.svg";
 
 const route = useRoute();
