@@ -182,7 +182,7 @@
     <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
-          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+          Do Twojego konta nie jest przypisana żadna licencja.
         </div>
       </div>
       <div class="min-h-[calc(100vh-4rem)]">

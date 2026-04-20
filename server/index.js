@@ -1567,6 +1567,29 @@ app.put("/api/account/email", async (req, res) => {
   }
 });
 
+app.patch("/api/account/block", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase is not configured." });
+
+  const user = await getUserFromBearerToken(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const blocked = req.body?.blocked === true;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ blocked, updated_at: new Date().toISOString() })
+      .eq("id", user.id)
+      .select("id, blocked")
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "User profile not found." });
+    return res.json({ user: data });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Failed to update block status." });
+  }
+});
+
 app.post("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
@@ -2666,6 +2689,27 @@ app.get("/api/account/license-status", async (req, res) => {
       : null,
     uploadPolicy,
     uploadsUsed
+  });
+});
+
+app.get("/api/account/billing-summary", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const userEvents = (db.costEvents || []).filter((event) => {
+    return String(event.teacherId || "") === String(teacher.teacherId || "")
+      && String(event.schoolId || "") === String(teacher.schoolId || "");
+  });
+
+  const totalSpentPLN = userEvents.reduce((sum, event) => sum + Number(event.amountPLN || 0), 0);
+  const providerCostPLN = userEvents.reduce((sum, event) => sum + Number(event.baseAmountPLN || 0), 0);
+  const marginPLN = userEvents.reduce((sum, event) => sum + Number(event.marginAmountPLN || 0), 0);
+
+  return res.json({
+    paymentMethod: null,
+    totalSpentPLN: roundMoney(totalSpentPLN),
+    providerCostPLN: roundMoney(providerCostPLN),
+    marginPLN: roundMoney(marginPLN)
   });
 });
 

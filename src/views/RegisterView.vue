@@ -92,13 +92,13 @@
             />
           </label>
           <label class="block text-sm font-semibold text-foreground">
-            Twoja nazwa/login organizacyjny
+            E-mail organizacyjny
             <input
-              v-model="businessLogin"
-              type="text"
+              v-model="businessEmail"
+              type="email"
               required
               class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="np. jan.kowalski"
+              placeholder="np. biuro@twoja-firma.pl"
             />
           </label>
           <label class="block text-sm font-semibold text-foreground">
@@ -121,9 +121,6 @@
               placeholder="••••••••"
             />
           </label>
-          <p class="text-xs text-muted-foreground">
-            Konto będzie utworzone jako: <span class="font-semibold text-foreground">{{ businessPreviewEmail || "—" }}</span>
-          </p>
           <button
             type="submit"
             class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
@@ -161,32 +158,24 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
-const DEFAULT_BUSINESS_EMAIL_DOMAIN = "sluzbowe.coteach.local";
 
 const router = useRouter();
 const accountMode = ref("individual");
 const name = ref("");
 const email = ref("");
 const password = ref("");
-const businessLogin = ref("");
+const businessEmail = ref("");
 const businessOrganization = ref("");
-const businessEmailDomain = ref(DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
 const infoMessage = ref("");
-const businessPreviewEmail = computed(() => {
-  const login = String(businessLogin.value || "").trim().toLowerCase();
-  if (!login) return "";
-  if (login.includes("@")) return login;
-  return `${login}@${businessEmailDomain.value}`;
-});
 
-async function upsertProfileRow({ id, email, fullName, schoolId }) {
+async function upsertProfileRow({ id, email, fullName, schoolId, organisation = false }) {
   if (!id) return;
   const teacherId = `teacher-${crypto.randomUUID()}`;
   await supabase.from("profiles").upsert(
@@ -195,6 +184,7 @@ async function upsertProfileRow({ id, email, fullName, schoolId }) {
       email: email || null,
       full_name: fullName || null,
       school_id: schoolId || null,
+      organisation: organisation === true,
       teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
@@ -209,11 +199,13 @@ async function handleRegister() {
   const fullName = String(name.value || "").trim();
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
   const schoolId = null;
+  const emailConfirmRedirect = `${window.location.origin}/login`;
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
     password: password.value,
     options: {
+      emailRedirectTo: emailConfirmRedirect,
       data: {
         full_name: fullName
       }
@@ -234,7 +226,8 @@ async function handleRegister() {
         id: userId,
         email: normalizedEmail,
         fullName,
-        schoolId
+        schoolId,
+        organisation: false
       });
       localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
     } catch {
@@ -247,10 +240,10 @@ async function handleRegister() {
   if (data?.user) {
     localStorage.setItem(
       PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
+      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: false, created_at: Date.now() })
     );
     infoMessage.value =
-      "Konto utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
+      "Konto utworzone. Wysłaliśmy e-mail potwierdzający - sprawdź skrzynkę (także Spam) i kliknij link.";
   }
 }
 
@@ -261,15 +254,15 @@ async function handleBusinessRegister() {
   const fullName = String(name.value || "").trim();
   const organizationName = String(businessOrganization.value || "").trim();
   const schoolId = null;
-  const normalizedLogin = String(businessLogin.value || "").trim().toLowerCase();
-  const normalizedEmail = normalizedLogin.includes("@") ? normalizedLogin : `${normalizedLogin}@${businessEmailDomain.value}`;
+  const normalizedEmail = String(businessEmail.value || "").trim().toLowerCase();
+  const emailConfirmRedirect = `${window.location.origin}/login`;
 
   if (!organizationName) {
     errorMessage.value = "Podaj nazwę organizacji.";
     return;
   }
-  if (!/^[a-z0-9._-]{3,64}(@[a-z0-9.-]+\.[a-z]{2,})?$/i.test(normalizedLogin)) {
-    errorMessage.value = "Podaj poprawną nazwę/login organizacyjny (3-64 znaki).";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    errorMessage.value = "Podaj poprawny adres e-mail.";
     return;
   }
 
@@ -277,10 +270,11 @@ async function handleBusinessRegister() {
     email: normalizedEmail,
     password: password.value,
     options: {
+      emailRedirectTo: emailConfirmRedirect,
       data: {
         full_name: fullName,
         account_type: "business",
-        business_login: normalizedLogin.replace(/@.*$/, ""),
+        business_login: normalizedEmail.split("@")[0] || "",
         organization_name: organizationName
       }
     }
@@ -300,7 +294,8 @@ async function handleBusinessRegister() {
         id: userId,
         email: normalizedEmail,
         fullName,
-        schoolId
+        schoolId,
+        organisation: true
       });
       localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
     } catch {
@@ -313,10 +308,10 @@ async function handleBusinessRegister() {
   if (data?.user) {
     localStorage.setItem(
       PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
+      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: true, created_at: Date.now() })
     );
     infoMessage.value =
-      "Konto organizacji utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
+      "Konto organizacji utworzone. Wysłaliśmy e-mail potwierdzający - sprawdź skrzynkę (także Spam) i kliknij link.";
   }
 }
 
@@ -349,19 +344,4 @@ async function handleGoogleAuth() {
     errorMessage.value = error.message;
   }
 }
-
-onMounted(() => {
-  void (async () => {
-    try {
-      const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "");
-      const response = await fetch(`${apiBase}/api/public/business-login-config`);
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data?.businessEmailDomain) {
-        businessEmailDomain.value = String(data.businessEmailDomain).trim().toLowerCase();
-      }
-    } catch {
-      // Keep default domain when API is unavailable.
-    }
-  })();
-});
 </script>
