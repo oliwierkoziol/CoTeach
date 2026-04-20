@@ -36,6 +36,9 @@ const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+const OPENAI_BASE_URL = String(process.env.OPENAI_BASE_URL || "").trim();
+const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-1").trim() || "whisper-1";
+const OPENAI_PROVIDER_NAME = String(process.env.OPENAI_PROVIDER_NAME || "openai").trim() || "openai";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = String(process.env.BUSINESS_EMAIL_DOMAIN || "sluzbowe.coteach.local")
   .trim()
@@ -54,9 +57,13 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
   : null;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openaiClientConfig = process.env.OPENAI_API_KEY
+  ? {
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    }
   : null;
+const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
 const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_notatki_przedmiotowej.txt"),
@@ -2794,7 +2801,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     });
     const transcription = await openai.audio.transcriptions.create({
       file,
-      model: "whisper-1",
+      model: OPENAI_WHISPER_MODEL,
       language: "pl",
       response_format: "verbose_json"
     });
@@ -2806,7 +2813,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       lessonId,
       schoolId: teacher.schoolId,
       teacherId: teacher.teacherId,
-      provider: "openai",
+      provider: OPENAI_PROVIDER_NAME,
       category: "live_transcription",
       baseAmountPLN: fragmentCost
     });
@@ -2827,10 +2834,11 @@ app.get("/api/health", (_req, res) => {
   return res.json({
     ok: true,
     service: "lesson-planning-api",
-    aiProvider: "openrouter+openai-whisper",
+    aiProvider: `openrouter+${OPENAI_PROVIDER_NAME}-whisper`,
     textModel: OPENROUTER_TEXT_MODEL,
     visionModel: OPENROUTER_VISION_MODEL,
-    sttModel: "whisper-1",
+    sttModel: OPENAI_WHISPER_MODEL,
+    sttBaseUrlConfigured: Boolean(OPENAI_BASE_URL),
     whisperEnabled: Boolean(openai),
     openRouterEnabled: Boolean(String(process.env.OPENROUTER_API_KEY || "").trim()),
     supabaseEnabled: Boolean(supabase)

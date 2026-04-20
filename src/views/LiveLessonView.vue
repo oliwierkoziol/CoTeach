@@ -169,13 +169,13 @@
               <select
                 v-model="sttEngine"
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                :disabled="isRecording"
+                @change="handleSttEngineChange"
               >
                 <option value="browser">Przeglądarka Web Speech</option>
-                <option value="whisper">Atheneum AI Whisper v3</option>
+                <option value="whisper">Whisper</option>
               </select>
               <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] pointer-events-none">
-                {{ sttEngine === 'whisper' ? 'Atheneum AI Whisper v3' : 'Przeglądarka Web Speech' }}
+                {{ sttEngine === 'whisper' ? 'Whisper' : 'Przeglądarka Web Speech' }}
               </span>
               <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
                 <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -515,6 +515,27 @@ function stopSession() {
   void refreshCoverageThrottled(true);
 }
 
+async function handleSttEngineChange() {
+  if (!isRecording.value && !micTestActive.value) return;
+  try {
+    error.value = "";
+    shouldKeepListening.value = false;
+    recognition.value?.stop();
+    recognition.value = null;
+    mediaRecorder.value?.stop();
+    mediaRecorder.value = null;
+    interimCaption.value = "";
+    sttStatus.value = "starting";
+    info.value = sttEngine.value === "whisper"
+      ? "Przełączono na Whisper. Restartuję nasłuch..."
+      : "Przełączono na Web Speech. Restartuję nasłuch...";
+    await beginMic();
+  } catch (e) {
+    sttStatus.value = "error";
+    error.value = e.message || "Nie udało się przełączyć silnika STT.";
+  }
+}
+
 async function beginMic() {
   sttStatus.value = "starting";
   await startMicMeter();
@@ -694,6 +715,16 @@ async function startMicMeter() {
     ? { audio: { deviceId: { exact: selectedMicId.value } } }
     : { audio: true };
   micStream.value = await navigator.mediaDevices.getUserMedia(constraints);
+  console.log('[mic debug] micStream', micStream.value);
+  console.log('[mic debug] micDevices', micDevices.value, 'selectedMicId', selectedMicId.value);
+  if (micStream.value) {
+    const tracks = micStream.value.getAudioTracks();
+    console.log('[mic debug] audioTracks', tracks);
+    if (tracks.length > 0) {
+      console.log('[mic debug] track settings', tracks[0].getSettings());
+      console.log('[mic debug] track muted', tracks[0].muted);
+    }
+  }
   audioContext.value = new (window.AudioContext || window.webkitAudioContext)();
   const source = audioContext.value.createMediaStreamSource(micStream.value);
   analyserNode.value = audioContext.value.createAnalyser();
