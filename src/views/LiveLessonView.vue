@@ -705,65 +705,96 @@ async function beginWhisperMode() {
   if (!micStream.value) {
     throw new Error("Nie udało się uruchomić strumienia mikrofonu.");
   }
-  let recorder;
-  try {
-    recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
-  } catch {
-    recorder = new MediaRecorder(micStream.value);
-  }
-  mediaRecorder.value = recorder;
-  sttStatus.value = "listening";
-  info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
-
-  recorder.ondataavailable = async (event) => {
-    if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
+  function startNewMediaRecorder() {
+    if (!micStream.value || sttEngine.value !== 'whisper') return;
+    let recorder;
     try {
-      const form = new FormData();
-      form.set("lessonId", state.lesson.id);
-      form.set("file", event.data, `chunk-${Date.now()}.webm`);
-      const { data: authData } = await supabase.auth.getSession();
-      const token = authData?.session?.access_token;
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const response = await fetch(`${API_BASE}/api/transcribe`, {
-        method: "POST",
-        headers,
-        body: form
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        info.value = (data.message || data.error || "Błąd Whisper API.") + " Przełączam na STT przeglądarki.";
-        // Automatic recovery: switch to browser STT when provider fails.
-        sttEngine.value = "browser";
-        mediaRecorder.value?.stop();
-        mediaRecorder.value = null;
-        await beginMic();
-        return;
-      }
-      const text = String(data.text || "").trim();
-      if (text.length >= captionSensitivity.value) {
-        // Show Whisper text immediately on screen before lesson analysis.
-        interimCaption.value = "Przetworzono fragment audio.";
-        lastFinalCaption.value = text;
-        transcription.value.push(text);
-        await sendTranscript(state.lesson.id, text);
-        scheduleCoverageRefresh();
-        interimCaption.value = "";
-      }
-      if (data.limitReached) {
-        info.value = "Osiągnięto limit kosztów sesji.";
-      }
-    } catch (e) {
-      info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
+      recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
+    } catch {
+      recorder = new MediaRecorder(micStream.value);
     }
-  };
+    mediaRecorder.value = recorder;
+    sttStatus.value = "listening";
+    info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
 
-  recorder.onerror = () => {
-    sttStatus.value = "error";
-    info.value = "Błąd rejestratora audio dla Whisper.";
-  };
+    recorder.onstart = () => {
+      console.log('[whisper debug] MediaRecorder started');
+    };
+    recorder.onstop = () => {
+      console.log('[whisper debug] MediaRecorder stopped');
+      // Po zatrzymaniu, utwórz nowy MediaRecorder i start
+      if (micStream.value && sttEngine.value === 'whisper') {
+        setTimeout(() => {
+          console.log('[whisper debug] Restarting MediaRecorder after stop');
+          startNewMediaRecorder();
+        }, 100);
+      }
+    };
 
-  recorder.start(4000);
+    recorder.ondataavailable = async (event) => {
+      console.log('[whisper debug] ondataavailable', event.data ? event.data.size : 0);
+      if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
+      try {
+        const form = new FormData();
+        form.set("lessonId", state.lesson.id);
+        form.set("file", event.data, `chunk-${Date.now()}.webm`);
+        const { data: authData } = await supabase.auth.getSession();
+        const token = authData?.session?.access_token;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const response = await fetch(`${API_BASE}/api/transcribe`, {
+          method: "POST",
+          headers,
+          body: form
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          info.value = (data.message || data.error || "Błąd Whisper API.") + " Przełączam na STT przeglądarki.";
+          // Automatic recovery: switch to browser STT when provider fails.
+          sttEngine.value = "browser";
+          mediaRecorder.value?.stop();
+          mediaRecorder.value = null;
+          await beginMic();
+          return;
+        }
+        const text = String(data.text || "").trim();
+        if (text.length >= captionSensitivity.value) {
+          // Show Whisper text immediately on screen before lesson analysis.
+          interimCaption.value = "Przetworzono fragment audio.";
+          lastFinalCaption.value = text;
+          transcription.value.push(text);
+          await sendTranscript(state.lesson.id, text);
+          scheduleCoverageRefresh();
+          interimCaption.value = "";
+        }
+        if (data.limitReached) {
+          info.value = "Osiągnięto limit kosztów sesji.";
+        }
+      } catch (e) {
+        info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
+      }
+    };
+
+    recorder.onerror = () => {
+      sttStatus.value = "error";
+      info.value = "Błąd rejestratora audio dla Whisper.";
+      console.log('[whisper debug] MediaRecorder error');
+    };
+
+    recorder.start(4000);
+    console.log('[whisper debug] MediaRecorder .start(4000) called');
+  }
+
+  // Przed uruchomieniem nowego MediaRecorder wyczyść poprzedni
+  if (mediaRecorder.value) {
+    try { mediaRecorder.value.ondataavailable = null; } catch {}
+    try { mediaRecorder.value.onstop = null; } catch {}
+    try { mediaRecorder.value.onerror = null; } catch {}
+    try { mediaRecorder.value.onstart = null; } catch {}
+    try { mediaRecorder.value.state !== 'inactive' && mediaRecorder.value.stop(); } catch {}
+    mediaRecorder.value = null;
+  }
+  startNewMediaRecorder();
 }
 
 async function loadMicDevices() {
