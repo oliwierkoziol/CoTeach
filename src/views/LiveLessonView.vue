@@ -227,7 +227,7 @@
           />
           <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30" />
           <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
-          <div class="absolute left-3/4 top-0 bottom-0 w-0.5 bg-white/50 shadow-[0px_0px_0px_2px_rgba(0,83,219,0.4)]" />
+          <div class="absolute left-3/4 top-0 bottom-0 w-0.5 bg-white/30" />
         </div>
 
         <div class="flex items-center justify-between text-[10px] font-['Plus_Jakarta_Sans'] font-bold tracking-[1px] uppercase">

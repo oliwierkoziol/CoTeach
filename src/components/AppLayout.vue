@@ -167,18 +167,8 @@
             </a>
           </RouterLink>
 
-          <!-- Monitoring -->
-          <RouterLink to="/monitoring" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
-              <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 18 18">
-                <path d="M0 18V16L2 14V18H0ZM4 18V12L6 10V18H4ZM8 18V10L10 12.025V18H8ZM12 18V12.025L14 10.025V18H12ZM16 18V8L18 6V18H16ZM0 12.825V10L7 3L11 7L18 0V2.825L11 9.825L7 5.825L0 12.825Z" fill="#566166"/>
-              </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Monitoring</p>
-            </a>
-          </RouterLink>
-
           <!-- Panel admina -->
-          <RouterLink to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
+          <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
               <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
               <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
