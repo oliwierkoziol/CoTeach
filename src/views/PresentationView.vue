@@ -1,7 +1,23 @@
 <template>
-  <div v-if="isPresenting" class="fixed inset-0 bg-black text-white">
-    <button class="absolute right-4 top-4 z-50 rounded-lg bg-white/20 px-3 py-2 text-white" @click="exitPresentation">X</button>
+  <div v-if="isPresenting" class="fixed inset-0 z-[120] bg-[#05070f] text-white">
+    <div class="flex h-full flex-col">
+      <div class="flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 sm:px-6">
+        <button
+          class="rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+          @click="exitPresentation"
+        >
+          Zakończ prezentację
+        </button>
+        <div class="text-sm text-white/80">{{ slideIndex + 1 }} / {{ slides.length }}</div>
+        <button
+          class="rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+          @click="openPresentationWindow"
+        >
+          Otwórz w nowym oknie
+        </button>
+      </div>
 
+<<<<<<< Updated upstream
     <div class="h-full flex flex-col">
       <div class="flex-1 flex items-center justify-center p-12">
         <div class="max-w-5xl w-full">
@@ -20,16 +36,41 @@
                 <p class="text-xl opacity-70 text-center px-6">{{ current.visualHint || "[Sugerowana wizualizacja slajdu]" }}</p>
               </div>
             </div>
+=======
+      <div class="flex-1 overflow-auto p-4 sm:p-8 lg:p-10">
+        <div class="mx-auto w-full max-w-6xl rounded-3xl bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700 p-6 shadow-2xl sm:p-10 lg:p-14">
+          <h1 class="mb-5 text-3xl font-extrabold leading-tight sm:text-5xl">{{ current.point.title }}</h1>
+          <div class="mb-6 flex flex-wrap gap-2 sm:gap-3">
+            <span
+              v-for="k in current.point.keywords"
+              :key="k"
+              class="rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold text-white sm:px-4 sm:py-2 sm:text-base"
+            >
+              {{ k }}
+            </span>
+          </div>
+          <p class="mb-8 text-lg leading-relaxed text-white/95 sm:text-2xl">{{ current.point.description }}</p>
+          <div class="rounded-2xl border border-white/20 bg-white/10 p-5 sm:p-7">
+            <div class="aspect-video rounded-xl bg-black/20" />
+>>>>>>> Stashed changes
           </div>
         </div>
       </div>
-      <div class="bg-gray-900 border-t border-gray-700 px-8 py-4">
-        <div class="max-w-5xl mx-auto flex items-center justify-between text-white">
-          <button :disabled="slideIndex === 0" @click="slideIndex -= 1" class="px-3 py-2 rounded border border-white/30 disabled:opacity-30">
+
+      <div class="border-t border-white/10 bg-black/35 px-4 py-3 sm:px-6">
+        <div class="mx-auto flex w-full max-w-6xl items-center justify-between">
+          <button
+            :disabled="slideIndex === 0"
+            @click="slideIndex -= 1"
+            class="rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-30 sm:px-5 sm:text-base"
+          >
             Poprzedni
           </button>
-          <div>{{ slideIndex + 1 }} / {{ slides.length }}</div>
-          <button :disabled="slideIndex === slides.length - 1" @click="slideIndex += 1" class="px-3 py-2 rounded border border-white/30 disabled:opacity-30">
+          <button
+            :disabled="slideIndex === slides.length - 1"
+            @click="slideIndex += 1"
+            class="rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-30 sm:px-5 sm:text-base"
+          >
             Następny
           </button>
         </div>
@@ -132,6 +173,13 @@
         </button>
       </div>
 
+      <div
+        v-if="generationMessage"
+        class="mb-5 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800"
+      >
+        {{ generationMessage }}
+      </div>
+
       <div class="flex flex-wrap gap-4 items-center w-full">
         <button
           v-for="item in presentationHistory"
@@ -205,8 +253,12 @@ const presentationHistory = ref([]);
 const selectedPresentation = ref(null);
 const selectedLessonId = ref("");
 const presentationScope = ref("pending");
+<<<<<<< Updated upstream
 const selectedNoteId = ref("");
 const selectedClassLevel = ref("");
+=======
+const generationMessage = ref("");
+>>>>>>> Stashed changes
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
@@ -268,15 +320,17 @@ function buildPresentationTitle() {
 
 function savePresentationSnapshot(currentSlides) {
   const createdAt = new Date().toISOString();
-  presentationHistory.value.unshift({
+  const item = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: buildPresentationTitle(),
     createdAt,
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
     slides: currentSlides
-  });
+  };
+  presentationHistory.value.unshift(item);
   persistPresentationHistory();
+  return item;
 }
 
 function startPresentation(currentSlides) {
@@ -289,6 +343,7 @@ async function startGeneratedPresentation() {
   if (!preparedSlides.value.length) return;
 
   isGenerating.value = true;
+<<<<<<< Updated upstream
   try {
     const generated = await generatePresentation({
       lessonId: selectedLesson.value?.id || "",
@@ -316,6 +371,23 @@ async function startGeneratedPresentation() {
   } finally {
     isGenerating.value = false;
   }
+=======
+  generationMessage.value = "";
+  setTimeout(() => {
+    const generatedSlides = preparedSlides.value.map((slide) => ({
+      point: {
+        title: slide.point.title,
+        keywords: Array.isArray(slide.point.keywords) ? slide.point.keywords : [],
+        description: slide.point.description || ""
+      },
+      imageUrl: ""
+    }));
+    const savedItem = savePresentationSnapshot(generatedSlides);
+    selectedPresentation.value = savedItem;
+    generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów). Kliknij "Otwórz wybraną", aby ją wyświetlić.`;
+    isGenerating.value = false;
+  }, 900);
+>>>>>>> Stashed changes
 }
 
 function openSavedPresentation(item) {
@@ -328,6 +400,7 @@ function exitPresentation() {
   isPresenting.value = false;
 }
 
+<<<<<<< Updated upstream
 function slideTypeLabel(type) {
   const value = String(type || "").toLowerCase();
   if (value === "title") return "Slajd tytułowy";
@@ -339,5 +412,10 @@ function slideTypeLabel(type) {
   if (value === "summary") return "Podsumowanie";
   if (value === "next_steps") return "Następne kroki";
   return "Slajd";
+=======
+function openPresentationWindow() {
+  const url = window.location.href;
+  window.open(url, "_blank", "noopener,noreferrer");
+>>>>>>> Stashed changes
 }
 </script>
