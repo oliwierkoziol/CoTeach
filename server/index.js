@@ -28,7 +28,8 @@ const DEMO_POLICY = {
 const upload = multer({ limits: { fileSize: UPLOAD_LIMITS.licensed.maxFileSizeBytes } });
 const port = Number(process.env.PORT || 3001);
 
-const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
+const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
@@ -1183,22 +1184,39 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens 
   const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
   const startedAt = Date.now();
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: finalMaxTokens,
-      messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
-    })
-  });
+  const requestOpenRouter = async (targetModel) =>
+    fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        max_tokens: finalMaxTokens,
+        messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
+      })
+    });
 
+  let effectiveModel = String(model || "").trim() || OPENROUTER_TEXT_MODEL;
+  let response = await requestOpenRouter(effectiveModel);
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} ${text}`);
+    const errorText = await response.text();
+    const shouldRetryWithFallback =
+      response.status === 404 &&
+      /No endpoints found/i.test(errorText) &&
+      effectiveModel !== OPENROUTER_TEXT_FALLBACK_MODEL;
+
+    if (shouldRetryWithFallback) {
+      effectiveModel = OPENROUTER_TEXT_FALLBACK_MODEL;
+      response = await requestOpenRouter(effectiveModel);
+      if (!response.ok) {
+        const fallbackErrorText = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} ${fallbackErrorText}`);
+      }
+    } else {
+      throw new Error(`OpenRouter API error: ${response.status} ${errorText}`);
+    }
   }
 
   const data = await response.json();
@@ -1214,14 +1232,14 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens 
   const completionTokens = Number(usage.completion_tokens || estimatedCompletionTokens);
   const totalTokens = Number(usage.total_tokens || promptTokens + completionTokens);
   const baseUsd = estimateOpenRouterBaseUsdCost({
-    model,
+    model: effectiveModel,
     promptTokens,
     completionTokens
   });
 
   return {
     text,
-    model,
+    model: effectiveModel,
     usage: {
       promptTokens,
       completionTokens,
