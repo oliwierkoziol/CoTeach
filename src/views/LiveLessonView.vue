@@ -294,7 +294,17 @@ const lessonDurationOptions = [
 
 const route = useRoute();
 const router = useRouter();
-const { state, startLive, sendTranscript, refreshCoverage, setManualPointApproval, finalizeLesson, fetchLessons } = useLessonStore();
+const {
+  state,
+  startLive,
+  sendTranscript,
+  refreshCoverage,
+  setManualPointApproval,
+  finalizeLesson,
+  fetchLessons,
+  fetchLesson,
+  hydrateLessonFromCache
+} = useLessonStore();
 
 const isRecording = ref(false);
 const recognition = ref(null);
@@ -369,9 +379,24 @@ onMounted(async () => {
   await checkApiHealth();
   await fetchLicenseStatus();
   apiPingTimer = setInterval(checkApiHealth, 10000);
-  if (!state.lesson) {
+  const routeLessonId = String(route.params.lessonId || "").trim();
+  const currentLessonId = String(state.lesson?.id || "").trim();
+  if (routeLessonId) {
+    const cachedRouteLesson = hydrateLessonFromCache(routeLessonId);
+    if (routeLessonId !== currentLessonId) {
+      if (cachedRouteLesson) {
+        // Render instantly from local cache, then silently refresh.
+        void fetchLesson(routeLessonId);
+      } else {
+        await fetchLesson(routeLessonId);
+      }
+    } else {
+      // Keep UI instant when returning, but refresh lesson in background.
+      void fetchLesson(routeLessonId);
+    }
+  } else if (!state.lesson) {
     const lessons = await fetchLessons();
-    const target = lessons.find((l) => l.id === route.params.lessonId) || lessons[0];
+    const target = lessons[0];
     if (target) state.lesson = target;
   }
   if (!isRecording.value) {

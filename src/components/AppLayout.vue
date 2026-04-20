@@ -311,9 +311,12 @@ const isPresentationActive = computed(() => route.path.startsWith("/presentation
 
 const currentLiveLesson = computed(() => {
   const lessons = Array.isArray(state.lessons) ? state.lessons : [];
-  return lessons
+  const liveFromList =
+    lessons
     .filter((lesson) => lesson?.status === "live")
     .sort((a, b) => new Date(b?.startedAt || 0).getTime() - new Date(a?.startedAt || 0).getTime())[0] || null;
+  if (liveFromList) return liveFromList;
+  return state.lesson?.status === "live" ? state.lesson : null;
 });
 
 const startLessonCta = computed(() => {

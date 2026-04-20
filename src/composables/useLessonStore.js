@@ -8,6 +8,69 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
+const CURRENT_LESSON_CACHE_KEY = "coteach_current_lesson_v1";
+const LESSON_CACHE_PREFIX = "coteach_lesson_cache_v1:";
+
+function readCurrentLessonCache() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CURRENT_LESSON_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id) return null;
+    if (parsed?.status === "finished") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCurrentLessonCache(lesson) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!lesson?.id || lesson?.status === "finished") {
+      window.localStorage.removeItem(CURRENT_LESSON_CACHE_KEY);
+      return;
+    }
+    window.localStorage.setItem(CURRENT_LESSON_CACHE_KEY, JSON.stringify(lesson));
+  } catch {
+    // Ignore storage errors (private mode/quota).
+  }
+}
+
+function lessonCacheKey(lessonId) {
+  return `${LESSON_CACHE_PREFIX}${String(lessonId || "").trim()}`;
+}
+
+function readLessonCache(lessonId) {
+  if (typeof window === "undefined") return null;
+  const id = String(lessonId || "").trim();
+  if (!id) return null;
+  try {
+    const raw = window.localStorage.getItem(lessonCacheKey(id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id) return null;
+    if (parsed?.status === "finished") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeLessonCache(lesson) {
+  if (typeof window === "undefined") return;
+  try {
+    const id = String(lesson?.id || "").trim();
+    if (!id || lesson?.status === "finished") {
+      if (id) window.localStorage.removeItem(lessonCacheKey(id));
+      return;
+    }
+    window.localStorage.setItem(lessonCacheKey(id), JSON.stringify(lesson));
+  } catch {
+    // Ignore storage errors (private mode/quota).
+  }
+}
 
 function upsertLessonInState(lesson) {
   if (!lesson?.id) return;
@@ -18,8 +81,14 @@ function upsertLessonInState(lesson) {
     : [lesson, ...existingLessons];
 }
 
+function setCurrentLessonInState(lesson) {
+  state.lesson = lesson || null;
+  writeCurrentLessonCache(state.lesson);
+  writeLessonCache(state.lesson);
+}
+
 const state = reactive({
-  lesson: null,
+  lesson: readCurrentLessonCache(),
   lessons: [],
   notes: [],
   error: "",
@@ -81,6 +150,14 @@ export function clearLessonStoreAuthCache() {
 }
 
 export function useLessonStore() {
+  function hydrateLessonFromCache(lessonId) {
+    const cachedLesson = readLessonCache(lessonId);
+    if (!cachedLesson) return null;
+    setCurrentLessonInState(cachedLesson);
+    upsertLessonInState(cachedLesson);
+    return cachedLesson;
+  }
+
   async function createLesson(payload) {
     state.error = "";
     const data = await api("/api/lessons", {
@@ -88,7 +165,7 @@ export function useLessonStore() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     upsertLessonInState(data.lesson);
     return data.lesson;
   }
@@ -100,7 +177,7 @@ export function useLessonStore() {
     if (rawText?.trim()) form.set("rawText", rawText.trim());
     if (file) form.set("file", file);
     const data = await api(`/api/lessons/${lessonId}/upload`, { method: "POST", body: form });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     upsertLessonInState(data.lesson);
     state.info = `Analiza zakonczona. Wykryto ${data.lesson.plan.length} tematow.`;
     return data.lesson;
@@ -112,14 +189,14 @@ export function useLessonStore() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan })
     });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     upsertLessonInState(data.lesson);
     return data.lesson;
   }
 
   async function startLive(lessonId) {
     const data = await api(`/api/lessons/${lessonId}/live/start`, { method: "POST" });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     upsertLessonInState(data.lesson);
     return data.lesson;
   }
@@ -136,7 +213,7 @@ export function useLessonStore() {
     const coverage = await api(`/api/lessons/${lessonId}/coverage`);
     state.missing = coverage.missing || [];
     if (state.lesson) {
-      state.lesson = { ...state.lesson, plan: coverage.plan };
+      setCurrentLessonInState({ ...state.lesson, plan: coverage.plan });
     }
     state.costInfo = await api(`/api/lessons/${lessonId}/costs`);
     return coverage;
@@ -149,7 +226,7 @@ export function useLessonStore() {
       body: JSON.stringify({ approved })
     });
     if (state.lesson) {
-      state.lesson = { ...state.lesson, plan: data.lesson?.plan || state.lesson.plan };
+      setCurrentLessonInState({ ...state.lesson, plan: data.lesson?.plan || state.lesson.plan });
     }
     state.missing = data.missing || [];
     return data.lesson;
@@ -164,7 +241,7 @@ export function useLessonStore() {
     if (state.lesson?.id === lessonId) {
       const nowIso = new Date().toISOString();
       const finishedLesson = { ...state.lesson, status: "finished", finishedAt: nowIso };
-      state.lesson = finishedLesson;
+      setCurrentLessonInState(finishedLesson);
       upsertLessonInState(finishedLesson);
     }
     state.shareUrl = data.finalNote.shareUrl;
@@ -177,14 +254,14 @@ export function useLessonStore() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     state.lessons = state.lessons.map((lesson) => (lesson.id === data.lesson.id ? data.lesson : lesson));
     return data.lesson;
   }
 
   async function deleteFinalNote(lessonId) {
     const data = await api(`/api/lessons/${lessonId}/final-note`, { method: "DELETE" });
-    state.lesson = data.lesson;
+    setCurrentLessonInState(data.lesson);
     state.lessons = state.lessons.map((lesson) => (lesson.id === data.lesson.id ? data.lesson : lesson));
     return data.lesson;
   }
@@ -193,12 +270,36 @@ export function useLessonStore() {
     try {
       const data = await api("/api/lessons");
       state.lessons = data.lessons || [];
+      if (state.lesson?.id) {
+        const refreshedCurrent = state.lessons.find((lesson) => lesson?.id === state.lesson?.id);
+        if (refreshedCurrent) {
+          setCurrentLessonInState(refreshedCurrent);
+        } else if (state.lesson?.status === "live") {
+          setCurrentLessonInState(null);
+        }
+      }
       return state.lessons;
     } catch (error) {
       state.lessons = [];
       state.error = error.message || "Nie udało się pobrać lekcji";
       return [];
     }
+  }
+
+  async function fetchLesson(lessonId) {
+    if (!lessonId) return null;
+    const cachedLesson = readLessonCache(lessonId);
+    if (cachedLesson) {
+      setCurrentLessonInState(cachedLesson);
+      upsertLessonInState(cachedLesson);
+    }
+    const data = await api(`/api/lessons/${lessonId}`);
+    if (data?.lesson) {
+      setCurrentLessonInState(data.lesson);
+      upsertLessonInState(data.lesson);
+      return data.lesson;
+    }
+    return null;
   }
 
   async function fetchAdmin() {
@@ -254,6 +355,8 @@ export function useLessonStore() {
     updateFinalNote,
     deleteFinalNote,
     fetchLessons,
+    fetchLesson,
+    hydrateLessonFromCache,
     fetchAdmin,
     fetchSharedNote,
     generateTeacherNote,

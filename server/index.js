@@ -914,9 +914,117 @@ async function loadLessonsFromSupabase() {
   if (!supabase) return;
   const { data, error } = await supabase.from("lessons").select("*").order("updated_at", { ascending: false });
   if (error) throw new Error(`Supabase lessons load failed: ${error.message}`);
+
+  const lessons = new Map();
   for (const row of data || []) {
     const lesson = rowToLesson(row);
+    lessons.set(lesson.id, lesson);
+  }
+  db.lessons = lessons;
+}
+
+async function refreshLessonsCacheFromSupabaseSafe() {
+  if (!supabase) return;
+  try {
+    await loadLessonsFromSupabase();
+    await loadFinalNotesFromSupabase();
+  } catch (error) {
+    console.error(`Supabase lessons refresh failed: ${error.message}`);
+  }
+}
+
+async function refreshTeacherLessonsFromSupabaseSafe(teacherId, schoolId) {
+  if (!supabase) return;
+  try {
+    const teacherIdValue = String(teacherId || "");
+    const schoolIdValue = String(schoolId || "");
+    const { data: lessonRows, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("teacher_id", teacherIdValue)
+      .eq("school_id", schoolIdValue)
+      .order("updated_at", { ascending: false });
+    if (lessonsError) {
+      throw new Error(`Supabase scoped lessons load failed: ${lessonsError.message}`);
+    }
+
+    const nextTeacherLessons = new Map();
+    for (const row of lessonRows || []) {
+      const lesson = rowToLesson(row);
+      nextTeacherLessons.set(lesson.id, lesson);
+    }
+
+    for (const [lessonId, lesson] of db.lessons.entries()) {
+      if (String(lesson?.teacherId || "") === teacherIdValue && String(lesson?.schoolId || "") === schoolIdValue) {
+        db.lessons.delete(lessonId);
+      }
+    }
+    for (const [lessonId, lesson] of nextTeacherLessons.entries()) {
+      db.lessons.set(lessonId, lesson);
+    }
+
+    const lessonIds = [...nextTeacherLessons.keys()];
+    if (!lessonIds.length) return;
+    const { data: finalNoteRows, error: finalNotesError } = await supabase
+      .from("final_notes")
+      .select("*")
+      .in("lesson_id", lessonIds);
+    if (finalNotesError) {
+      throw new Error(`Supabase scoped final notes load failed: ${finalNotesError.message}`);
+    }
+    for (const row of finalNoteRows || []) {
+      const lesson = db.lessons.get(row.lesson_id);
+      if (!lesson) continue;
+      lesson.finalNote = rowToFinalNote(row);
+      db.lessons.set(lesson.id, lesson);
+    }
+  } catch (error) {
+    console.error(`Supabase teacher lessons refresh failed: ${error.message}`);
+  }
+}
+
+async function refreshSingleLessonFromSupabaseSafe(lessonId, teacherId, schoolId) {
+  if (!supabase) return null;
+  try {
+    const lessonIdValue = String(lessonId || "");
+    const teacherIdValue = String(teacherId || "");
+    const schoolIdValue = String(schoolId || "");
+    if (!lessonIdValue || !teacherIdValue || !schoolIdValue) return null;
+
+    const { data: lessonRow, error: lessonError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("id", lessonIdValue)
+      .eq("teacher_id", teacherIdValue)
+      .eq("school_id", schoolIdValue)
+      .maybeSingle();
+    if (lessonError) {
+      throw new Error(`Supabase single lesson load failed: ${lessonError.message}`);
+    }
+
+    if (!lessonRow) {
+      db.lessons.delete(lessonIdValue);
+      return null;
+    }
+
+    const lesson = rowToLesson(lessonRow);
+    const { data: finalNoteRow, error: finalNoteError } = await supabase
+      .from("final_notes")
+      .select("*")
+      .eq("lesson_id", lessonIdValue)
+      .maybeSingle();
+    if (finalNoteError) {
+      throw new Error(`Supabase single final note load failed: ${finalNoteError.message}`);
+    }
+    if (finalNoteRow) {
+      lesson.finalNote = rowToFinalNote(finalNoteRow);
+    }
+
     db.lessons.set(lesson.id, lesson);
+    return lesson;
+  } catch (error) {
+    console.error(`Supabase single lesson refresh failed: ${error.message}`);
+    return null;
   }
 }
 
@@ -1691,12 +1799,33 @@ app.post("/api/lessons", async (req, res) => {
 app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await refreshTeacherLessonsFromSupabaseSafe(teacher.teacherId, teacher.schoolId);
   await autoFinishDueLessons();
 
   const lessons = [...db.lessons.values()].filter((lesson) => {
     return String(lesson.teacherId) === teacher.teacherId && String(lesson.schoolId || "") === String(teacher.schoolId || "");
   });
   res.json({ lessons });
+});
+
+app.get("/api/lessons/:lessonId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  await refreshSingleLessonFromSupabaseSafe(req.params.lessonId, teacher.teacherId, teacher.schoolId);
+
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    return res.status(404).json({ error: "Lesson not found" });
+  }
+  if (String(lesson.teacherId) !== String(teacher.teacherId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  return res.json({ lesson });
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
