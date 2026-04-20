@@ -15,6 +15,7 @@ const router = createRouter({
     { path: "/live-lesson/:lessonId?", component: () => import("../views/LiveLessonView.vue") },
     { path: "/presentation/:lessonId", component: () => import("../views/PresentationView.vue") },
     { path: "/archive", component: () => import("../views/ArchiveView.vue") },
+    { path: "/organization", component: () => import("../views/OrganizationView.vue") },
     { path: "/admin", component: () => import("../views/AdminView.vue") },
     { path: "/admin/dashboard", component: () => import("../views/SpecialAdminView.vue") },
     { path: "/admin/cost-calculator", component: () => import("../views/AdminCostCalculatorView.vue") },
@@ -70,7 +71,7 @@ router.beforeEach(async (to) => {
     return { path: "/login", query: { blocked: "1" } };
   }
 
-  if (to.path.startsWith("/admin") && profile?.admin !== true) {
+  if ((to.path.startsWith("/admin") || to.path === "/organization") && profile?.admin !== true) {
     return { path: "/dashboard" };
   }
 

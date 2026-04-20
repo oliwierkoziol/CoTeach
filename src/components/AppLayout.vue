@@ -179,7 +179,15 @@
               <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
             </a>
           </RouterLink>
-
+          
+          <!-- Organizacja -->
+          <RouterLink v-if="isAdmin" to="/organization" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
+            </a>
+          
+          </RouterLink>
           <!-- Panel admina -->
           <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
@@ -187,6 +195,8 @@
               <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
             </a>
           </RouterLink>
+
+         
 
         </div>
       </div>
