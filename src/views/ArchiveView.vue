@@ -1,101 +1,131 @@
 <template>
-  <div class="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-7xl">
-      <header class="mb-8">
-        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Moduł</p>
-        <h1 class="text-3xl font-bold text-foreground">Archiwum lekcji</h1>
-        <p class="mt-1 text-sm text-muted-foreground">Archiwizacja i dystrybucja notatek</p>
-      </header>
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
-          <div class="rounded-2xl border border-border bg-card p-4">
-            <input
-              v-model="searchQuery"
-              class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Szukaj według przedmiotu lub tytułu..."
-            />
+    <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
+      <div class="mb-7 max-w-[1024px]">
+        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+          Archiwum lekcji
+        </h1>
+        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+          Archiwizacja i dystrybucja notatek końcowych.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-12 gap-8">
+        <div class="col-span-12 xl:col-span-8 space-y-6">
+          <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-6">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-2">
+              Szukaj lekcji
+            </label>
+            <div class="bg-[#e0e3e6] rounded-lg px-4 py-3">
+              <input
+                v-model="searchQuery"
+                class="w-full bg-transparent outline-none border-none font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e] placeholder-[#767683]"
+                placeholder="Szukaj według przedmiotu, tytułu albo miesiąca..."
+              />
+            </div>
           </div>
 
-          <div v-if="!filteredLessons.length" class="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">
-            Brak zarchiwizowanych lekcji.
+          <div v-if="!filteredLessons.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zarchiwizowanych lekcji.</p>
           </div>
 
-          <div v-for="lesson in filteredLessons" :key="lesson.id" class="rounded-xl border border-border bg-card p-4 cursor-pointer transition hover:border-primary/40 hover:bg-muted/30" @click="selectLesson(lesson)">
-            <div class="flex items-start justify-between">
-              <div>
-                <h3 class="font-medium text-foreground">{{ lesson.finalNote?.title || lesson.title }}</h3>
-                <p class="mt-1 text-sm text-muted-foreground">
-                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} • {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }} punktów
+          <div
+            v-for="lesson in filteredLessons"
+            :key="lesson.id"
+            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+            :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            @click="selectLesson(lesson)"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  {{ lesson.finalNote?.title || lesson.title }}
+                </h3>
+                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
+                  <span class="font-semibold text-[#0053db]">
+                    Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
+                  </span>
                 </p>
               </div>
-              <span class="shrink-0 rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">{{ lesson.month }}</span>
+              <span class="shrink-0 rounded-lg bg-[#e8eefb] px-3 py-1.5 font-['Inter'] font-semibold text-[12px] text-[#142588]">
+                {{ lesson.month || "Brak miesiąca" }}
+              </span>
             </div>
           </div>
         </div>
 
-        <div class="space-y-6">
-          <div class="rounded-2xl border border-border bg-card p-6">
-            <h3 class="mb-2 font-semibold text-foreground">Moduły archiwum</h3>
-            <ul class="space-y-1 text-sm text-muted-foreground">
-              <li>Generator złotej notatki</li>
-              <li>Cloud storage i QR</li>
-              <li>Struktura przedmiot / miesiąc</li>
-              <li>Archiwizacja ZIP</li>
-            </ul>
-          </div>
-
-          <div v-if="selected?.finalNote" class="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div class="col-span-12 xl:col-span-4 space-y-6">
+          <div v-if="selected?.finalNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
             <div class="flex items-center justify-between gap-3">
-              <h3 class="font-semibold">Złota Notatka</h3>
-              <button class="px-3 py-2 rounded-lg border border-red-300 text-red-700 bg-red-50 text-sm" @click="handleDeleteFinalNote" :disabled="saving">
-                Usuń notatkę
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Złota notatka
+              </h3>
+              <button
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors disabled:opacity-60 cursor-pointer"
+                @click="handleDeleteFinalNote"
+                :disabled="saving"
+              >
+                Usuń
               </button>
             </div>
 
-            <div>
-              <label class="text-sm text-gray-600 block mb-1">Nazwa notatki</label>
-              <input v-model="editTitle" class="w-full border rounded-lg px-3 py-2" placeholder="Tytuł notatki" />
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Nazwa notatki</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <input v-model="editTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
+              </div>
             </div>
 
-            <div>
-              <label class="text-sm text-gray-600 block mb-1">Temat</label>
-              <input v-model="editSubject" class="w-full border rounded-lg px-3 py-2" placeholder="Przedmiot" />
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Temat</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <input v-model="editSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
+              </div>
             </div>
 
-            <div>
-              <label class="text-sm text-gray-600 block mb-1">Data</label>
-              <input v-model="editDate" type="date" class="w-full border rounded-lg px-3 py-2" />
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Data</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <input v-model="editDate" type="date" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] [color-scheme:light]" />
+              </div>
             </div>
 
-            <button class="w-full px-3 py-2 rounded-lg bg-orange-600 text-white text-sm" :disabled="saving" @click="handleSaveFinalNote">
+            <button
+              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              :disabled="saving"
+              @click="handleSaveFinalNote"
+            >
               {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
             </button>
 
-            <div class="flex justify-center">
-              <button
-                type="button"
-                class="rounded-2xl border border-border bg-card p-3 transition hover:border-primary/40"
-                @click="openQrModal"
-              >
-                <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
-              </button>
-            </div>
+            <button
+              type="button"
+              class="w-full rounded-xl bg-[#f2f4f7] p-3 transition-colors hover:bg-[#e8ebf0] cursor-pointer"
+              @click="openQrModal"
+            >
+              <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
+            </button>
 
-            <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white text-sm" @click="openFinalNote">
-              Przenieś do notatki
+            <button
+              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
+              @click="openFinalNote"
+            >
+              Otwórz notatkę
             </button>
 
             <RouterLink
               to="/notes"
-              class="block w-full rounded-lg border border-border bg-card px-3 py-2 text-center text-sm font-semibold text-foreground transition hover:bg-muted/40"
+              class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
             >
               Wróć do notatek
             </RouterLink>
           </div>
 
-          <div v-else-if="selected" class="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-            Dla tej lekcji nie ma jeszcze notatki końcowej.
+          <div v-else-if="selected" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6">
+            <p class="font-['Inter'] text-[#454652] text-[14px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
           </div>
         </div>
       </div>
@@ -108,7 +138,7 @@
           class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           @click="closeQrModal"
         >
-          <div class="rounded-3xl bg-card p-5 shadow-2xl" @click.stop>
+          <div class="rounded-3xl bg-white p-5 shadow-2xl" @click.stop>
             <img :src="qrCodeUrl" alt="QR" width="320" height="320" class="mx-auto h-auto w-full max-w-[320px]" />
           </div>
         </div>
