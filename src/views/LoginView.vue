@@ -395,13 +395,6 @@ async function handleBusinessLogin() {
     return;
   }
 
-  const profileEmail = String(profile?.email || "").toLowerCase();
-  if (!isBusinessEmail(profileEmail)) {
-    await supabase.auth.signOut({ scope: "local" });
-    errorMessage.value = "To nie jest konto służbowe. Użyj logowania dla konta indywidualnego.";
-    return;
-  }
-
   if (profile?.organisation !== true) {
     await supabase.auth.signOut({ scope: "local" });
     errorMessage.value = "To nie jest konto organizacji. Użyj logowania dla konta indywidualnego.";
