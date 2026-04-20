@@ -22,20 +22,26 @@
           <p class="mt-1 text-sm text-muted-foreground">Formularz po prawej — lewa kolumna to tylko podgląd marki.</p>
         </div>
 
-        <form @submit.prevent="handleRegister" class="space-y-5">
-          <label class="block text-sm font-semibold text-foreground">
-            Organizacja
-            <select
-              v-model="selectedOrganizationId"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-            >
-              <option value="" disabled>{{ isLoadingOrganizations ? "Ładowanie organizacji..." : "Wybierz organizację" }}</option>
-              <option v-for="org in organizations" :key="org.id" :value="org.id">
-                {{ org.name }}
-              </option>
-            </select>
-          </label>
+        <div class="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-1">
+          <button
+            type="button"
+            class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+            :class="accountMode === 'individual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+            @click="accountMode = 'individual'"
+          >
+            Konto indywidualne
+          </button>
+          <button
+            type="button"
+            class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+            :class="accountMode === 'business' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+            @click="accountMode = 'business'"
+          >
+            Konto organizacji
+          </button>
+        </div>
+
+        <form v-if="accountMode === 'individual'" @submit.prevent="handleRegister" class="space-y-5">
           <label class="block text-sm font-semibold text-foreground">
             Imię i nazwisko
             <input
@@ -74,19 +80,73 @@
           </button>
         </form>
 
-        <div class="my-5 flex items-center gap-3">
-          <span class="h-px flex-1 bg-border"></span>
-          <span class="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">lub</span>
-          <span class="h-px flex-1 bg-border"></span>
-        </div>
+        <form v-else @submit.prevent="handleBusinessRegister" class="space-y-5">
+          <label class="block text-sm font-semibold text-foreground">
+            Organizacja
+            <input
+              v-model="businessOrganization"
+              type="text"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="np. Szkoła Podstawowa nr 1"
+            />
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
+            Twoja nazwa/login organizacyjny
+            <input
+              v-model="businessLogin"
+              type="text"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="np. jan.kowalski"
+            />
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
+            Imię i nazwisko
+            <input
+              v-model="name"
+              type="text"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="Jan Kowalski"
+            />
+          </label>
+          <label class="block text-sm font-semibold text-foreground">
+            Hasło
+            <input
+              v-model="password"
+              type="password"
+              required
+              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+              placeholder="••••••••"
+            />
+          </label>
+          <p class="text-xs text-muted-foreground">
+            Konto będzie utworzone jako: <span class="font-semibold text-foreground">{{ businessPreviewEmail || "—" }}</span>
+          </p>
+          <button
+            type="submit"
+            class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+          >
+            Zarejestruj konto organizacji
+          </button>
+        </form>
 
-        <button
-          type="button"
-          @click="handleGoogleAuth"
-          class="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
-        >
-          Zarejestruj się przez Google
-        </button>
+        <template v-if="accountMode === 'individual'">
+          <div class="my-5 flex items-center gap-3">
+            <span class="h-px flex-1 bg-border"></span>
+            <span class="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">lub</span>
+            <span class="h-px flex-1 bg-border"></span>
+          </div>
+
+          <button
+            type="button"
+            @click="handleGoogleAuth"
+            class="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
+          >
+            Zarejestruj się przez Google
+          </button>
+        </template>
 
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {{ errorMessage }}
@@ -101,22 +161,30 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
+const DEFAULT_BUSINESS_EMAIL_DOMAIN = "sluzbowe.coteach.local";
 
 const router = useRouter();
+const accountMode = ref("individual");
 const name = ref("");
 const email = ref("");
 const password = ref("");
+const businessLogin = ref("");
+const businessOrganization = ref("");
+const businessEmailDomain = ref(DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
 const infoMessage = ref("");
-const organizations = ref([]);
-const selectedOrganizationId = ref("");
-const isLoadingOrganizations = ref(false);
+const businessPreviewEmail = computed(() => {
+  const login = String(businessLogin.value || "").trim().toLowerCase();
+  if (!login) return "";
+  if (login.includes("@")) return login;
+  return `${login}@${businessEmailDomain.value}`;
+});
 
 async function upsertProfileRow({ id, email, fullName, schoolId }) {
   if (!id) return;
@@ -134,36 +202,13 @@ async function upsertProfileRow({ id, email, fullName, schoolId }) {
   );
 }
 
-async function loadOrganizations() {
-  isLoadingOrganizations.value = true;
-  try {
-    const response = await fetch(`${String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "")}/api/public/organizations`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Nie udało się pobrać organizacji.");
-
-    organizations.value = Array.isArray(data.organizations) ? data.organizations : [];
-    if (!selectedOrganizationId.value && organizations.value.length) {
-      selectedOrganizationId.value = String(organizations.value[0].id || "");
-    }
-  } catch (error) {
-    errorMessage.value = error.message || "Nie udało się pobrać organizacji.";
-  } finally {
-    isLoadingOrganizations.value = false;
-  }
-}
-
 async function handleRegister() {
   errorMessage.value = "";
   infoMessage.value = "";
 
   const fullName = String(name.value || "").trim();
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = String(selectedOrganizationId.value || "").trim();
-
-  if (!schoolId) {
-    errorMessage.value = "Wybierz organizację.";
-    return;
-  }
+  const schoolId = null;
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -209,18 +254,79 @@ async function handleRegister() {
   }
 }
 
+async function handleBusinessRegister() {
+  errorMessage.value = "";
+  infoMessage.value = "";
+
+  const fullName = String(name.value || "").trim();
+  const organizationName = String(businessOrganization.value || "").trim();
+  const schoolId = null;
+  const normalizedLogin = String(businessLogin.value || "").trim().toLowerCase();
+  const normalizedEmail = normalizedLogin.includes("@") ? normalizedLogin : `${normalizedLogin}@${businessEmailDomain.value}`;
+
+  if (!organizationName) {
+    errorMessage.value = "Podaj nazwę organizacji.";
+    return;
+  }
+  if (!/^[a-z0-9._-]{3,64}(@[a-z0-9.-]+\.[a-z]{2,})?$/i.test(normalizedLogin)) {
+    errorMessage.value = "Podaj poprawną nazwę/login organizacyjny (3-64 znaki).";
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: normalizedEmail,
+    password: password.value,
+    options: {
+      data: {
+        full_name: fullName,
+        account_type: "business",
+        business_login: normalizedLogin.replace(/@.*$/, ""),
+        organization_name: organizationName
+      }
+    }
+  });
+
+  if (error) {
+    errorMessage.value = error.message;
+    return;
+  }
+
+  const userId = data?.user?.id || "";
+  const session = data?.session;
+
+  if (session && userId) {
+    try {
+      await upsertProfileRow({
+        id: userId,
+        email: normalizedEmail,
+        fullName,
+        schoolId
+      });
+      localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
+    } catch {
+      // Keep registration successful even if profile upsert is temporarily unavailable.
+    }
+    router.push("/dashboard");
+    return;
+  }
+
+  if (data?.user) {
+    localStorage.setItem(
+      PENDING_PROFILE_SEED_KEY,
+      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
+    );
+    infoMessage.value =
+      "Konto organizacji utworzone. Jeśli projekt wymaga potwierdzenia e-mail, sprawdź skrzynkę i dopiero wtedy zaloguj się.";
+  }
+}
+
 async function handleGoogleAuth() {
   errorMessage.value = "";
   infoMessage.value = "";
 
   const fullName = String(name.value || "").trim();
   const fallbackEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = String(selectedOrganizationId.value || "").trim();
-
-  if (!schoolId) {
-    errorMessage.value = "Wybierz organizację.";
-    return;
-  }
+  const schoolId = null;
 
   if (fullName || fallbackEmail) {
     localStorage.setItem(
@@ -245,6 +351,17 @@ async function handleGoogleAuth() {
 }
 
 onMounted(() => {
-  void loadOrganizations();
+  void (async () => {
+    try {
+      const apiBase = String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "");
+      const response = await fetch(`${apiBase}/api/public/business-login-config`);
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data?.businessEmailDomain) {
+        businessEmailDomain.value = String(data.businessEmailDomain).trim().toLowerCase();
+      }
+    } catch {
+      // Keep default domain when API is unavailable.
+    }
+  })();
 });
 </script>

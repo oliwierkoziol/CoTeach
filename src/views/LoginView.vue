@@ -496,6 +496,11 @@ async function handleGoogleIntentAfterRedirect() {
 }
 
 onMounted(async () => {
+  const requestedMode = String(route.query.mode || "").trim().toLowerCase();
+  if (requestedMode === "business" || requestedMode === "organizacja" || requestedMode === "organization") {
+    accountMode.value = "business";
+  }
+
   try {
     const response = await fetch(`${API_BASE}/api/public/business-login-config`);
     const data = await response.json().catch(() => null);
