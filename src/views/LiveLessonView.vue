@@ -239,7 +239,7 @@
       <!-- Action Buttons -->
       <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
         <button 
-          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors"
+          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
           @click="goPresentation"
         >
           <!-- Presentation Icon -->
@@ -252,7 +252,8 @@
         </button>
 
         <button 
-          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)]"
+          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#7b3400]"
+          :disabled="isFinalizingLesson"
           @click="finalizeNow"
         >
           <!-- Archive Icon -->
@@ -260,7 +261,7 @@
              <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
           </svg>
           <span class="font-['Inter'] font-semibold text-[#ffa26e] text-[16px]">
-            Zakończ i archiwizuj
+            {{ isFinalizingLesson ? "Przetwarzanie..." : "Zakończ i archiwizuj" }}
           </span>
         </button>
       </div>
@@ -331,6 +332,7 @@ const transcription = ref([]);
 const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
+const isFinalizingLesson = ref(false);
 const manualUpdateLoadingId = ref("");
 const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
@@ -705,96 +707,79 @@ async function beginWhisperMode() {
   if (!micStream.value) {
     throw new Error("Nie udało się uruchomić strumienia mikrofonu.");
   }
-  function startNewMediaRecorder() {
-    if (!micStream.value || sttEngine.value !== 'whisper') return;
-    let recorder;
+  // Continuous MediaRecorder: nie restartujemy, tylko obsługujemy kolejne fragmenty
+  if (!micStream.value || sttEngine.value !== 'whisper') return;
+  let recorder;
+  try {
+    recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
+  } catch {
+    recorder = new MediaRecorder(micStream.value);
+  }
+  mediaRecorder.value = recorder;
+  sttStatus.value = "listening";
+  info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
+
+  recorder.onstart = () => {
+    console.log('[whisper debug] MediaRecorder started');
+  };
+  recorder.ondataavailable = async (event) => {
+    console.log('[whisper debug] ondataavailable', event.data ? event.data.size : 0);
+    if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
     try {
-      recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
-    } catch {
-      recorder = new MediaRecorder(micStream.value);
+      const form = new FormData();
+      form.set("lessonId", state.lesson.id);
+      form.set("file", event.data, `chunk-${Date.now()}.webm`);
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData?.session?.access_token;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const response = await fetch(`${API_BASE}/api/transcribe`, {
+        method: "POST",
+        headers,
+        body: form
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        info.value = (data.message || data.error || "Błąd Whisper API.") + " Przełączam na STT przeglądarki.";
+        // Automatic recovery: switch to browser STT when provider fails.
+        sttEngine.value = "browser";
+        mediaRecorder.value?.stop();
+        mediaRecorder.value = null;
+        await beginMic();
+        return;
+      }
+      const text = String(data.text || "").trim();
+      if (text.length >= captionSensitivity.value) {
+        // Show Whisper text immediately on screen before lesson analysis.
+        interimCaption.value = "Przetworzono fragment audio.";
+        lastFinalCaption.value = text;
+        transcription.value.push(text);
+        await sendTranscript(state.lesson.id, text);
+        scheduleCoverageRefresh();
+        interimCaption.value = "";
+      }
+      if (data.limitReached) {
+        info.value = "Osiągnięto limit kosztów sesji.";
+      }
+    } catch (e) {
+      info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
     }
-    mediaRecorder.value = recorder;
-    sttStatus.value = "listening";
-    info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
+  };
+  recorder.onerror = () => {
+    sttStatus.value = "error";
+    info.value = "Błąd rejestratora audio dla Whisper.";
+    console.log('[whisper debug] MediaRecorder error');
+  };
+  recorder.start(2000);
+  console.log('[whisper debug] MediaRecorder .start(2000) called');
 
-    recorder.onstart = () => {
-      console.log('[whisper debug] MediaRecorder started');
-    };
-    recorder.onstop = () => {
-      console.log('[whisper debug] MediaRecorder stopped');
-      // Po zatrzymaniu, utwórz nowy MediaRecorder i start
-      if (micStream.value && sttEngine.value === 'whisper') {
-        setTimeout(() => {
-          console.log('[whisper debug] Restarting MediaRecorder after stop');
-          startNewMediaRecorder();
-        }, 100);
-      }
-    };
-
-    recorder.ondataavailable = async (event) => {
-      console.log('[whisper debug] ondataavailable', event.data ? event.data.size : 0);
-      if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
-      try {
-        const form = new FormData();
-        form.set("lessonId", state.lesson.id);
-        form.set("file", event.data, `chunk-${Date.now()}.webm`);
-        const { data: authData } = await supabase.auth.getSession();
-        const token = authData?.session?.access_token;
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const response = await fetch(`${API_BASE}/api/transcribe`, {
-          method: "POST",
-          headers,
-          body: form
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          info.value = (data.message || data.error || "Błąd Whisper API.") + " Przełączam na STT przeglądarki.";
-          // Automatic recovery: switch to browser STT when provider fails.
-          sttEngine.value = "browser";
-          mediaRecorder.value?.stop();
-          mediaRecorder.value = null;
-          await beginMic();
-          return;
-        }
-        const text = String(data.text || "").trim();
-        if (text.length >= captionSensitivity.value) {
-          // Show Whisper text immediately on screen before lesson analysis.
-          interimCaption.value = "Przetworzono fragment audio.";
-          lastFinalCaption.value = text;
-          transcription.value.push(text);
-          await sendTranscript(state.lesson.id, text);
-          scheduleCoverageRefresh();
-          interimCaption.value = "";
-        }
-        if (data.limitReached) {
-          info.value = "Osiągnięto limit kosztów sesji.";
-        }
-      } catch (e) {
-        info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
-      }
-    };
-
-    recorder.onerror = () => {
-      sttStatus.value = "error";
-      info.value = "Błąd rejestratora audio dla Whisper.";
-      console.log('[whisper debug] MediaRecorder error');
-    };
-
-    recorder.start(4000);
-    console.log('[whisper debug] MediaRecorder .start(4000) called');
-  }
-
-  // Przed uruchomieniem nowego MediaRecorder wyczyść poprzedni
-  if (mediaRecorder.value) {
-    try { mediaRecorder.value.ondataavailable = null; } catch {}
-    try { mediaRecorder.value.onstop = null; } catch {}
-    try { mediaRecorder.value.onerror = null; } catch {}
-    try { mediaRecorder.value.onstart = null; } catch {}
-    try { mediaRecorder.value.state !== 'inactive' && mediaRecorder.value.stop(); } catch {}
-    mediaRecorder.value = null;
-  }
-  startNewMediaRecorder();
+  // Debug: log MediaRecorder state every 2 seconds
+  if (window.__whisperStateLogger) clearInterval(window.__whisperStateLogger);
+  window.__whisperStateLogger = setInterval(() => {
+    if (mediaRecorder.value) {
+      console.log('[whisper debug] MediaRecorder state', mediaRecorder.value.state);
+    }
+  }, 2000);
 }
 
 async function loadMicDevices() {
@@ -908,8 +893,9 @@ function goPresentation() {
 }
 
 async function finalizeNow() {
-  if (!state.lesson) return;
+  if (!state.lesson || isFinalizingLesson.value) return;
   try {
+    isFinalizingLesson.value = true;
     error.value = "";
     stopSession();
     const note = await finalizeLesson(state.lesson.id, window.location.origin);
@@ -923,6 +909,8 @@ async function finalizeNow() {
     router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
   } catch (e) {
     error.value = e.message || "Nie udało się zakończyć lekcji.";
+  } finally {
+    isFinalizingLesson.value = false;
   }
 }
 
