@@ -17,42 +17,24 @@
         </button>
       </div>
 
-<<<<<<< Updated upstream
-    <div class="h-full flex flex-col">
-      <div class="flex-1 flex items-center justify-center p-12">
-        <div class="max-w-5xl w-full">
-          <div class="rounded-3xl bg-gradient-to-br from-purple-600 to-pink-600 p-12 text-white shadow-2xl">
-            <div class="mb-8">
-              <p class="mb-3 text-sm uppercase tracking-[0.18em] text-white/70">{{ slideTypeLabel(current.type) }}</p>
-              <h1 class="text-5xl font-bold mb-4">{{ current.title }}</h1>
-              <p v-if="current.subtitle" class="mb-5 text-lg text-white/85">{{ current.subtitle }}</p>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="k in current.details" :key="k" class="px-4 py-2 bg-white/20 rounded-full text-lg">{{ k }}</span>
-              </div>
-            </div>
-            <p class="text-2xl leading-relaxed opacity-90 mb-8">{{ current.summary }}</p>
-            <div class="bg-white/10 rounded-2xl p-8 border-2 border-white/20">
-              <div class="aspect-video bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center">
-                <p class="text-xl opacity-70 text-center px-6">{{ current.visualHint || "[Sugerowana wizualizacja slajdu]" }}</p>
-              </div>
-            </div>
-=======
       <div class="flex-1 overflow-auto p-4 sm:p-8 lg:p-10">
         <div class="mx-auto w-full max-w-6xl rounded-3xl bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700 p-6 shadow-2xl sm:p-10 lg:p-14">
-          <h1 class="mb-5 text-3xl font-extrabold leading-tight sm:text-5xl">{{ current.point.title }}</h1>
+          <h1 class="mb-5 text-3xl font-extrabold leading-tight sm:text-5xl">{{ current.title }}</h1>
+          <p v-if="current.subtitle" class="mb-4 text-lg text-white/85 sm:text-xl">{{ current.subtitle }}</p>
           <div class="mb-6 flex flex-wrap gap-2 sm:gap-3">
             <span
-              v-for="k in current.point.keywords"
+              v-for="k in current.details"
               :key="k"
               class="rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold text-white sm:px-4 sm:py-2 sm:text-base"
             >
               {{ k }}
             </span>
           </div>
-          <p class="mb-8 text-lg leading-relaxed text-white/95 sm:text-2xl">{{ current.point.description }}</p>
+          <p class="mb-8 text-lg leading-relaxed text-white/95 sm:text-2xl">{{ current.summary }}</p>
           <div class="rounded-2xl border border-white/20 bg-white/10 p-5 sm:p-7">
-            <div class="aspect-video rounded-xl bg-black/20" />
->>>>>>> Stashed changes
+            <div class="aspect-video rounded-xl bg-black/20 p-4">
+              <p class="text-base text-white/80 sm:text-lg">{{ current.visualHint || "Podpowiedź wizualna pojawi się tutaj." }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -253,12 +235,9 @@ const presentationHistory = ref([]);
 const selectedPresentation = ref(null);
 const selectedLessonId = ref("");
 const presentationScope = ref("pending");
-<<<<<<< Updated upstream
 const selectedNoteId = ref("");
 const selectedClassLevel = ref("");
-=======
 const generationMessage = ref("");
->>>>>>> Stashed changes
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
@@ -268,9 +247,7 @@ const selectedLesson = computed(() => availableLessons.value.find((lesson) => le
 const selectedNote = computed(() => availableNotes.value.find((note) => note.id === selectedNoteId.value) || null);
 const preparedSlides = computed(() => {
   const plan = Array.isArray(selectedLesson.value?.plan) ? selectedLesson.value.plan : [];
-  if (presentationScope.value === "full") {
-    return plan;
-  }
+  if (presentationScope.value === "full") return plan;
   return plan.filter((point) => point.status !== "discussed");
 });
 
@@ -343,7 +320,7 @@ async function startGeneratedPresentation() {
   if (!preparedSlides.value.length) return;
 
   isGenerating.value = true;
-<<<<<<< Updated upstream
+  generationMessage.value = "";
   try {
     const generated = await generatePresentation({
       lessonId: selectedLesson.value?.id || "",
@@ -364,30 +341,17 @@ async function startGeneratedPresentation() {
       }))
       .filter((slide) => slide.title || slide.summary || slide.details.length);
 
-    if (!generatedSlides.length) return;
-    savePresentationSnapshot(generatedSlides);
-    startPresentation(generatedSlides);
-    loadPresentationHistory();
-  } finally {
-    isGenerating.value = false;
-  }
-=======
-  generationMessage.value = "";
-  setTimeout(() => {
-    const generatedSlides = preparedSlides.value.map((slide) => ({
-      point: {
-        title: slide.point.title,
-        keywords: Array.isArray(slide.point.keywords) ? slide.point.keywords : [],
-        description: slide.point.description || ""
-      },
-      imageUrl: ""
-    }));
+    if (!generatedSlides.length) {
+      generationMessage.value = "Nie udało się wygenerować slajdów dla wybranych danych.";
+      return;
+    }
+
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów). Kliknij "Otwórz wybraną", aby ją wyświetlić.`;
+  } finally {
     isGenerating.value = false;
-  }, 900);
->>>>>>> Stashed changes
+  }
 }
 
 function openSavedPresentation(item) {
@@ -400,22 +364,8 @@ function exitPresentation() {
   isPresenting.value = false;
 }
 
-<<<<<<< Updated upstream
-function slideTypeLabel(type) {
-  const value = String(type || "").toLowerCase();
-  if (value === "title") return "Slajd tytułowy";
-  if (value === "agenda") return "Agenda";
-  if (value === "concept") return "Koncepcja";
-  if (value === "example") return "Przykład";
-  if (value === "comparison") return "Porównanie";
-  if (value === "practice") return "Ćwiczenie";
-  if (value === "summary") return "Podsumowanie";
-  if (value === "next_steps") return "Następne kroki";
-  return "Slajd";
-=======
 function openPresentationWindow() {
   const url = window.location.href;
   window.open(url, "_blank", "noopener,noreferrer");
->>>>>>> Stashed changes
 }
 </script>
