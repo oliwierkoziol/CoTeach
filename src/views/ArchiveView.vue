@@ -15,23 +15,59 @@
       <div class="grid grid-cols-12 gap-8">
         <div class="col-span-12 xl:col-span-8 space-y-6">
           <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-6">
+            <div class="mb-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                @click="activeTab = 'notes'"
+                :class="[
+                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
+                  activeTab === 'notes' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                ]"
+              >
+                <img :src="archiveIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'notes' ? 'brightness-0 invert' : ''" />
+                Notatki
+              </button>
+              <button
+                type="button"
+                @click="activeTab = 'lessons'"
+                :class="[
+                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
+                  activeTab === 'lessons' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                ]"
+              >
+                <img :src="liveLessonIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'lessons' ? 'brightness-0 invert' : ''" />
+                Lekcje
+              </button>
+              <button
+                type="button"
+                @click="activeTab = 'presentations'"
+                :class="[
+                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
+                  activeTab === 'presentations' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                ]"
+              >
+                <img :src="presentationIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'presentations' ? 'brightness-0 invert' : ''" />
+                Prezentacje
+              </button>
+            </div>
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-2">
-              Szukaj lekcji
+              {{ searchLabel }}
             </label>
             <div class="bg-[#e0e3e6] rounded-lg px-4 py-3">
               <input
                 v-model="searchQuery"
                 class="w-full bg-transparent outline-none border-none font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e] placeholder-[#767683]"
-                placeholder="Szukaj według przedmiotu, tytułu albo miesiąca..."
+                :placeholder="searchPlaceholder"
               />
             </div>
           </div>
 
-          <div v-if="!filteredLessons.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+          <div v-if="activeTab === 'lessons' && !filteredLessons.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
             <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zarchiwizowanych lekcji.</p>
           </div>
 
           <div
+            v-if="activeTab === 'lessons'"
             v-for="lesson in filteredLessons"
             :key="lesson.id"
             class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
@@ -39,26 +75,79 @@
             @click="selectLesson(lesson)"
           >
             <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
-                  {{ lesson.finalNote?.title || lesson.title }}
-                </h3>
-                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
-                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
-                  <span class="font-semibold text-[#0053db]">
-                    Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
-                  </span>
-                </p>
+              <div class="min-w-0 flex w-full items-center gap-4">
+                <img :src="liveLessonIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+                <div class="min-w-0">
+                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                    {{ lesson.finalNote?.title || lesson.title }}
+                  </h3>
+                  <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                    {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
+                    <span class="font-semibold text-[#0053db]">
+                      Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
+                    </span>
+                  </p>
+                </div>
               </div>
               <span class="shrink-0 rounded-lg bg-[#e8eefb] px-3 py-1.5 font-['Inter'] font-semibold text-[12px] text-[#142588]">
                 {{ lesson.month || "Brak miesiąca" }}
               </span>
             </div>
           </div>
+
+          <div v-if="activeTab === 'notes' && !filteredNotes.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych notatek.</p>
+          </div>
+
+          <div
+            v-if="activeTab === 'notes'"
+            v-for="note in filteredNotes"
+            :key="note.id"
+            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+            :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            @click="selectedNote = note"
+          >
+            <div class="flex w-full items-center gap-4">
+              <img :src="archiveIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+              <div class="min-w-0">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  {{ note.title || "Bez tytułu" }}
+                </h3>
+                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="activeTab === 'presentations' && !filteredPresentations.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych prezentacji.</p>
+          </div>
+
+          <div
+            v-if="activeTab === 'presentations'"
+            v-for="item in filteredPresentations"
+            :key="item.id"
+            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+            :class="selectedPresentation?.id === item.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            @click="selectedPresentation = item"
+          >
+            <div class="flex w-full items-center gap-4">
+              <img :src="presentationIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+              <div class="min-w-0">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  {{ item.title || "Prezentacja" }}
+                </h3>
+                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  {{ item.createdAtLabel || formatDate(item.createdAt) }} • {{ item.slideCount || 0 }} slajdów
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="col-span-12 xl:col-span-4 space-y-6">
-          <div v-if="selected?.finalNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+          <div v-if="activeTab === 'lessons' && selected?.finalNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
             <div class="flex items-center justify-between gap-3">
               <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
                 Złota notatka
@@ -124,8 +213,58 @@
             </RouterLink>
           </div>
 
-          <div v-else-if="selected" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6">
+          <div v-else-if="activeTab === 'lessons' && selected" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6">
             <p class="font-['Inter'] text-[#454652] text-[14px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
+          </div>
+
+          <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+              Szczegóły notatki
+            </h3>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Tytuł:</span> {{ selectedNote.title || "Bez tytułu" }}
+            </p>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Przedmiot:</span> {{ selectedNote.subject || "Brak" }}
+            </p>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Poziom:</span> {{ selectedNote.classLevel || "Brak" }}
+            </p>
+            <RouterLink
+              to="/notes"
+              class="block w-full rounded-lg bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
+            >
+              Przejdź do notatek
+            </RouterLink>
+          </div>
+
+          <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+              Szczegóły prezentacji
+            </h3>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Tytuł:</span> {{ selectedPresentation.title || "Prezentacja" }}
+            </p>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Slajdy:</span> {{ selectedPresentation.slideCount || 0 }}
+            </p>
+            <p class="font-['Inter'] text-[#454652] text-[14px]">
+              <span class="font-semibold text-[#191c1e]">Data:</span> {{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}
+            </p>
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
+              @click="openPresentationGenerator"
+            >
+              Otwórz generator prezentacji
+            </button>
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              @click="openSelectedPresentation"
+            >
+              Otwórz tę prezentację
+            </button>
           </div>
         </div>
       </div>
@@ -148,12 +287,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import archiveIcon from "../assets/archive.svg";
+import liveLessonIcon from "../assets/livelesson.svg";
+import presentationIcon from "../assets/presentation.svg";
 
-const { state, fetchLessons, updateFinalNote, deleteFinalNote } = useLessonStore();
+const PRESENTATION_HISTORY_KEY = "coteach:presentation-history";
+const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
+const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote } = useLessonStore();
+const router = useRouter();
+const activeTab = ref("lessons");
 const searchQuery = ref("");
 const selected = ref(null);
+const selectedNote = ref(null);
+const selectedPresentation = ref(null);
+const presentationHistory = ref([]);
 const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
@@ -161,8 +311,11 @@ const editDate = ref("");
 const isQrModalOpen = ref(false);
 
 onMounted(async () => {
-  await fetchLessons();
+  await Promise.all([fetchLessons(), fetchTeacherNotes()]);
+  loadPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
+  if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
+  if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
 });
 
 const filteredLessons = computed(() => {
@@ -174,6 +327,35 @@ const filteredLessons = computed(() => {
     const noteSubject = l.finalNote?.subject || l.subject || "";
     return `${noteTitle} ${noteSubject} ${l.month || ""}`.toLowerCase().includes(q);
   });
+});
+
+const filteredNotes = computed(() => {
+  const notes = Array.isArray(state.notes) ? state.notes : [];
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return notes;
+  return notes.filter((note) => {
+    return `${note.title || ""} ${note.subject || ""} ${note.classLevel || ""}`.toLowerCase().includes(q);
+  });
+});
+
+const filteredPresentations = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return presentationHistory.value;
+  return presentationHistory.value.filter((item) => {
+    return `${item.title || ""} ${item.createdAtLabel || ""}`.toLowerCase().includes(q);
+  });
+});
+
+const searchLabel = computed(() => {
+  if (activeTab.value === "notes") return "Szukaj notatek";
+  if (activeTab.value === "presentations") return "Szukaj prezentacji";
+  return "Szukaj lekcji";
+});
+
+const searchPlaceholder = computed(() => {
+  if (activeTab.value === "notes") return "Szukaj według tytułu, przedmiotu albo poziomu...";
+  if (activeTab.value === "presentations") return "Szukaj według tytułu lub daty prezentacji...";
+  return "Szukaj według przedmiotu, tytułu albo miesiąca...";
 });
 
 const qrCodeUrl = computed(() => {
@@ -246,6 +428,44 @@ function openQrModal() {
 function closeQrModal() {
   isQrModalOpen.value = false;
 }
+
+function loadPresentationHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRESENTATION_HISTORY_KEY) || "[]");
+    presentationHistory.value = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    presentationHistory.value = [];
+  }
+}
+
+function formatDate(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) return "Brak daty";
+  return date.toLocaleString("pl-PL");
+}
+
+function openPresentationGenerator() {
+  router.push("/presentation");
+}
+
+function openSelectedPresentation() {
+  if (!selectedPresentation.value?.id) return;
+  localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, String(selectedPresentation.value.id));
+  router.push("/presentation");
+}
+
+watch(activeTab, (tab) => {
+  searchQuery.value = "";
+  if (tab === "lessons" && filteredLessons.value.length && !selected.value) {
+    selectLesson(filteredLessons.value[0]);
+  }
+  if (tab === "notes" && filteredNotes.value.length && !selectedNote.value) {
+    selectedNote.value = filteredNotes.value[0];
+  }
+  if (tab === "presentations" && filteredPresentations.value.length && !selectedPresentation.value) {
+    selectedPresentation.value = filteredPresentations.value[0];
+  }
+});
 </script>
 
 <style scoped>

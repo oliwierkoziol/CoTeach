@@ -122,124 +122,95 @@
       </p>
     </header>
 
-    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
-      <h3 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-6">
-        Podstawowe informacje
+    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 md:p-8 w-full relative z-10 mb-6">
+      <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] mb-3">
+        Wybierz materiał prezentacji
       </h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-        <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Wybierz lekcję</label>
-          <select
-            v-model="selectedLessonId"
-            :disabled="!hasLessons"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
-          >
-            <option v-if="!hasLessons" value="">Brak dostępnych lekcji</option>
-            <option v-for="lesson in availableLessons" :key="lesson.id" :value="lesson.id">
-              {{ lesson.title || "Bez tytułu" }}{{ lesson.subject ? ` (${lesson.subject})` : "" }}
-            </option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Zakres prezentacji</label>
-          <select
-            v-model="presentationScope"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
-          >
-            <option value="full">Cała lekcja</option>
-            <option value="pending">Tylko nieomówione punkty</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-5">
-        <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Notatka źródłowa</label>
-          <select
-            v-model="selectedNoteId"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
-          >
-            <option value="">Automatycznie z lekcji</option>
-            <option v-for="note in availableNotes" :key="note.id" :value="note.id">
-              {{ note.title || "Bez tytułu" }}{{ note.subject ? ` (${note.subject})` : "" }}
-            </option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-2 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Poziom klasy</label>
-          <input
-            v-model="selectedClassLevel"
-            class="bg-[#e0e3e6] h-[48px] rounded-lg w-full px-4 text-[16px] text-[#454652] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
-            placeholder="np. 6 Szkoła Podstawowa"
-          />
-        </div>
-      </div>
-
-      <p class="mt-5 font-['Plus_Jakarta_Sans'] text-[14px] text-[#454652]">
-        Liczba slajdów do wygenerowania: <span class="font-bold text-[#191c1e]">{{ preparedSlides.length }}</span>
-      </p>
-      <p v-if="!hasLessons" class="mt-2 font-['Plus_Jakarta_Sans'] text-[13px] text-[#b54747]">
-        Brak lekcji w archiwum. Najpierw utwórz lekcję, aby wygenerować prezentację.
-      </p>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 w-full relative z-10 mb-7">
-      <div class="flex items-center justify-between mb-8 w-full">
-        <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
-          Poprzednie prezentacje
-        </h3>
+      <div class="mb-4 flex gap-2">
         <button
           type="button"
-          class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
-          :disabled="!preparedSlides.length || isGenerating"
-          @click="startGeneratedPresentation"
+          @click="presentationSource = 'note'"
+          :class="[
+            'inline-flex h-7 items-center gap-1.5 rounded-full px-4 text-[12px] font-semibold transition',
+            presentationSource === 'note' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e8e8ed] text-[#454652] hover:bg-[#dbdbe2]'
+          ]"
         >
-          Generuj prezentację
+          <img :src="archiveIcon" alt="" class="h-3.5 w-3.5 shrink-0" :class="presentationSource === 'note' ? 'brightness-0 invert' : ''" />
+          Notatki
+        </button>
+        <button
+          type="button"
+          @click="presentationSource = 'lesson'"
+          :class="[
+            'inline-flex h-7 items-center gap-1.5 rounded-full px-4 text-[12px] font-semibold transition',
+            presentationSource === 'lesson' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e8e8ed] text-[#454652] hover:bg-[#dbdbe2]'
+          ]"
+        >
+          <img :src="liveLessonIcon" alt="" class="h-3.5 w-3.5 shrink-0" :class="presentationSource === 'lesson' ? 'brightness-0 invert' : ''" />
+          Lekcje
         </button>
       </div>
-
-      <div
-        v-if="generationMessage"
-        class="mb-5 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800"
-      >
-        {{ generationMessage }}
-      </div>
-
-      <div class="flex flex-wrap gap-4 items-center w-full">
+      <div class="flex flex-wrap gap-3">
         <button
-          v-for="item in presentationHistory"
+          v-for="item in sourceItems"
           :key="item.id"
           type="button"
-          @click="selectedPresentation = item"
+          @click="selectSourceItem(item.id)"
           :class="[
-            'flex items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left w-[260px]',
-            selectedPresentation?.id === item.id
+            'flex w-full sm:w-[220px] items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left',
+            selectedSourceId === item.id
               ? 'bg-[#0c3dfe] text-white shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]'
               : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)]'
           ]"
         >
-          <svg class="h-[20px] w-[20px] shrink-0 fill-current opacity-90" viewBox="0 0 20 20">
-            <path d="M7 2h7l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2h3zm1 0v4h4L8 2zm8 16V7h-5V2H4v16h14zm-4-4v2H7v-2h7zm2-4v2H7v-2h9z" />
-          </svg>
-          <div class="flex flex-col justify-center font-['Plus_Jakarta_Sans'] font-bold text-[14px]">
-            <p class="leading-[18px] truncate max-w-[180px]">{{ item.title }}</p>
+          <img
+            :src="presentationSource === 'lesson' ? liveLessonIcon : archiveIcon"
+            alt=""
+            class="h-[18px] w-[18px] shrink-0 opacity-90"
+            :class="selectedSourceId === item.id ? 'brightness-0 invert' : ''"
+          />
+          <div class="flex flex-col justify-center font-['Plus_Jakarta_Sans'] font-bold text-[14px] min-w-0">
+            <p class="leading-[18px] truncate">{{ item.title }}</p>
             <p
-              class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[180px] mt-0.5"
-              :class="selectedPresentation?.id === item.id ? 'text-white' : 'text-[#454652]'"
+              class="leading-[18px] font-medium text-[12px] opacity-80 truncate mt-0.5"
+              :class="selectedSourceId === item.id ? 'text-white' : 'text-[#454652]'"
             >
-              {{ item.createdAtLabel }} • {{ item.slideCount }} slajdów
+              {{ item.subtitle }}
             </p>
           </div>
         </button>
-
-        <p v-if="!presentationHistory.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
-          Brak dostępnych prezentacji. Wygeneruj prezentację klikając przycisk.
+        <p v-if="!sourceItems.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
+          Brak dostępnych materiałów dla wybranego źródła.
         </p>
       </div>
     </div>
 
+    <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 md:p-8 w-full relative z-10 mb-6">
+      <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] mb-3">
+        Ustawienia prezentacji
+      </h3>
+      <div class="max-w-none">
+        <label class="mb-2 block font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Zakres</label>
+        <select
+          v-model="presentationScope"
+          :disabled="presentationSource === 'note'"
+          class="bg-[#d9dde2] h-[40px] rounded-md w-full px-4 text-[14px] text-[#2a3439] font-['Plus_Jakarta_Sans'] outline-none border-none focus:ring-2 focus:ring-[#0c3dfe]/50"
+        >
+          <option value="full">Cała lekcja/notatka</option>
+          <option value="pending">Tylko nieomówione punkty</option>
+        </select>
+      </div>
+    </div>
+
     <div class="bg-white rounded-xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 w-full relative z-10 mb-7">
-      <div class="flex items-center justify-end gap-3 w-full">
+      <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800">
+        {{ generationMessage }}
+      </div>
+      <div class="flex items-center justify-between gap-3 w-full">
+        <p class="font-['Plus_Jakarta_Sans'] text-[14px] text-[#454652]">
+          Liczba slajdów do wygenerowania: <span class="font-bold text-[#191c1e]">{{ plannedSlideCount }}</span>
+        </p>
+        <div class="flex items-center justify-end gap-3">
         <button
           type="button"
           @click="$router.back()"
@@ -249,12 +220,13 @@
         </button>
         <button
           type="button"
-          :disabled="!selectedPresentation"
-          @click="openSavedPresentation(selectedPresentation)"
+          :disabled="!canGenerate || isGenerating"
+          @click="startGeneratedPresentation"
           class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
         >
-          Otwórz wybraną
+          {{ isGenerating ? "Generuję..." : "Wygeneruj" }}
         </button>
+        </div>
       </div>
     </div>
   </div>
@@ -264,8 +236,11 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import archiveIcon from "../assets/archive.svg";
+import liveLessonIcon from "../assets/livelesson.svg";
 
 const PRESENTATION_HISTORY_KEY = "coteach:presentation-history";
+const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 
 const route = useRoute();
 const { state, fetchLessons, fetchTeacherNotes, generatePresentation } = useLessonStore();
@@ -276,10 +251,10 @@ const slides = ref([]);
 const slideIndex = ref(0);
 const presentationHistory = ref([]);
 const selectedPresentation = ref(null);
+const presentationSource = ref("lesson");
 const selectedLessonId = ref("");
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
-const selectedClassLevel = ref("");
 const generationMessage = ref("");
 const presentationTheme = ref({
   wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
@@ -293,10 +268,41 @@ const hasLessons = computed(() => availableLessons.value.length > 0);
 const availableNotes = computed(() => (Array.isArray(state.notes) ? state.notes : []));
 const selectedLesson = computed(() => availableLessons.value.find((lesson) => lesson.id === selectedLessonId.value) || null);
 const selectedNote = computed(() => availableNotes.value.find((note) => note.id === selectedNoteId.value) || null);
+const sourceItems = computed(() => {
+  if (presentationSource.value === "lesson") {
+    return availableLessons.value.map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title || "Bez tytułu",
+      subtitle: lesson.subject || "Lekcja"
+    }));
+  }
+  return availableNotes.value.map((note) => ({
+    id: note.id,
+    title: note.title || "Bez tytułu",
+    subtitle: note.subject || "Notatka"
+  }));
+});
+const selectedSourceId = computed(() => (presentationSource.value === "lesson" ? selectedLessonId.value : selectedNoteId.value));
+const selectedClassLevel = computed(() => {
+  if (presentationSource.value === "note") {
+    return String(selectedNote.value?.classLevel || "").trim();
+  }
+  return String(selectedLesson.value?.classLevel || selectedNote.value?.classLevel || "").trim();
+});
+const effectivePresentationScope = computed(() => (presentationSource.value === "note" ? "full" : presentationScope.value));
 const preparedSlides = computed(() => {
+  if (presentationSource.value === "note") return [];
   const plan = Array.isArray(selectedLesson.value?.plan) ? selectedLesson.value.plan : [];
-  if (presentationScope.value === "full") return plan;
+  if (effectivePresentationScope.value === "full") return plan;
   return plan.filter((point) => point.status !== "discussed");
+});
+const plannedSlideCount = computed(() => {
+  if (presentationSource.value === "note") return 5;
+  return preparedSlides.value.length;
+});
+const canGenerate = computed(() => {
+  if (presentationSource.value === "note") return Boolean(selectedNote.value?.id);
+  return Boolean(selectedLesson.value?.id) && preparedSlides.value.length > 0;
 });
 const currentMainText = computed(() => {
   const text = String(current.value.summary || "").trim();
@@ -329,18 +335,27 @@ onMounted(async () => {
   const byCurrent = state.lesson?.id ? lessons.find((lesson) => lesson.id === state.lesson.id) : null;
   const initialLesson = byRoute || byCurrent || lessons[0] || null;
   selectedLessonId.value = initialLesson?.id || "";
-  selectedClassLevel.value = selectedNote.value?.classLevel || "";
+  if (availableNotes.value.length > 0) {
+    selectedNoteId.value = availableNotes.value[0].id;
+  }
   state.lesson = initialLesson;
   loadPresentationHistory();
+  tryOpenRequestedPresentation();
 });
 
 watch(selectedLesson, (lesson) => {
   state.lesson = lesson || null;
 });
 
-watch(selectedNote, (note) => {
-  if (!selectedClassLevel.value && note?.classLevel) {
-    selectedClassLevel.value = note.classLevel;
+watch(presentationSource, (source) => {
+  if (source === "note" && !selectedNoteId.value && availableNotes.value.length > 0) {
+    selectedNoteId.value = availableNotes.value[0].id;
+  }
+  if (source === "lesson" && !selectedLessonId.value && availableLessons.value.length > 0) {
+    selectedLessonId.value = availableLessons.value[0].id;
+  }
+  if (source === "note") {
+    presentationScope.value = "full";
   }
 });
 
@@ -360,8 +375,11 @@ function persistPresentationHistory() {
 }
 
 function buildPresentationTitle() {
-  const subject = selectedLesson.value?.subject || selectedLesson.value?.title || selectedNote.value?.title || "Prezentacja";
-  const scopeLabel = presentationScope.value === "full" ? "cała lekcja" : "nieomówione punkty";
+  const subject =
+    (presentationSource.value === "note"
+      ? selectedNote.value?.subject || selectedNote.value?.title
+      : selectedLesson.value?.subject || selectedLesson.value?.title) || "Prezentacja";
+  const scopeLabel = effectivePresentationScope.value === "full" ? "całość" : "nieomówione punkty";
   return `${subject} - ${scopeLabel} (${new Date().toLocaleDateString("pl-PL")})`;
 }
 
@@ -390,17 +408,25 @@ function startPresentation(currentSlides) {
   isPresenting.value = true;
 }
 
+function selectSourceItem(id) {
+  if (presentationSource.value === "lesson") {
+    selectedLessonId.value = id;
+    return;
+  }
+  selectedNoteId.value = id;
+}
+
 async function startGeneratedPresentation() {
-  if (!preparedSlides.value.length) return;
+  if (!canGenerate.value) return;
 
   isGenerating.value = true;
   generationMessage.value = "";
   try {
     const generated = await generatePresentation({
-      lessonId: selectedLesson.value?.id || "",
+      lessonId: presentationSource.value === "lesson" ? selectedLesson.value?.id || "" : "",
       noteId: selectedNote.value?.id || "",
-      classLevel: selectedClassLevel.value || selectedNote.value?.classLevel || "",
-      scope: presentationScope.value,
+      classLevel: selectedClassLevel.value || "",
+      scope: effectivePresentationScope.value,
       maxSlides: 12
     });
     const generatedSlides = (generated?.slides || [])
@@ -422,7 +448,8 @@ async function startGeneratedPresentation() {
 
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
-    generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów). Kliknij "Otwórz wybraną", aby ją wyświetlić.`;
+    generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
+    startPresentation(generatedSlides);
   } finally {
     isGenerating.value = false;
   }
@@ -432,6 +459,16 @@ function openSavedPresentation(item) {
   const storedSlides = Array.isArray(item?.slides) ? item.slides : [];
   if (!storedSlides.length) return;
   startPresentation(storedSlides);
+}
+
+function tryOpenRequestedPresentation() {
+  const requestedId = String(localStorage.getItem(ARCHIVE_OPEN_PRESENTATION_KEY) || "").trim();
+  if (!requestedId) return;
+  localStorage.removeItem(ARCHIVE_OPEN_PRESENTATION_KEY);
+  const requested = presentationHistory.value.find((item) => String(item.id) === requestedId);
+  if (!requested) return;
+  selectedPresentation.value = requested;
+  openSavedPresentation(requested);
 }
 
 function exitPresentation() {
