@@ -17,13 +17,13 @@
                 {{ userInitials }}
               </span>
             </div>
-
+            
             <div
               class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-black/65"
             >
               <span class="px-2 text-center text-sm font-semibold text-white">Zmień zdjęcie</span>
             </div>
-
+            
             <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleAvatarUpload" />
 
             <button
