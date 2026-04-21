@@ -62,7 +62,7 @@ router.beforeEach(async (to) => {
 
   const { data: profile, error: blockedCheckError } = await supabase
     .from("profiles")
-    .select("blocked, admin, organisation")
+    .select("blocked, admin")
     .eq("id", session.user.id)
     .maybeSingle();
 
@@ -71,11 +71,7 @@ router.beforeEach(async (to) => {
     return { path: "/login", query: { blocked: "1" } };
   }
 
-  if (to.path.startsWith("/admin") && profile?.admin !== true) {
-    return { path: "/dashboard" };
-  }
-
-  if (to.path === "/organization" && profile?.admin !== true && profile?.organisation !== true) {
+  if ((to.path.startsWith("/admin") || to.path === "/organization") && profile?.admin !== true) {
     return { path: "/dashboard" };
   }
 
