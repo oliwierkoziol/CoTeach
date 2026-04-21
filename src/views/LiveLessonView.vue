@@ -16,7 +16,7 @@
         Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
       </h1>
       <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-        Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.
+        Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
       </p>
     </div>
 
@@ -169,13 +169,13 @@
               <select
                 v-model="sttEngine"
                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                :disabled="isRecording"
+                @change="handleSttEngineChange"
               >
                 <option value="browser">Przeglądarka Web Speech</option>
-                <option value="whisper">Atheneum AI Whisper v3</option>
+                <option value="whisper">Whisper</option>
               </select>
               <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] pointer-events-none">
-                {{ sttEngine === 'whisper' ? 'Atheneum AI Whisper v3' : 'Przeglądarka Web Speech' }}
+                {{ sttEngine === 'whisper' ? 'Whisper' : 'Przeglądarka Web Speech' }}
               </span>
               <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
                 <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -216,14 +216,14 @@
             </h3>
           </div>
           <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#0053db] text-[14px]">
-            {{ Math.floor(elapsedSec / 60) }} / {{ activeSessionDurationMinutes }} Minutes
+            {{ lessonProgressTimeLabel }}
           </p>
         </div>
 
         <div class="bg-[#d9e4ea] h-8 rounded-2xl overflow-hidden relative">
           <div 
             class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
-            :style="{ width: `${Math.min(100, Math.floor((elapsedSec / (activeSessionDurationMinutes * 60)) * 100))}%` }" 
+            :style="{ width: `${lessonProgressPercent}%` }" 
           />
           <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30" />
           <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
@@ -239,7 +239,7 @@
       <!-- Action Buttons -->
       <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
         <button 
-          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors"
+          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
           @click="goPresentation"
         >
           <!-- Presentation Icon -->
@@ -252,7 +252,8 @@
         </button>
 
         <button 
-          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)]"
+          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#7b3400]"
+          :disabled="isFinalizingLesson"
           @click="finalizeNow"
         >
           <!-- Archive Icon -->
@@ -260,7 +261,7 @@
              <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
           </svg>
           <span class="font-['Inter'] font-semibold text-[#ffa26e] text-[16px]">
-            Zakończ i archiwizuj
+            {{ isFinalizingLesson ? "Przetwarzanie..." : "Zakończ i archiwizuj" }}
           </span>
         </button>
       </div>
@@ -294,7 +295,17 @@ const lessonDurationOptions = [
 
 const route = useRoute();
 const router = useRouter();
-const { state, startLive, sendTranscript, refreshCoverage, setManualPointApproval, finalizeLesson, fetchLessons } = useLessonStore();
+const {
+  state,
+  startLive,
+  sendTranscript,
+  refreshCoverage,
+  setManualPointApproval,
+  finalizeLesson,
+  fetchLessons,
+  fetchLesson,
+  hydrateLessonFromCache
+} = useLessonStore();
 
 const isRecording = ref(false);
 const recognition = ref(null);
@@ -321,6 +332,7 @@ const transcription = ref([]);
 const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
+const isFinalizingLesson = ref(false);
 const manualUpdateLoadingId = ref("");
 const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
@@ -341,6 +353,12 @@ const availableLessonDurationOptions = computed(() => {
   return filtered.length ? filtered : [{ label: `${maxMinutes} min`, minutes: maxMinutes }];
 });
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
+const elapsedMinutes = computed(() => Math.floor(elapsedSec.value / 60));
+const elapsedSecondsRemainder = computed(() => elapsedSec.value % 60);
+const lessonProgressTimeLabel = computed(
+  () =>
+    `${elapsedMinutes.value} minut ${elapsedSecondsRemainder.value} sekund / ${activeSessionDurationMinutes.value} minut`
+);
 const durationLabel = computed(() => {
   const minutes = activeSessionDurationMinutes.value || selectedLessonDurationMinutes.value || 45;
   const hours = Math.floor(minutes / 60);
@@ -364,15 +382,67 @@ const apiStatusLabel = computed(() => {
   return "sprawdzanie";
 });
 
+const lessonProgressPercent = computed(() => {
+  const totalSeconds = Math.max(1, activeSessionDurationMinutes.value * 60);
+  return Math.min(100, Math.floor((elapsedSec.value / totalSeconds) * 100));
+});
+
+function resolveLessonDurationMinutes(lesson) {
+  const parsedLength = Number(lesson?.length);
+  let minutes = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
+  if (isDemoLicense.value && Number(demoMaxLiveMinutes.value) > 0) {
+    minutes = Math.min(minutes, Number(demoMaxLiveMinutes.value));
+  }
+  return Math.max(1, minutes);
+}
+
+function hydrateLessonProgressFromState() {
+  if (!state.lesson) return;
+  activeSessionDurationMinutes.value = resolveLessonDurationMinutes(state.lesson);
+  const startedAtMs = new Date(state.lesson?.startedAt || 0).getTime();
+  const nowMs = Date.now();
+  startAt.value = Number.isFinite(startedAtMs) && startedAtMs > 0 ? startedAtMs : nowMs;
+  elapsedSec.value = Math.max(0, Math.floor((nowMs - startAt.value) / 1000));
+}
+
 onMounted(async () => {
-  await loadMicDevices();
-  await checkApiHealth();
-  await fetchLicenseStatus();
+  const routeLessonId = String(route.params.lessonId || "").trim();
+  const currentLessonId = String(state.lesson?.id || "").trim();
+  let cachedRouteLesson = null;
+  if (routeLessonId) {
+    cachedRouteLesson = hydrateLessonFromCache(routeLessonId);
+    if (cachedRouteLesson) {
+      hydrateLessonProgressFromState();
+    }
+  }
+
+  // Do not block lesson UI hydration on secondary async tasks.
+  void loadMicDevices();
+  void checkApiHealth();
+  void fetchLicenseStatus();
   apiPingTimer = setInterval(checkApiHealth, 10000);
-  if (!state.lesson) {
+  if (routeLessonId) {
+    if (routeLessonId !== currentLessonId) {
+      if (cachedRouteLesson) {
+        // Render instantly from local cache, then silently refresh.
+        void fetchLesson(routeLessonId);
+      } else {
+        await fetchLesson(routeLessonId);
+        hydrateLessonProgressFromState();
+      }
+    } else {
+      // Keep UI instant when returning, but refresh lesson in background.
+      void fetchLesson(routeLessonId);
+    }
+  } else if (!state.lesson) {
     const lessons = await fetchLessons();
-    const target = lessons.find((l) => l.id === route.params.lessonId) || lessons[0];
-    if (target) state.lesson = target;
+    const target = lessons[0];
+    if (target) {
+      state.lesson = target;
+      hydrateLessonProgressFromState();
+    }
+  } else {
+    hydrateLessonProgressFromState();
   }
   if (!isRecording.value) {
     startSession();
@@ -473,12 +543,12 @@ async function startSession() {
       error.value = "Brak lekcji. Najpierw utwórz plan.";
       return;
     }
-    activeSessionDurationMinutes.value = selectedLessonDurationMinutes.value || 45;
-    await startLive(state.lesson.id);
-    await beginMic();
-    isRecording.value = true;
-    elapsedSec.value = 0;
-    startAt.value = Date.now();
+    hydrateLessonProgressFromState();
+    if (state.lesson.status !== "live") {
+      await startLive(state.lesson.id);
+      hydrateLessonProgressFromState();
+    }
+    if (timer.value) clearInterval(timer.value);
     timer.value = setInterval(() => {
       elapsedSec.value = Math.floor((Date.now() - startAt.value) / 1000);
       if (elapsedSec.value >= activeSessionDurationMinutes.value * 60) {
@@ -486,6 +556,8 @@ async function startSession() {
         stopSession();
       }
     }, 1000);
+    await beginMic();
+    isRecording.value = true;
   } catch (e) {
     error.value = e.message;
     sttStatus.value = "error";
@@ -511,6 +583,27 @@ function stopSession() {
     coverageRefreshTimer.value = null;
   }
   void refreshCoverageThrottled(true);
+}
+
+async function handleSttEngineChange() {
+  if (!isRecording.value && !micTestActive.value) return;
+  try {
+    error.value = "";
+    shouldKeepListening.value = false;
+    recognition.value?.stop();
+    recognition.value = null;
+    mediaRecorder.value?.stop();
+    mediaRecorder.value = null;
+    interimCaption.value = "";
+    sttStatus.value = "starting";
+    info.value = sttEngine.value === "whisper"
+      ? "Przełączono na Whisper. Restartuję nasłuch..."
+      : "Przełączono na Web Speech. Restartuję nasłuch...";
+    await beginMic();
+  } catch (e) {
+    sttStatus.value = "error";
+    error.value = e.message || "Nie udało się przełączyć silnika STT.";
+  }
 }
 
 async function beginMic() {
@@ -614,6 +707,8 @@ async function beginWhisperMode() {
   if (!micStream.value) {
     throw new Error("Nie udało się uruchomić strumienia mikrofonu.");
   }
+  // Continuous MediaRecorder: nie restartujemy, tylko obsługujemy kolejne fragmenty
+  if (!micStream.value || sttEngine.value !== 'whisper') return;
   let recorder;
   try {
     recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
@@ -624,7 +719,11 @@ async function beginWhisperMode() {
   sttStatus.value = "listening";
   info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
 
+  recorder.onstart = () => {
+    console.log('[whisper debug] MediaRecorder started');
+  };
   recorder.ondataavailable = async (event) => {
+    console.log('[whisper debug] ondataavailable', event.data ? event.data.size : 0);
     if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
     try {
       const form = new FormData();
@@ -666,13 +765,21 @@ async function beginWhisperMode() {
       info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
     }
   };
-
   recorder.onerror = () => {
     sttStatus.value = "error";
     info.value = "Błąd rejestratora audio dla Whisper.";
+    console.log('[whisper debug] MediaRecorder error');
   };
+  recorder.start(2000);
+  console.log('[whisper debug] MediaRecorder .start(2000) called');
 
-  recorder.start(4000);
+  // Debug: log MediaRecorder state every 2 seconds
+  if (window.__whisperStateLogger) clearInterval(window.__whisperStateLogger);
+  window.__whisperStateLogger = setInterval(() => {
+    if (mediaRecorder.value) {
+      console.log('[whisper debug] MediaRecorder state', mediaRecorder.value.state);
+    }
+  }, 2000);
 }
 
 async function loadMicDevices() {
@@ -692,6 +799,16 @@ async function startMicMeter() {
     ? { audio: { deviceId: { exact: selectedMicId.value } } }
     : { audio: true };
   micStream.value = await navigator.mediaDevices.getUserMedia(constraints);
+  console.log('[mic debug] micStream', micStream.value);
+  console.log('[mic debug] micDevices', micDevices.value, 'selectedMicId', selectedMicId.value);
+  if (micStream.value) {
+    const tracks = micStream.value.getAudioTracks();
+    console.log('[mic debug] audioTracks', tracks);
+    if (tracks.length > 0) {
+      console.log('[mic debug] track settings', tracks[0].getSettings());
+      console.log('[mic debug] track muted', tracks[0].muted);
+    }
+  }
   audioContext.value = new (window.AudioContext || window.webkitAudioContext)();
   const source = audioContext.value.createMediaStreamSource(micStream.value);
   analyserNode.value = audioContext.value.createAnalyser();
@@ -776,9 +893,25 @@ function goPresentation() {
 }
 
 async function finalizeNow() {
-  if (!state.lesson) return;
-  const note = await finalizeLesson(state.lesson.id, window.location.origin);
-  router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
+  if (!state.lesson || isFinalizingLesson.value) return;
+  try {
+    isFinalizingLesson.value = true;
+    error.value = "";
+    stopSession();
+    const note = await finalizeLesson(state.lesson.id, window.location.origin);
+    if (state.lesson) {
+      state.lesson = {
+        ...state.lesson,
+        status: "finished",
+        finishedAt: new Date().toISOString()
+      };
+    }
+    router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
+  } catch (e) {
+    error.value = e.message || "Nie udało się zakończyć lekcji.";
+  } finally {
+    isFinalizingLesson.value = false;
+  }
 }
 
 async function toggleManualApproval(point) {

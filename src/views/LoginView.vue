@@ -241,6 +241,7 @@ function readPendingProfileSeed() {
       email: String(parsed.email || "").trim().toLowerCase(),
       full_name: String(parsed.full_name || "").trim(),
       school_id: String(parsed.school_id || "").trim(),
+      organisation: parsed.organisation === true,
       created_at: Number(parsed.created_at || 0)
     };
   } catch {
@@ -259,12 +260,13 @@ async function syncProfileAfterLogin(session) {
   const metadataAvatar = String(
     user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.photo_url || ""
   ).trim();
+  const metadataOrganisation = user.user_metadata?.account_type === "business" || user.user_metadata?.organisation === true;
   const fullName =
     pendingMatchesUser && pending?.full_name ? pending.full_name : metadataName;
 
   const { data: existingProfile } = await supabase
     .from("profiles")
-    .select("teacher_id, school_id")
+    .select("teacher_id, school_id, organisation")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -273,6 +275,10 @@ async function syncProfileAfterLogin(session) {
     String(existingProfile?.school_id || "").trim() ||
     (pendingMatchesUser ? String(pending?.school_id || "").trim() : "") ||
     null;
+  const organisation =
+    existingProfile?.organisation === true ||
+    (pendingMatchesUser ? pending?.organisation === true : false) ||
+    metadataOrganisation === true;
 
   await supabase.from("profiles").upsert(
     {
@@ -281,6 +287,7 @@ async function syncProfileAfterLogin(session) {
       full_name: fullName || null,
       avatar_url: metadataAvatar || null,
       school_id: schoolId,
+      organisation: organisation === true,
       teacher_id: teacherId,
       updated_at: new Date().toISOString()
     },
@@ -378,7 +385,7 @@ async function handleBusinessLogin() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("blocked, email")
+    .select("blocked, email, organisation")
     .eq("id", data.session.user.id)
     .maybeSingle();
 
@@ -388,10 +395,9 @@ async function handleBusinessLogin() {
     return;
   }
 
-  const profileEmail = String(profile?.email || "").toLowerCase();
-  if (!isBusinessEmail(profileEmail)) {
+  if (profile?.organisation !== true) {
     await supabase.auth.signOut({ scope: "local" });
-    errorMessage.value = "To nie jest konto służbowe. Użyj logowania dla konta indywidualnego.";
+    errorMessage.value = "To nie jest konto organizacji. Użyj logowania dla konta indywidualnego.";
     return;
   }
 
@@ -496,6 +502,11 @@ async function handleGoogleIntentAfterRedirect() {
 }
 
 onMounted(async () => {
+  const requestedMode = String(route.query.mode || "").trim().toLowerCase();
+  if (requestedMode === "business" || requestedMode === "organizacja" || requestedMode === "organization") {
+    accountMode.value = "business";
+  }
+
   try {
     const response = await fetch(`${API_BASE}/api/public/business-login-config`);
     const data = await response.json().catch(() => null);

@@ -1,12 +1,12 @@
 <template>
   <div class="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-10">
-    <div class="mx-auto max-w-2xl">
+    <div class="mx-auto max-w-6xl">
       <header class="mb-8">
         <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Konto</p>
         <h1 class="text-3xl font-bold text-foreground">Mój profil</h1>
       </header>
 
-      <div class="rounded-2xl border border-border bg-card p-8 shadow-sm">
+      <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <div class="mb-8 flex justify-center">
           <div class="group relative">
             <div
@@ -35,7 +35,42 @@
           </div>
         </div>
 
-        <div class="space-y-6">
+        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <aside class="rounded-2xl border border-border bg-background/50 p-3">
+            <p class="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Ustawienia</p>
+            <div class="space-y-1">
+              <button
+                type="button"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'account' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
+                @click="activeProfileSection = 'account'"
+              >
+                Informacje o koncie
+              </button>
+              <button
+                type="button"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'billing' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
+                @click="activeProfileSection = 'billing'"
+              >
+                Billing
+              </button>
+              <button
+                type="button"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'security' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
+                @click="activeProfileSection = 'security'"
+              >
+                Bezpieczeństwo
+              </button>
+            </div>
+          </aside>
+
+          <div class="space-y-8">
+          <section v-show="activeProfileSection === 'account'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Informacje o koncie</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Dane profilu i bezpieczeństwo konta.</p>
+            <div class="mt-5 space-y-6">
           <div>
             <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
             <div class="flex flex-col gap-2 sm:flex-row">
@@ -119,7 +154,14 @@
               {{ formatDate(userProfile.created_at) }}
             </div>
           </div>
+            </div>
+          </section>
 
+          <section v-show="activeProfileSection === 'billing'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Billing</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Licencja, płatności i wykorzystanie kosztów.</p>
+
+            <div class="mt-5 space-y-6">
           <div>
             <label class="mb-2 block text-sm font-semibold text-foreground">Licencja</label>
             <div class="border-b border-border pb-2 text-lg text-foreground">
@@ -142,6 +184,228 @@
             </div>
           </div>
 
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Metoda płatności</label>
+            <div class="border-b border-border pb-2 text-lg text-foreground">
+              {{ billingSummary?.paymentMethod || "Brak przypisanej metody płatności" }}
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Zużycie pieniędzy</label>
+            <div class="border-b border-border pb-2 text-lg text-foreground">
+              {{ formatCurrencyPLN(billingSummary?.totalSpentPLN) }}
+            </div>
+            <div class="mt-2 text-sm text-muted-foreground">
+              Koszt dostawcy: {{ formatCurrencyPLN(billingSummary?.providerCostPLN) }} ·
+              Marża platformy: {{ formatCurrencyPLN(billingSummary?.marginPLN) }}
+            </div>
+          </div>
+            </div>
+          </section>
+
+          <section v-show="activeProfileSection === 'security'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Bezpieczeństwo</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Ustawienia krytyczne konta.</p>
+            <div class="mt-5 space-y-6">
+              <div class="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4">
+                <label class="block text-sm font-semibold text-amber-900 mb-2">Zablokuj moje konto</label>
+                <p class="text-sm text-amber-800">
+                  Po zablokowaniu nie zalogujesz się ponownie, dopóki administrator nie odblokuje konta.
+                </p>
+                <button
+                  type="button"
+                  class="mt-3 w-full sm:w-auto rounded-2xl bg-amber-600 px-6 py-3 text-white font-semibold hover:bg-amber-700 transition disabled:opacity-50"
+                  :disabled="isBlockingAccount"
+                  @click="handleSelfBlockAccount"
+                >
+                  {{ isBlockingAccount ? "Blokowanie konta..." : "Zablokuj moje konto" }}
+                </button>
+              </div>
+
+              <div class="rounded-2xl border border-red-200 bg-red-50/70 p-4">
+                <label class="block text-sm font-semibold text-red-800 mb-2">Usuń konto</label>
+                <p class="text-sm text-red-700">
+                  Usunięcie konta jest trwałe i nie można go cofnąć.
+                </p>
+                <button
+                  type="button"
+                  class="mt-3 w-full sm:w-auto rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                  :disabled="isDeletingAccount"
+                  @click="toggleDeleteConfirm"
+                >
+                  {{ showDeleteConfirm ? "Anuluj usuwanie" : "Usuń konto" }}
+                </button>
+
+                <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-card p-4">
+                  <p class="text-sm text-red-700">
+                    Wpisz hasło, aby potwierdzić usunięcie konta.
+                  </p>
+                  <input
+                    v-model="deletePassword"
+                    type="password"
+                    autocomplete="current-password"
+                    class="mt-3 w-full rounded-2xl border border-red-200 bg-background px-4 py-3 text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                    placeholder="Podaj hasło"
+                  />
+                  <div class="mt-3 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      class="rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                      :disabled="isDeletingAccount || !deletePassword.trim()"
+                      @click="handleDeleteAccount"
+                    >
+                      {{ isDeletingAccount ? "Usuwanie konta..." : "Potwierdź usunięcie" }}
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-2xl border border-border bg-card px-6 py-3 font-semibold text-foreground transition hover:bg-muted/50"
+                      :disabled="isDeletingAccount"
+                      @click="cancelDeleteConfirm"
+                    >
+                      Cofnij
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-show="activeProfileSection === 'organization'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Organizacja</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Ustawienia szkoły, konta służbowe i koszty AI.</p>
+
+            <div v-if="organizationError" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {{ organizationError }}
+            </div>
+
+            <div class="mt-5 space-y-6">
+              <section class="rounded-2xl border border-border bg-card p-4">
+                <h3 class="text-base font-semibold text-foreground">Ustawienia szkoły</h3>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <label class="block text-sm text-muted-foreground">
+                    Nazwa szkoły
+                    <input
+                      v-model.trim="orgSchoolName"
+                      type="text"
+                      class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                      placeholder="Np. Szkoła Podstawowa nr 1"
+                    />
+                  </label>
+                  <label class="block text-sm text-muted-foreground">
+                    Końcówka maili służbowych
+                    <input
+                      v-model.trim="orgBusinessEmailDomain"
+                      type="text"
+                      class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                      placeholder="np. szkola.edu.pl"
+                    />
+                  </label>
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    class="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+                    :disabled="isSavingOrgSettings"
+                    @click="saveOrganizationSettings"
+                  >
+                    {{ isSavingOrgSettings ? "Zapisywanie..." : "Zapisz ustawienia szkoły" }}
+                  </button>
+                </div>
+              </section>
+
+              <section class="rounded-2xl border border-border bg-card p-4">
+                <h3 class="text-base font-semibold text-foreground">Utwórz konto służbowe</h3>
+                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <label class="block text-sm text-muted-foreground">
+                    Imię i nazwisko
+                    <input
+                      v-model.trim="orgBusinessFullName"
+                      type="text"
+                      class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                      placeholder="Jan Kowalski"
+                    />
+                  </label>
+                  <label class="block text-sm text-muted-foreground">
+                    Login służbowy
+                    <input
+                      v-model.trim="orgBusinessLogin"
+                      type="text"
+                      class="mt-1 w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                      placeholder="jan.kowalski"
+                    />
+                  </label>
+                  <label class="block text-sm text-muted-foreground">
+                    Hasło
+                    <div class="mt-1 flex gap-2">
+                      <input
+                        v-model="orgBusinessPassword"
+                        :type="showOrgBusinessPassword ? 'text' : 'password'"
+                        class="w-full rounded-xl border border-border bg-input-background px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
+                        placeholder="Minimum 8 znaków"
+                      />
+                      <button
+                        type="button"
+                        class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40"
+                        @click="showOrgBusinessPassword = !showOrgBusinessPassword"
+                      >
+                        {{ showOrgBusinessPassword ? "Ukryj" : "Pokaż" }}
+                      </button>
+                    </div>
+                  </label>
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                    :disabled="isCreatingOrgBusinessUser"
+                    @click="createOrganizationBusinessUser"
+                  >
+                    {{ isCreatingOrgBusinessUser ? "Tworzenie..." : "Utwórz konto służbowe" }}
+                  </button>
+                </div>
+              </section>
+
+              <section class="rounded-2xl border border-border bg-card p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <h3 class="text-base font-semibold text-foreground">Zużycie pieniędzy na nauczyciela</h3>
+                  <button
+                    type="button"
+                    class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-40"
+                    :disabled="isLoadingOrgTeacherCosts"
+                    @click="loadOrganizationTeacherCosts"
+                  >
+                    {{ isLoadingOrgTeacherCosts ? "Ładowanie..." : "Odśwież koszty" }}
+                  </button>
+                </div>
+                <div v-if="!orgTeacherCosts.length" class="text-sm text-muted-foreground">Brak danych kosztów nauczycieli.</div>
+                <div v-else class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                        <th class="px-3 py-2 font-medium">Nauczyciel</th>
+                        <th class="px-3 py-2 font-medium">Koszt dostawcy</th>
+                        <th class="px-3 py-2 font-medium">Koszt platformy</th>
+                        <th class="px-3 py-2 font-medium">Razem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="row in orgTeacherCosts" :key="row.teacherId" class="border-b border-border/60">
+                        <td class="px-3 py-3">
+                          <div class="font-medium text-foreground">{{ row.fullName || "Brak nazwy" }}</div>
+                          <div class="text-xs text-muted-foreground">{{ row.email || row.teacherId }}</div>
+                        </td>
+                        <td class="px-3 py-3 text-muted-foreground">{{ formatCurrencyPLN(row.base) }}</td>
+                        <td class="px-3 py-3 text-muted-foreground">{{ formatCurrencyPLN(row.margin) }}</td>
+                        <td class="px-3 py-3 font-semibold text-foreground">{{ formatCurrencyPLN(row.total) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+          </div>
         </div>
 
         <div v-if="isUploading" class="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
@@ -250,63 +514,19 @@
           </Transition>
         </Teleport>
 
-        <div class="mt-8 rounded-2xl border border-red-200 bg-red-50/70 p-4">
-          <label class="block text-sm font-semibold text-red-800 mb-2">Usuń konto</label>
-          <p class="text-sm text-red-700">
-            Usunięcie konta jest trwałe i nie można go cofnąć.
-          </p>
-          <button
-            type="button"
-            class="mt-3 w-full sm:w-auto rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
-            :disabled="isDeletingAccount"
-            @click="toggleDeleteConfirm"
-          >
-            {{ showDeleteConfirm ? "Anuluj usuwanie" : "Usuń konto" }}
-          </button>
-
-          <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-card p-4">
-            <p class="text-sm text-red-700">
-              Wpisz hasło, aby potwierdzić usunięcie konta.
-            </p>
-            <input
-              v-model="deletePassword"
-              type="password"
-              autocomplete="current-password"
-              class="mt-3 w-full rounded-2xl border border-red-200 bg-background px-4 py-3 text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
-              placeholder="Podaj hasło"
-            />
-            <div class="mt-3 flex flex-wrap gap-3">
-              <button
-                type="button"
-                class="rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
-                :disabled="isDeletingAccount || !deletePassword.trim()"
-                @click="handleDeleteAccount"
-              >
-                {{ isDeletingAccount ? "Usuwanie konta..." : "Potwierdź usunięcie" }}
-              </button>
-              <button
-                type="button"
-                class="rounded-2xl border border-border bg-card px-6 py-3 font-semibold text-foreground transition hover:bg-muted/50"
-                :disabled="isDeletingAccount"
-                @click="cancelDeleteConfirm"
-              >
-                Cofnij
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { createTemporarySupabaseClient, supabase } from "../supabase";
 import { clearLessonStoreAuthCache } from "../composables/useLessonStore";
 
 const router = useRouter();
+const route = useRoute();
 
 const userProfile = ref({
   full_name: "",
@@ -323,6 +543,7 @@ const isUploading = ref(false);
 const isSavingName = ref(false);
 const isSavingEmail = ref(false);
 const isDeletingAccount = ref(false);
+const isBlockingAccount = ref(false);
 const showEmailEditor = ref(false);
 const showEmailValue = ref(false);
 const showDeleteConfirm = ref(false);
@@ -339,6 +560,19 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const fileInput = ref(null);
 const licenseStatus = ref(null);
+const billingSummary = ref(null);
+const activeProfileSection = ref("account");
+const organizationError = ref("");
+const orgSchoolName = ref("");
+const orgBusinessEmailDomain = ref("");
+const isSavingOrgSettings = ref(false);
+const orgBusinessFullName = ref("");
+const orgBusinessLogin = ref("");
+const orgBusinessPassword = ref("");
+const showOrgBusinessPassword = ref(false);
+const isCreatingOrgBusinessUser = ref(false);
+const orgTeacherCosts = ref([]);
+const isLoadingOrgTeacherCosts = ref(false);
 
 function normalizeBaseUrl(url) {
   return String(url || "")
@@ -383,6 +617,11 @@ function formatDate(dateString) {
   });
 }
 
+function formatCurrencyPLN(value) {
+  const amount = Number(value || 0);
+  return `${amount.toFixed(2)} PLN`;
+}
+
 function openFilePicker() {
   fileInput.value?.click();
 }
@@ -404,6 +643,7 @@ const loadUserProfile = async () => {
   newEmail.value = user.email || "";
 
   void loadLicenseStatus(token);
+  void loadBillingSummary(token);
 
   const { data: row, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
@@ -466,6 +706,142 @@ async function loadLicenseStatus(token) {
     licenseStatus.value = data;
   } catch {
     licenseStatus.value = null;
+  }
+}
+
+async function loadBillingSummary(token) {
+  billingSummary.value = null;
+  if (!token) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/account/billing-summary`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      billingSummary.value = null;
+      return;
+    }
+    billingSummary.value = data;
+  } catch {
+    billingSummary.value = null;
+  }
+}
+
+async function getAuthHeader() {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function readApiPayload(res) {
+  const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return await res.json().catch(() => ({}));
+  }
+  const text = await res.text();
+  return { error: text?.slice(0, 180) || "Serwer zwrócił nieprawidłową odpowiedź." };
+}
+
+async function loadOrganizationPanelData() {
+  organizationError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    const dashboardRes = await fetch(`${API_BASE}/api/admin/dashboard`, { headers });
+    const dashboardData = await readApiPayload(dashboardRes);
+    if (!dashboardRes.ok) throw new Error(dashboardData.error || "Brak dostępu do danych organizacji.");
+    orgSchoolName.value = String(dashboardData.schoolSettings?.schoolName || "");
+    orgBusinessEmailDomain.value = String(dashboardData.schoolSettings?.businessEmailDomain || "");
+    await loadOrganizationTeacherCosts();
+  } catch (error) {
+    organizationError.value = error.message || "Nie udało się wczytać panelu organizacji.";
+  }
+}
+
+function openOrganizationPanel() {
+  activeProfileSection.value = "organization";
+  void loadOrganizationPanelData();
+}
+
+function applySectionFromRoute() {
+  const requestedSection = String(route.query.section || "").trim().toLowerCase();
+  if (requestedSection === "organization") {
+    openOrganizationPanel();
+    return;
+  }
+  if (["account", "billing", "security"].includes(requestedSection)) {
+    activeProfileSection.value = requestedSection;
+  }
+}
+
+async function saveOrganizationSettings() {
+  isSavingOrgSettings.value = true;
+  organizationError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}/api/admin/school-settings`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        schoolName: String(orgSchoolName.value || "").trim(),
+        businessEmailDomain: String(orgBusinessEmailDomain.value || "").trim().toLowerCase()
+      })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się zapisać ustawień szkoły.");
+    orgSchoolName.value = String(data.schoolSettings?.schoolName || orgSchoolName.value);
+    orgBusinessEmailDomain.value = String(data.schoolSettings?.businessEmailDomain || orgBusinessEmailDomain.value);
+    successMessage.value = "Zapisano ustawienia szkoły.";
+  } catch (error) {
+    organizationError.value = error.message || "Nie udało się zapisać ustawień szkoły.";
+  } finally {
+    isSavingOrgSettings.value = false;
+  }
+}
+
+async function createOrganizationBusinessUser() {
+  isCreatingOrgBusinessUser.value = true;
+  organizationError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}/api/admin/users/special-account`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        fullName: String(orgBusinessFullName.value || "").trim(),
+        login: String(orgBusinessLogin.value || "").trim().toLowerCase(),
+        password: String(orgBusinessPassword.value || "")
+      })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się utworzyć konta służbowego.");
+    orgBusinessFullName.value = "";
+    orgBusinessLogin.value = "";
+    orgBusinessPassword.value = "";
+    showOrgBusinessPassword.value = false;
+    successMessage.value = "Utworzono konto służbowe.";
+  } catch (error) {
+    organizationError.value = error.message || "Nie udało się utworzyć konta służbowego.";
+  } finally {
+    isCreatingOrgBusinessUser.value = false;
+  }
+}
+
+async function loadOrganizationTeacherCosts() {
+  isLoadingOrgTeacherCosts.value = true;
+  organizationError.value = "";
+  try {
+    const headers = await getAuthHeader();
+    const params = new URLSearchParams({ sortBy: "total", direction: "desc" });
+    const res = await fetch(`${API_BASE}/api/admin/teacher-costs?${params.toString()}`, { headers });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się pobrać kosztów nauczycieli.");
+    orgTeacherCosts.value = Array.isArray(data.rows) ? data.rows : [];
+  } catch (error) {
+    organizationError.value = error.message || "Nie udało się pobrać kosztów nauczycieli.";
+  } finally {
+    isLoadingOrgTeacherCosts.value = false;
   }
 }
 
@@ -755,6 +1131,45 @@ async function handleLogout() {
   router.push("/login");
 }
 
+async function handleSelfBlockAccount() {
+  if (isBlockingAccount.value) return;
+  const confirmed = window.confirm(
+    "Na pewno chcesz zablokować swoje konto? Po tej operacji tylko administrator będzie mógł je odblokować."
+  );
+  if (!confirmed) return;
+
+  isBlockingAccount.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  try {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error("Brak aktywnej sesji. Zaloguj się ponownie.");
+
+    const response = await fetch(`${API_BASE}/api/account/block`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ blocked: true })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data?.error || "Nie udało się zablokować konta.");
+
+    await supabase.auth.signOut({ scope: "local" });
+    clearLessonStoreAuthCache();
+    await router.replace({ path: "/login", query: { blocked: "1" } });
+  } catch (error) {
+    errorMessage.value = error?.message || "Nie udało się zablokować konta.";
+  } finally {
+    isBlockingAccount.value = false;
+  }
+}
+
 function cancelDeleteConfirm() {
   if (isDeletingAccount.value) return;
   showDeleteConfirm.value = false;
@@ -840,7 +1255,17 @@ async function handleDeleteAccount() {
   }
 }
 
-onMounted(loadUserProfile);
+onMounted(async () => {
+  await loadUserProfile();
+  applySectionFromRoute();
+});
+
+watch(
+  () => route.query.section,
+  () => {
+    applySectionFromRoute();
+  }
+);
 </script>
 
 <style scoped>

@@ -28,7 +28,8 @@ const DEMO_POLICY = {
 const upload = multer({ limits: { fileSize: UPLOAD_LIMITS.licensed.maxFileSizeBytes } });
 const port = Number(process.env.PORT || 3001);
 
-const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-2-9b-it:free";
+const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
@@ -37,6 +38,9 @@ const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
+const OPENAI_BASE_URL = String(process.env.OPENAI_BASE_URL || "").trim();
+const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-1").trim() || "whisper-1";
+const OPENAI_PROVIDER_NAME = String(process.env.OPENAI_PROVIDER_NAME || "openai").trim() || "openai";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = String(process.env.BUSINESS_EMAIL_DOMAIN || "sluzbowe.coteach.local")
   .trim()
@@ -55,9 +59,13 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
   : null;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openaiClientConfig = process.env.OPENAI_API_KEY
+  ? {
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    }
   : null;
+const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
 const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_notatki_przedmiotowej.txt"),
@@ -556,6 +564,8 @@ function getOwnedLessonOrRespond(req, res, teacherId, schoolId = null) {
 }
 
 function rowToLesson(row) {
+  const parsedLength = Number(row.length);
+  const normalizedLength = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
   return {
     id: row.id,
     schoolId: row.school_id,
@@ -565,6 +575,7 @@ function rowToLesson(row) {
     month: row.month,
     date: row.date,
     status: row.status,
+    length: normalizedLength,
     sourceFiles: parseJsonArray(row.source_files),
     plan: parseJsonArray(row.plan),
     transcripts: parseJsonArray(row.transcripts),
@@ -607,6 +618,8 @@ function rowToSavedNote(row) {
 }
 
 function lessonToRow(lesson) {
+  const parsedLength = Number(lesson.length);
+  const normalizedLength = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
   return {
     id: lesson.id,
     school_id: lesson.schoolId,
@@ -616,6 +629,7 @@ function lessonToRow(lesson) {
     month: lesson.month,
     date: lesson.date,
     status: lesson.status,
+    length: normalizedLength,
     source_files: lesson.sourceFiles || [],
     plan: lesson.plan || [],
     transcripts: lesson.transcripts || [],
@@ -760,6 +774,39 @@ async function persistLessonSafe(lesson) {
   }
 }
 
+function resolveLessonLengthMinutes(lesson) {
+  const parsedLength = Number(lesson?.length);
+  if (!Number.isFinite(parsedLength) || parsedLength <= 0) return 45;
+  return Math.round(parsedLength);
+}
+
+function shouldAutoFinishLesson(lesson, nowMs = Date.now()) {
+  if (!lesson || lesson.status !== "live") return false;
+  const startedAtMs = new Date(lesson.startedAt || 0).getTime();
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return false;
+  const targetMs = startedAtMs + resolveLessonLengthMinutes(lesson) * 60 * 1000;
+  return nowMs >= targetMs;
+}
+
+function markLessonFinished(lesson, nowIso = new Date().toISOString()) {
+  lesson.status = "finished";
+  lesson.finishedAt = lesson.finishedAt || nowIso;
+}
+
+async function autoFinishDueLessons() {
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const dueLessons = [...db.lessons.values()].filter((lesson) => shouldAutoFinishLesson(lesson, nowMs));
+  if (!dueLessons.length) return;
+  await Promise.all(
+    dueLessons.map(async (lesson) => {
+      markLessonFinished(lesson, nowIso);
+      db.lessons.set(lesson.id, lesson);
+      await persistLessonSafe(lesson);
+    })
+  );
+}
+
 async function persistFinalNote(finalNote, teacherId) {
   if (!supabase || !finalNote) return;
   const { error } = await supabase
@@ -873,9 +920,117 @@ async function loadLessonsFromSupabase() {
   if (!supabase) return;
   const { data, error } = await supabase.from("lessons").select("*").order("updated_at", { ascending: false });
   if (error) throw new Error(`Supabase lessons load failed: ${error.message}`);
+
+  const lessons = new Map();
   for (const row of data || []) {
     const lesson = rowToLesson(row);
+    lessons.set(lesson.id, lesson);
+  }
+  db.lessons = lessons;
+}
+
+async function refreshLessonsCacheFromSupabaseSafe() {
+  if (!supabase) return;
+  try {
+    await loadLessonsFromSupabase();
+    await loadFinalNotesFromSupabase();
+  } catch (error) {
+    console.error(`Supabase lessons refresh failed: ${error.message}`);
+  }
+}
+
+async function refreshTeacherLessonsFromSupabaseSafe(teacherId, schoolId) {
+  if (!supabase) return;
+  try {
+    const teacherIdValue = String(teacherId || "");
+    const schoolIdValue = String(schoolId || "");
+    const { data: lessonRows, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("teacher_id", teacherIdValue)
+      .eq("school_id", schoolIdValue)
+      .order("updated_at", { ascending: false });
+    if (lessonsError) {
+      throw new Error(`Supabase scoped lessons load failed: ${lessonsError.message}`);
+    }
+
+    const nextTeacherLessons = new Map();
+    for (const row of lessonRows || []) {
+      const lesson = rowToLesson(row);
+      nextTeacherLessons.set(lesson.id, lesson);
+    }
+
+    for (const [lessonId, lesson] of db.lessons.entries()) {
+      if (String(lesson?.teacherId || "") === teacherIdValue && String(lesson?.schoolId || "") === schoolIdValue) {
+        db.lessons.delete(lessonId);
+      }
+    }
+    for (const [lessonId, lesson] of nextTeacherLessons.entries()) {
+      db.lessons.set(lessonId, lesson);
+    }
+
+    const lessonIds = [...nextTeacherLessons.keys()];
+    if (!lessonIds.length) return;
+    const { data: finalNoteRows, error: finalNotesError } = await supabase
+      .from("final_notes")
+      .select("*")
+      .in("lesson_id", lessonIds);
+    if (finalNotesError) {
+      throw new Error(`Supabase scoped final notes load failed: ${finalNotesError.message}`);
+    }
+    for (const row of finalNoteRows || []) {
+      const lesson = db.lessons.get(row.lesson_id);
+      if (!lesson) continue;
+      lesson.finalNote = rowToFinalNote(row);
+      db.lessons.set(lesson.id, lesson);
+    }
+  } catch (error) {
+    console.error(`Supabase teacher lessons refresh failed: ${error.message}`);
+  }
+}
+
+async function refreshSingleLessonFromSupabaseSafe(lessonId, teacherId, schoolId) {
+  if (!supabase) return null;
+  try {
+    const lessonIdValue = String(lessonId || "");
+    const teacherIdValue = String(teacherId || "");
+    const schoolIdValue = String(schoolId || "");
+    if (!lessonIdValue || !teacherIdValue || !schoolIdValue) return null;
+
+    const { data: lessonRow, error: lessonError } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("id", lessonIdValue)
+      .eq("teacher_id", teacherIdValue)
+      .eq("school_id", schoolIdValue)
+      .maybeSingle();
+    if (lessonError) {
+      throw new Error(`Supabase single lesson load failed: ${lessonError.message}`);
+    }
+
+    if (!lessonRow) {
+      db.lessons.delete(lessonIdValue);
+      return null;
+    }
+
+    const lesson = rowToLesson(lessonRow);
+    const { data: finalNoteRow, error: finalNoteError } = await supabase
+      .from("final_notes")
+      .select("*")
+      .eq("lesson_id", lessonIdValue)
+      .maybeSingle();
+    if (finalNoteError) {
+      throw new Error(`Supabase single final note load failed: ${finalNoteError.message}`);
+    }
+    if (finalNoteRow) {
+      lesson.finalNote = rowToFinalNote(finalNoteRow);
+    }
+
     db.lessons.set(lesson.id, lesson);
+    return lesson;
+  } catch (error) {
+    console.error(`Supabase single lesson refresh failed: ${error.message}`);
+    return null;
   }
 }
 
@@ -1034,23 +1189,39 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
   const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
   const startedAt = Date.now();
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: finalMaxTokens,
-      temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.7,
-      messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
-    })
-  });
+  const requestOpenRouter = async (targetModel) =>
+    fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        max_tokens: finalMaxTokens,
+        messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
+      })
+    });
 
+  let effectiveModel = String(model || "").trim() || OPENROUTER_TEXT_MODEL;
+  let response = await requestOpenRouter(effectiveModel);
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} ${text}`);
+    const errorText = await response.text();
+    const shouldRetryWithFallback =
+      response.status === 404 &&
+      /No endpoints found/i.test(errorText) &&
+      effectiveModel !== OPENROUTER_TEXT_FALLBACK_MODEL;
+
+    if (shouldRetryWithFallback) {
+      effectiveModel = OPENROUTER_TEXT_FALLBACK_MODEL;
+      response = await requestOpenRouter(effectiveModel);
+      if (!response.ok) {
+        const fallbackErrorText = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} ${fallbackErrorText}`);
+      }
+    } else {
+      throw new Error(`OpenRouter API error: ${response.status} ${errorText}`);
+    }
   }
 
   const data = await response.json();
@@ -1066,14 +1237,14 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
   const completionTokens = Number(usage.completion_tokens || estimatedCompletionTokens);
   const totalTokens = Number(usage.total_tokens || promptTokens + completionTokens);
   const baseUsd = estimateOpenRouterBaseUsdCost({
-    model,
+    model: effectiveModel,
     promptTokens,
     completionTokens
   });
 
   return {
     text,
-    model,
+    model: effectiveModel,
     usage: {
       promptTokens,
       completionTokens,
@@ -1702,11 +1873,34 @@ app.put("/api/account/email", async (req, res) => {
   }
 });
 
+app.patch("/api/account/block", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase is not configured." });
+
+  const user = await getUserFromBearerToken(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const blocked = req.body?.blocked === true;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ blocked, updated_at: new Date().toISOString() })
+      .eq("id", user.id)
+      .select("id, blocked")
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "User profile not found." });
+    return res.json({ user: data });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Failed to update block status." });
+  }
+});
+
 app.post("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
-  const { title, subject, month, date, rawText = "" } = req.body || {};
+  const { title, subject, month, date, rawText = "", length } = req.body || {};
   if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
   const activeLicense = getActiveUserLicense(teacher.userId);
@@ -1723,6 +1917,7 @@ app.post("/api/lessons", async (req, res) => {
     month: normalizedMonth,
     date: normalizedDate,
     status: "draft",
+    length: resolveLessonLengthMinutes({ length }),
     sourceFiles: [],
     plan: [],
     transcripts: [],
@@ -1756,11 +1951,33 @@ app.post("/api/lessons", async (req, res) => {
 app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await refreshTeacherLessonsFromSupabaseSafe(teacher.teacherId, teacher.schoolId);
+  await autoFinishDueLessons();
 
   const lessons = [...db.lessons.values()].filter((lesson) => {
     return String(lesson.teacherId) === teacher.teacherId && String(lesson.schoolId || "") === String(teacher.schoolId || "");
   });
   res.json({ lessons });
+});
+
+app.get("/api/lessons/:lessonId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  await refreshSingleLessonFromSupabaseSafe(req.params.lessonId, teacher.teacherId, teacher.schoolId);
+
+  const lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    return res.status(404).json({ error: "Lesson not found" });
+  }
+  if (String(lesson.teacherId) !== String(teacher.teacherId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  return res.json({ lesson });
 });
 
 app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res) => {
@@ -2058,6 +2275,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.status = "live";
+  lesson.finishedAt = null;
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
@@ -2077,6 +2295,12 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
+  if (shouldAutoFinishLesson(lesson)) {
+    markLessonFinished(lesson);
+    db.lessons.set(lesson.id, lesson);
+    await persistLessonSafe(lesson);
+    return res.status(409).json({ error: "Lekcja została automatycznie zakończona po upływie ustawionego czasu." });
+  }
   if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
@@ -2882,6 +3106,27 @@ app.get("/api/account/license-status", async (req, res) => {
   });
 });
 
+app.get("/api/account/billing-summary", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const userEvents = (db.costEvents || []).filter((event) => {
+    return String(event.teacherId || "") === String(teacher.teacherId || "")
+      && String(event.schoolId || "") === String(teacher.schoolId || "");
+  });
+
+  const totalSpentPLN = userEvents.reduce((sum, event) => sum + Number(event.amountPLN || 0), 0);
+  const providerCostPLN = userEvents.reduce((sum, event) => sum + Number(event.baseAmountPLN || 0), 0);
+  const marginPLN = userEvents.reduce((sum, event) => sum + Number(event.marginAmountPLN || 0), 0);
+
+  return res.json({
+    paymentMethod: null,
+    totalSpentPLN: roundMoney(totalSpentPLN),
+    providerCostPLN: roundMoney(providerCostPLN),
+    marginPLN: roundMoney(marginPLN)
+  });
+});
+
 app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
@@ -2915,7 +3160,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     });
     const transcription = await openai.audio.transcriptions.create({
       file,
-      model: "whisper-1",
+      model: OPENAI_WHISPER_MODEL,
       language: "pl",
       response_format: "verbose_json"
     });
@@ -2927,7 +3172,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       lessonId,
       schoolId: teacher.schoolId,
       teacherId: teacher.teacherId,
-      provider: "openai",
+      provider: OPENAI_PROVIDER_NAME,
       category: "live_transcription",
       baseAmountPLN: fragmentCost
     });
@@ -2948,11 +3193,12 @@ app.get("/api/health", (_req, res) => {
   return res.json({
     ok: true,
     service: "lesson-planning-api",
-    aiProvider: "openrouter+openai-whisper",
+    aiProvider: `openrouter+${OPENAI_PROVIDER_NAME}-whisper`,
     textModel: OPENROUTER_TEXT_MODEL,
     presentationModel: OPENROUTER_PRESENTATION_MODEL,
     visionModel: OPENROUTER_VISION_MODEL,
-    sttModel: "whisper-1",
+    sttModel: OPENAI_WHISPER_MODEL,
+    sttBaseUrlConfigured: Boolean(OPENAI_BASE_URL),
     whisperEnabled: Boolean(openai),
     openRouterEnabled: Boolean(String(process.env.OPENROUTER_API_KEY || "").trim()),
     supabaseEnabled: Boolean(supabase)
@@ -2969,6 +3215,11 @@ loadSchoolsFromSupabase()
     console.error(`Persistence bootstrap failed: ${error.message}`);
   })
   .finally(() => {
+    setInterval(() => {
+      autoFinishDueLessons().catch((error) => {
+        console.error("Auto-finish due lessons failed:", error.message || error);
+      });
+    }, 10_000);
     app.listen(port, () => {
       console.log(`API listening at http://localhost:${port}`);
     });

@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
+  <div class="app-shell min-h-screen overflow-x-clip bg-background text-foreground transition-colors">
     <header
-      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-black/30 bg-white/95 px-4 backdrop-blur-md sm:px-5"
+      class="fixed inset-x-0 top-0 z-[56] flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 text-foreground backdrop-blur-md sm:px-5"
     >
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <button
@@ -96,21 +96,34 @@
 
         <!-- Start Lesson Button -->
         <RouterLink
-          :to="liveLessonTo"
+          :to="startLessonCta.to"
           custom
           v-slot="{ href, navigate }"
         >
           <a
             :href="href"
-            class="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#0c3dfe] py-3 transition-colors hover:bg-[#0a34d4]"
+            :class="[
+              'mb-4 flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors',
+              startLessonCta.isLive
+                ? 'bg-[rgba(12,61,254,0.08)] hover:bg-[rgba(12,61,254,0.14)]'
+                : 'justify-center bg-[#0c3dfe] hover:bg-[#0a34d4]'
+            ]"
             @click="navigate(); open = false;"
           >
-            <svg class="h-[10px] w-[10px]" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
-              Rozpocznij lekcję
-            </span>
+            <template v-if="startLessonCta.isLive">
+              <img :src="screenIcon" alt="" class="h-[18px] w-[20px] shrink-0" />
+              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-[#0c3dfe]">
+                {{ startLessonCta.label }}
+              </span>
+            </template>
+            <template v-else>
+              <svg class="h-[10px] w-[10px]" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
+                Rozpocznij lekcję
+              </span>
+            </template>
           </a>
         </RouterLink>
 
@@ -128,7 +141,7 @@
           </RouterLink>
 
           <!-- Dodaj materiały -->
-          <RouterLink to="/preparation" custom v-slot="{ href, navigate, isActive }">
+          <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
               <svg class="h-5 w-4 shrink-0" fill="none" viewBox="0 0 16 20">
                 <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="#566166"/>
@@ -137,7 +150,7 @@
             </a>
           </RouterLink>
 
-          <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
+          <!-- <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 hover:bg-black/5', isActive ? 'bg-black/5' : '']" @click="onNav(navigate)">
             <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="#566166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
               <rect x="2" y="4" width="20" height="14" rx="2" />
@@ -145,7 +158,7 @@
             </svg>
             <p class="text-[14px] font-semibold text-[#475569]" style="font-family: 'Plus Jakarta Sans', sans-serif;">Notatki</p>
           </a>
-        </RouterLink>
+        </RouterLink> -->
 
           <!-- Prezentacja -->
           <RouterLink :to="presentationHref" custom v-slot="{ href, navigate, isActive }">
@@ -166,7 +179,15 @@
               <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
             </a>
           </RouterLink>
-
+          
+          <!-- Organizacja -->
+          <RouterLink v-if="isAdmin" to="/organization" custom v-slot="{ href, navigate, isActive }">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+              <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
+            </a>
+          
+          </RouterLink>
           <!-- Panel admina -->
           <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
@@ -175,6 +196,8 @@
             </a>
           </RouterLink>
 
+         
+
         </div>
       </div>
     </aside>
@@ -182,7 +205,7 @@
     <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
-          Do Twojego konta nie jest przypisana żadna licencja. Skontaktuj się ze swoją organizacją.
+          Do Twojego konta nie jest przypisana żadna licencja.
         </div>
       </div>
       <div class="min-h-[calc(100vh-4rem)]">
@@ -199,6 +222,7 @@ import { supabase } from "../supabase";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useTheme } from "../composables/useTheme";
 import adminIcon from "../assets/admin.svg";
+import screenIcon from "../assets/screen.svg";
 
 defineProps({
   licenseWarning: {
@@ -295,9 +319,30 @@ const presentationHref = computed(() => {
 
 const isPresentationActive = computed(() => route.path.startsWith("/presentation/"));
 
-const liveLessonTo = computed(() => {
-  const id = state.lesson?.id;
-  return id ? `/live-lesson/${id}` : "/live-lesson";
+const currentLiveLesson = computed(() => {
+  const lessons = Array.isArray(state.lessons) ? state.lessons : [];
+  const liveFromList =
+    lessons
+    .filter((lesson) => lesson?.status === "live")
+    .sort((a, b) => new Date(b?.startedAt || 0).getTime() - new Date(a?.startedAt || 0).getTime())[0] || null;
+  if (liveFromList) return liveFromList;
+  return state.lesson?.status === "live" ? state.lesson : null;
+});
+
+const startLessonCta = computed(() => {
+  const liveLesson = currentLiveLesson.value;
+  if (!liveLesson) {
+    return {
+      isLive: false,
+      to: "/preparation",
+      label: "Rozpocznij lekcję"
+    };
+  }
+  return {
+    isLive: true,
+    to: `/live-lesson/${liveLesson.id}`,
+    label: `Lekcja: ${liveLesson.title || "Lekcja"}`
+  };
 });
 
 const activeLessonLink = computed(() => {

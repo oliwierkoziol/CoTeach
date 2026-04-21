@@ -35,12 +35,12 @@
           </div>
           <!-- Czas Lekcji Input -->
           <div class="flex flex-col gap-2 w-full">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Czas lekcji</label>
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Czas lekcji (min)</label>
             <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
               <input 
-                v-model="lessonTime" 
+                v-model="lessonTime" type="number"
                 class="bg-transparent border-none outline-none w-full text-[16px] text-[#454652] placeholder-[rgba(118,118,131,0.6)] font-['Plus_Jakarta_Sans']" 
-                placeholder="1-90min" 
+                placeholder="45" 
               />
               <svg class="h-4 w-4 ml-2 shrink-0 opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
                 <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
@@ -176,11 +176,11 @@ import { useLessonStore } from "../composables/useLessonStore";
 import archiveIcon from "../assets/archive.svg";
 
 const router = useRouter();
-const { state, createLesson, uploadLessonMaterial, savePlan, fetchTeacherNotes } = useLessonStore();
+const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes } = useLessonStore();
 const lesson = computed(() => state.lesson);
 
 const title = ref("");
-const lessonTime = ref("1-90min");
+const lessonTime = ref(45);
 const selectedNoteId = ref("");
 const isGenerating = ref(false);
 const isSaving = ref(false);
@@ -210,7 +210,7 @@ watch(selectedNoteId, (noteId) => {
 function resetForm() {
   title.value = "";
   selectedNoteId.value = "";
-  lessonTime.value = "1-90min";
+  lessonTime.value = 45;
   error.value = "";
   info.value = "";
 }
@@ -234,12 +234,17 @@ async function handleGenerate() {
     const lessonMonth = new Date().toLocaleString("pl-PL", { month: "long" });
     const generatedSubject = selectedNote.value?.subject || "Ogólny";
     const extractedRawText = selectedNote.value?.content || "";
+    const parsedLessonMinutes = Number(lessonTime.value);
+    const lessonLengthMinutes = Number.isFinite(parsedLessonMinutes) && parsedLessonMinutes > 0
+      ? Math.round(parsedLessonMinutes)
+      : 45;
 
     const created = await createLesson({
       subject: generatedSubject,
       title: title.value,
       month: lessonMonth,
       date: normalizedDate,
+      length: lessonLengthMinutes,
       rawText: ""
     });
     
@@ -292,6 +297,7 @@ async function saveAndStart() {
       return;
     }
     await savePlan(state.lesson.id, state.lesson.plan);
+    await startLive(state.lesson.id);
     info.value = "Plan zapisany. Przechodzę do lekcji na żywo...";
     await router.push(`/live-lesson/${state.lesson.id}`);
   } catch (e) {
