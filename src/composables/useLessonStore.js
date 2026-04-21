@@ -319,6 +319,15 @@ export function useLessonStore() {
     return String(data.note || "");
   }
 
+  async function generatePresentation(payload) {
+    const data = await api("/api/presentations/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return data.presentation;
+  }
+
   async function saveTeacherNote(payload) {
     const data = await api("/api/notes", {
       method: "POST",
@@ -360,6 +369,7 @@ export function useLessonStore() {
     fetchAdmin,
     fetchSharedNote,
     generateTeacherNote,
+    generatePresentation,
     saveTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes
