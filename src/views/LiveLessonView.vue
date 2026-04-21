@@ -887,8 +887,13 @@ function stopMicTest() {
   micLevel.value = 0;
 }
 
-function goPresentation() {
-  if (!state.lesson) return;
+async function goPresentation() {
+  if (!state.lesson?.id) return;
+  try {
+    await fetchLesson(state.lesson.id);
+  } catch {
+    // generator i tak spróbuje pobrać lekcję po wejściu na trasę
+  }
   router.push(`/presentation/${state.lesson.id}`);
 }
 

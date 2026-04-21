@@ -2113,10 +2113,8 @@ app.post("/api/presentations/generate", async (req, res) => {
     if (lessonId) {
       lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
       if (!lesson) return;
-    } else {
-      lesson = [...db.lessons.values()].find((item) => {
-        return String(item.teacherId) === String(teacher.teacherId) && String(item.schoolId || "") === String(teacher.schoolId || "");
-      }) || null;
+    } else if (!String(noteId || "").trim()) {
+      return res.status(400).json({ error: "Podaj lessonId albo noteId do wygenerowania prezentacji." });
     }
 
     let note = null;
@@ -2172,6 +2170,81 @@ app.post("/api/presentations/generate", async (req, res) => {
     return res.json({ presentation });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Nie udało się wygenerować prezentacji." });
+  }
+});
+
+app.post("/api/insights/live-lesson-summary", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Podsumowanie AI lekcji")) return;
+
+    const lessonId = String(req.body?.lessonId || "").trim();
+    if (!lessonId) {
+      return res.status(400).json({ error: "Brak lessonId." });
+    }
+
+    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    if (!lesson) return;
+
+    const planLines = (Array.isArray(lesson.plan) ? lesson.plan : []).map((point, index) => {
+      const label = String(point?.title || point?.label || `Punkt ${index + 1}`).trim();
+      const status = String(point?.status || "unknown").trim();
+      return `- ${label} (${status})`;
+    });
+    const transcriptText = (Array.isArray(lesson.transcripts) ? lesson.transcripts : [])
+      .map((item) => String(item?.text || "").trim())
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 12000);
+    const finalNoteSnippet = String(lesson.finalNote?.html || lesson.finalNote?.content || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 8000);
+
+    const prompt = `Jesteś asystentem edukacyjnym. Na podstawie danych z lekcji na żywo napisz po polsku zwięzłe podsumowanie (ok. 400–900 słów), w kilku akapitach z nagłówkami markdown (##). Uwzględnij: co udało się omówić, postęp względem planu, luki, co warto powtórzyć przed kolejną lekcją. Pisz konkretnie, bez wymyślania faktów spoza danych.
+
+Tytuł lekcji: ${String(lesson.title || "Bez tytułu")}
+Przedmiot: ${String(lesson.subject || "Brak")}
+
+Plan (statusy):
+${planLines.length ? planLines.join("\n") : "(brak planu)"}
+
+Transkrypcja (fragment):
+${transcriptText || "(brak transkrypcji)"}
+
+Notatka końcowa (fragment tekstu):
+${finalNoteSnippet || "(brak notatki końcowej)"}`;
+
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: prompt }],
+      maxTokens: Math.min(3000, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS + 500 : 2500),
+      temperature: 0.25
+    });
+
+    recordCostFromBase({
+      lessonId: lesson.id,
+      schoolId: teacher.schoolId,
+      teacherId: teacher.teacherId,
+      provider: "openrouter",
+      model: out.model,
+      feature: "live_lesson_summary",
+      category: "other",
+      baseAmountPLN: out.baseUsd * USD_TO_PLN,
+      providerCostUsd: out.baseUsd,
+      costUsd: out.baseUsd,
+      promptTokens: out.usage.promptTokens,
+      completionTokens: out.usage.completionTokens,
+      totalTokens: out.usage.totalTokens,
+      requestId: out.requestId,
+      latencyMs: out.latencyMs
+    });
+
+    return res.json({ summary: out.text || "Brak treści podsumowania." });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Nie udało się wygenerować podsumowania." });
   }
 });
 

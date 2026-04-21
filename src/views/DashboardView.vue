@@ -101,11 +101,14 @@
           </div>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer"
+            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="summaryLoading"
+            @click="handleGenerateSummary"
           >
-          Wygeneruj podsumowanie AI
-          <img :src="sparklesIcon" alt="" class="h-4 w-4" />
+            {{ summaryLoading ? "Generuję..." : "Wygeneruj podsumowanie AI" }}
+            <img :src="sparklesIcon" alt="" class="h-4 w-4" />
           </button>
+          <p v-if="summaryError" class="text-sm font-medium text-red-600">{{ summaryError }}</p>
         </div>
         <div v-else class="space-y-3">
           <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja na żywo</p>
@@ -123,6 +126,28 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="summaryModalOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+        @click.self="summaryModalOpen = false"
+      >
+        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <h3 class="font-['Plus_Jakarta_Sans'] text-lg font-bold text-[#191c1e]">Podsumowanie lekcji</h3>
+            <button
+              type="button"
+              class="rounded-lg bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#454652] hover:bg-[#e5e5e5]"
+              @click="summaryModalOpen = false"
+            >
+              Zamknij
+            </button>
+          </div>
+          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ summaryText }}</pre>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -138,9 +163,13 @@ import iconFour from "../assets/4.svg";
 import sparklesIcon from "../assets/sparkles.svg";
 
 const route = useRoute();
-const { state, fetchLessons } = useLessonStore();
+const { state, fetchLessons, generateLiveLessonSummary } = useLessonStore();
 
 const displayName = ref("użytkowniku");
+const summaryLoading = ref(false);
+const summaryError = ref("");
+const summaryModalOpen = ref(false);
+const summaryText = ref("");
 
 async function loadDisplayName() {
   const {
@@ -246,6 +275,23 @@ function resolveLessonTimestamp(lesson) {
     if (Number.isFinite(parsed)) return parsed;
   }
   return 0;
+}
+
+async function handleGenerateSummary() {
+  summaryError.value = "";
+  if (!previousLiveLesson.value?.id) {
+    summaryError.value = "Brak lekcji do podsumowania.";
+    return;
+  }
+  summaryLoading.value = true;
+  try {
+    summaryText.value = await generateLiveLessonSummary({ lessonId: previousLiveLesson.value.id });
+    summaryModalOpen.value = true;
+  } catch (e) {
+    summaryError.value = e?.message || "Nie udało się wygenerować podsumowania.";
+  } finally {
+    summaryLoading.value = false;
+  }
 }
 
 function formatLessonDate(lesson) {

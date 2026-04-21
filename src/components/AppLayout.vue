@@ -313,11 +313,12 @@ const avatarUrl = ref("");
 const isAdmin = ref(false);
 
 const presentationHref = computed(() => {
-  const id = state.lesson?.id || state.lessons[0]?.id || "demo";
-  return `/presentation/${id}`;
+  const id = state.lesson?.id || state.lessons[0]?.id;
+  if (id) return `/presentation/${id}`;
+  return "/presentation";
 });
 
-const isPresentationActive = computed(() => route.path.startsWith("/presentation/"));
+const isPresentationActive = computed(() => route.path === "/presentation" || route.path.startsWith("/presentation/"));
 
 const currentLiveLesson = computed(() => {
   const lessons = Array.isArray(state.lessons) ? state.lessons : [];

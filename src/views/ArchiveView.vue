@@ -199,10 +199,19 @@
             </button>
 
             <button
+              v-if="selected?.finalNote?.shareUrl"
               class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
               @click="openFinalNote"
             >
-              Otwórz notatkę
+              Otwórz notatkę (link)
+            </button>
+
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+              @click="openGoldenNotePreview"
+            >
+              Pokaż treść notatki
             </button>
 
             <RouterLink
@@ -230,6 +239,20 @@
             <p class="font-['Inter'] text-[#454652] text-[14px]">
               <span class="font-semibold text-[#191c1e]">Poziom:</span> {{ selectedNote.classLevel || "Brak" }}
             </p>
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#142588] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0f1d66] transition-colors cursor-pointer"
+              @click="openTeacherNotePreview"
+            >
+              Pokaż treść notatki
+            </button>
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#ffe8dd] py-2.5 text-center font-['Inter'] font-semibold text-[#9e3f4e] hover:bg-[#ffdacc] transition-colors cursor-pointer"
+              @click="handleDeleteTeacherNote"
+            >
+              Usuń notatkę
+            </button>
             <RouterLink
               to="/notes"
               class="block w-full rounded-lg bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
@@ -265,6 +288,13 @@
             >
               Otwórz tę prezentację
             </button>
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#ffe8dd] py-2.5 text-center font-['Inter'] font-semibold text-[#9e3f4e] hover:bg-[#ffdacc] transition-colors cursor-pointer"
+              @click="handleDeletePresentation"
+            >
+              Usuń prezentację
+            </button>
           </div>
         </div>
       </div>
@@ -283,6 +313,27 @@
         </div>
       </Transition>
     </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="textPreviewOpen"
+        class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4"
+        @click.self="textPreviewOpen = false"
+      >
+        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" @click.stop>
+          <div class="mb-4 flex justify-end">
+            <button
+              type="button"
+              class="rounded-lg bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#454652] hover:bg-[#e5e5e5]"
+              @click="textPreviewOpen = false"
+            >
+              Zamknij
+            </button>
+          </div>
+          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ textPreviewBody }}</pre>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -290,14 +341,18 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { supabase } from "../supabase";
+import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/presentationHistoryStorage";
 import archiveIcon from "../assets/archive.svg";
 import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
 
-const PRESENTATION_HISTORY_KEY = "coteach:presentation-history";
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
-const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote, deleteTeacherNote } = useLessonStore();
 const router = useRouter();
+const historyOwnerId = ref("");
+const textPreviewOpen = ref(false);
+const textPreviewBody = ref("");
 const activeTab = ref("lessons");
 const searchQuery = ref("");
 const selected = ref(null);
@@ -312,7 +367,7 @@ const isQrModalOpen = ref(false);
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes()]);
-  loadPresentationHistory();
+  await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
   if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
@@ -339,9 +394,15 @@ const filteredNotes = computed(() => {
 });
 
 const filteredPresentations = computed(() => {
+  const uid = String(historyOwnerId.value || "").trim();
+  const owned = presentationHistory.value.filter((item) => {
+    if (!uid) return true;
+    const oid = String(item.ownerId || "").trim();
+    return !oid || oid === uid;
+  });
   const q = searchQuery.value.toLowerCase().trim();
-  if (!q) return presentationHistory.value;
-  return presentationHistory.value.filter((item) => {
+  if (!q) return owned;
+  return owned.filter((item) => {
     return `${item.title || ""} ${item.createdAtLabel || ""}`.toLowerCase().includes(q);
   });
 });
@@ -429,13 +490,54 @@ function closeQrModal() {
   isQrModalOpen.value = false;
 }
 
-function loadPresentationHistory() {
+async function refreshPresentationHistory() {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  historyOwnerId.value = String(session?.user?.id || "");
+  const { list } = loadPresentationHistoryRaw(historyOwnerId.value);
+  presentationHistory.value = list;
+}
+
+function stripHtml(html) {
+  return String(html || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function openGoldenNotePreview() {
+  const html = selected.value?.finalNote?.html || "";
+  textPreviewBody.value = stripHtml(html) || "Brak treści notatki.";
+  textPreviewOpen.value = true;
+}
+
+function openTeacherNotePreview() {
+  const raw = String(selectedNote.value?.content || "").trim();
+  textPreviewBody.value = raw || "Brak treści notatki.";
+  textPreviewOpen.value = true;
+}
+
+async function handleDeleteTeacherNote() {
+  if (!selectedNote.value?.id) return;
+  const ok = window.confirm("Na pewno usunąć tę notatkę? Operacji nie da się cofnąć.");
+  if (!ok) return;
   try {
-    const parsed = JSON.parse(localStorage.getItem(PRESENTATION_HISTORY_KEY) || "[]");
-    presentationHistory.value = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    presentationHistory.value = [];
+    await deleteTeacherNote(selectedNote.value.id);
+    selectedNote.value = filteredNotes.value[0] || null;
+  } catch (e) {
+    window.alert(e?.message || "Nie udało się usunąć notatki.");
   }
+}
+
+function handleDeletePresentation() {
+  if (!selectedPresentation.value?.id) return;
+  const ok = window.confirm("Usunąć tę prezentację z archiwum na tym urządzeniu?");
+  if (!ok) return;
+  const id = selectedPresentation.value.id;
+  presentationHistory.value = presentationHistory.value.filter((item) => item.id !== id);
+  savePresentationHistoryRaw(historyOwnerId.value, presentationHistory.value);
+  selectedPresentation.value = filteredPresentations.value[0] || null;
 }
 
 function formatDate(value) {
@@ -454,7 +556,7 @@ function openSelectedPresentation() {
   router.push("/presentation");
 }
 
-watch(activeTab, (tab) => {
+watch(activeTab, async (tab) => {
   searchQuery.value = "";
   if (tab === "lessons" && filteredLessons.value.length && !selected.value) {
     selectLesson(filteredLessons.value[0]);
@@ -462,8 +564,11 @@ watch(activeTab, (tab) => {
   if (tab === "notes" && filteredNotes.value.length && !selectedNote.value) {
     selectedNote.value = filteredNotes.value[0];
   }
-  if (tab === "presentations" && filteredPresentations.value.length && !selectedPresentation.value) {
-    selectedPresentation.value = filteredPresentations.value[0];
+  if (tab === "presentations") {
+    const prevId = selectedPresentation.value?.id;
+    await refreshPresentationHistory();
+    const next = prevId ? filteredPresentations.value.find((p) => p.id === prevId) : null;
+    selectedPresentation.value = next || filteredPresentations.value[0] || null;
   }
 });
 </script>

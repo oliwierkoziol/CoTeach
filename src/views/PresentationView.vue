@@ -236,14 +236,16 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { supabase } from "../supabase";
+import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/presentationHistoryStorage";
 import archiveIcon from "../assets/archive.svg";
 import liveLessonIcon from "../assets/livelesson.svg";
 
-const PRESENTATION_HISTORY_KEY = "coteach:presentation-history";
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 
 const route = useRoute();
-const { state, fetchLessons, fetchTeacherNotes, generatePresentation } = useLessonStore();
+const { state, fetchLessons, fetchLesson, fetchTeacherNotes, generatePresentation } = useLessonStore();
+const historyOwnerId = ref("");
 
 const isGenerating = ref(false);
 const isPresenting = ref(false);
@@ -328,12 +330,36 @@ const comparisonLeft = computed(() => currentDetailChips.value.slice(0, Math.cei
 const comparisonRight = computed(() => currentDetailChips.value.slice(Math.ceil(currentDetailChips.value.length / 2)).join(" • ") || currentMainText.value);
 
 onMounted(async () => {
-  const [lessonsResponse] = await Promise.all([fetchLessons(), fetchTeacherNotes()]);
-  const lessons = Array.isArray(lessonsResponse) ? lessonsResponse : [];
-  const routeLessonId = String(route.params.lessonId || "");
-  const byRoute = lessons.find((lesson) => lesson.id === routeLessonId);
-  const byCurrent = state.lesson?.id ? lessons.find((lesson) => lesson.id === state.lesson.id) : null;
-  const initialLesson = byRoute || byCurrent || lessons[0] || null;
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  historyOwnerId.value = String(session?.user?.id || "");
+
+  await Promise.all([fetchLessons(), fetchTeacherNotes()]);
+
+  const routeLessonId = String(route.params.lessonId || "").trim();
+  if (routeLessonId) {
+    const inList = (Array.isArray(state.lessons) ? state.lessons : []).some((lesson) => lesson.id === routeLessonId);
+    if (!inList && state.lesson?.id !== routeLessonId) {
+      await fetchLesson(routeLessonId);
+    }
+  }
+
+  const lessons = Array.isArray(state.lessons) ? state.lessons : [];
+  let initialLesson = null;
+  if (routeLessonId) {
+    initialLesson = lessons.find((lesson) => lesson.id === routeLessonId) || null;
+    if (!initialLesson && state.lesson?.id === routeLessonId) {
+      initialLesson = state.lesson;
+    }
+  }
+  if (!initialLesson) {
+    initialLesson = state.lesson?.id ? lessons.find((lesson) => lesson.id === state.lesson.id) : null;
+  }
+  if (!initialLesson) {
+    initialLesson = lessons[0] || null;
+  }
+
   selectedLessonId.value = initialLesson?.id || "";
   if (availableNotes.value.length > 0) {
     selectedNoteId.value = availableNotes.value[0].id;
@@ -342,6 +368,27 @@ onMounted(async () => {
   loadPresentationHistory();
   tryOpenRequestedPresentation();
 });
+
+watch(
+  () => route.params.lessonId,
+  async (rawId) => {
+    const id = String(rawId || "").trim();
+    if (!id) return;
+    const lessons = Array.isArray(state.lessons) ? state.lessons : [];
+    if (!lessons.some((lesson) => lesson.id === id) && state.lesson?.id !== id) {
+      await fetchLesson(id);
+    }
+    const found = (Array.isArray(state.lessons) ? state.lessons : []).find((lesson) => lesson.id === id) || null;
+    if (found?.id === id) {
+      selectedLessonId.value = id;
+      presentationSource.value = "lesson";
+      state.lesson = found;
+    } else if (state.lesson?.id === id) {
+      selectedLessonId.value = id;
+      presentationSource.value = "lesson";
+    }
+  }
+);
 
 watch(selectedLesson, (lesson) => {
   state.lesson = lesson || null;
@@ -360,18 +407,13 @@ watch(presentationSource, (source) => {
 });
 
 function loadPresentationHistory() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(PRESENTATION_HISTORY_KEY) || "[]");
-    presentationHistory.value = Array.isArray(parsed) ? parsed : [];
-    selectedPresentation.value = presentationHistory.value[0] || null;
-  } catch {
-    presentationHistory.value = [];
-    selectedPresentation.value = null;
-  }
+  const { list } = loadPresentationHistoryRaw(historyOwnerId.value);
+  presentationHistory.value = list;
+  selectedPresentation.value = presentationHistory.value[0] || null;
 }
 
 function persistPresentationHistory() {
-  localStorage.setItem(PRESENTATION_HISTORY_KEY, JSON.stringify(presentationHistory.value.slice(0, 20)));
+  savePresentationHistoryRaw(historyOwnerId.value, presentationHistory.value);
 }
 
 function buildPresentationTitle() {
@@ -391,7 +433,8 @@ function savePresentationSnapshot(currentSlides) {
     createdAt,
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
-    slides: currentSlides
+    slides: currentSlides,
+    ownerId: String(historyOwnerId.value || "").trim() || undefined
   };
   presentationHistory.value.unshift(item);
   persistPresentationHistory();
@@ -424,7 +467,7 @@ async function startGeneratedPresentation() {
   try {
     const generated = await generatePresentation({
       lessonId: presentationSource.value === "lesson" ? selectedLesson.value?.id || "" : "",
-      noteId: selectedNote.value?.id || "",
+      noteId: presentationSource.value === "note" ? selectedNote.value?.id || "" : "",
       classLevel: selectedClassLevel.value || "",
       scope: effectivePresentationScope.value,
       maxSlides: 12

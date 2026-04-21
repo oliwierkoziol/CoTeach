@@ -328,6 +328,15 @@ export function useLessonStore() {
     return data.presentation;
   }
 
+  async function generateLiveLessonSummary(payload) {
+    const data = await api("/api/insights/live-lesson-summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return String(data.summary || "");
+  }
+
   async function saveTeacherNote(payload) {
     const data = await api("/api/notes", {
       method: "POST",
@@ -370,6 +379,7 @@ export function useLessonStore() {
     fetchSharedNote,
     generateTeacherNote,
     generatePresentation,
+    generateLiveLessonSummary,
     saveTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes
