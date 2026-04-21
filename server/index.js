@@ -102,7 +102,7 @@ const db = {
   notes: new Map()
 };
 
-const defaultSchoolId = "school-default";
+const defaultSchoolId = "demo-school12";
 const defaultLicenseId = "license-default";
 const defaultTeacherId = "teacher-default";
 const defaultAdminId = "admin-default";
@@ -367,6 +367,36 @@ async function resolveAdminSchoolContext(req, res) {
 
   if (profile?.admin !== true) {
     res.status(403).json({ error: "Brak uprawnień administratora." });
+    return null;
+  }
+
+  return { schoolId: String(profile?.school_id || defaultSchoolId), userId: user.id };
+}
+
+async function resolveOrganizationSchoolContext(req, res) {
+  if (!supabase) {
+    return { schoolId: defaultSchoolId, userId: defaultAdminId };
+  }
+
+  const user = await getRequestUser(req);
+  if (!user?.id) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("school_id, admin, organisation")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    res.status(500).json({ error: `Nie udało się odczytać profilu organizacji: ${profileError.message}` });
+    return null;
+  }
+
+  if (profile?.admin !== true && profile?.organisation !== true) {
+    res.status(403).json({ error: "Brak uprawnień organizacji." });
     return null;
   }
 
@@ -2568,9 +2598,7 @@ app.get("/api/admin/users", async (req, res) => {
 });
 
 app.get("/api/admin/dashboard", async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
-
-  const adminSchool = await resolveAdminSchoolContext(req, res);
+  const adminSchool = await resolveOrganizationSchoolContext(req, res);
   if (!adminSchool) return;
 
   let lessons = [...db.lessons.values()].filter((lesson) => String(lesson.schoolId || "") === adminSchool.schoolId);
@@ -2651,8 +2679,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
 });
 
 app.patch("/api/admin/school-settings", async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
-  const adminSchool = await resolveAdminSchoolContext(req, res);
+  const adminSchool = await resolveOrganizationSchoolContext(req, res);
   if (!adminSchool) return;
 
   const schoolName = String(req.body?.schoolName || "").trim();
@@ -2732,9 +2759,7 @@ app.get("/api/public/organizations", (_req, res) => {
 });
 
 app.get("/api/admin/teacher-costs", async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
-
-  const adminSchool = await resolveAdminSchoolContext(req, res);
+  const adminSchool = await resolveOrganizationSchoolContext(req, res);
   if (!adminSchool) return;
 
   const sortByRaw = String(req.query.sortBy || "total").trim();
@@ -2912,10 +2937,9 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
 });
 
 app.post("/api/admin/users/special-account", async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
 
-  const adminSchool = await resolveAdminSchoolContext(req, res);
+  const adminSchool = await resolveOrganizationSchoolContext(req, res);
   if (!adminSchool) return;
 
   const login = String(req.body?.login || "").trim().toLowerCase();

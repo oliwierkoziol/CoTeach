@@ -164,6 +164,7 @@ import { supabase } from "../supabase";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
+const DEFAULT_REGISTRATION_SCHOOL_ID = "demo-school12";
 
 const router = useRouter();
 const accountMode = ref("individual");
@@ -198,7 +199,7 @@ async function handleRegister() {
 
   const fullName = String(name.value || "").trim();
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = null;
+  const schoolId = DEFAULT_REGISTRATION_SCHOOL_ID;
   const emailConfirmRedirect = `${window.location.origin}/login`;
 
   const { data, error } = await supabase.auth.signUp({
@@ -253,7 +254,7 @@ async function handleBusinessRegister() {
 
   const fullName = String(name.value || "").trim();
   const organizationName = String(businessOrganization.value || "").trim();
-  const schoolId = null;
+  const schoolId = DEFAULT_REGISTRATION_SCHOOL_ID;
   const normalizedEmail = String(businessEmail.value || "").trim().toLowerCase();
   const emailConfirmRedirect = `${window.location.origin}/login`;
 
@@ -321,7 +322,7 @@ async function handleGoogleAuth() {
 
   const fullName = String(name.value || "").trim();
   const fallbackEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = null;
+  const schoolId = DEFAULT_REGISTRATION_SCHOOL_ID;
 
   if (fullName || fallbackEmail) {
     localStorage.setItem(

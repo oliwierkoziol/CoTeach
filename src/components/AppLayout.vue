@@ -180,11 +180,11 @@
             </a>
           </RouterLink>
           
-          <!-- Organizacja -->
-          <RouterLink v-if="isAdmin" to="/organization" custom v-slot="{ href, navigate, isActive }">
+          <!-- Organizacje -->
+          <RouterLink v-if="canAccessOrganization" to="/organization" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
               <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacje</p>
             </a>
           
           </RouterLink>
@@ -311,6 +311,8 @@ const { isDark, toggleTheme } = useTheme();
 const displayName = ref("");
 const avatarUrl = ref("");
 const isAdmin = ref(false);
+const isOrganization = ref(false);
+const canAccessOrganization = computed(() => isAdmin.value || isOrganization.value);
 
 const presentationHref = computed(() => {
   const id = state.lesson?.id || state.lessons[0]?.id || "demo";
@@ -400,15 +402,21 @@ async function loadHeaderUser() {
     displayName.value = "";
     avatarUrl.value = "";
     isAdmin.value = false;
+    isOrganization.value = false;
     return;
   }
 
-  const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url, admin").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url, admin, organisation")
+    .eq("id", user.id)
+    .maybeSingle();
 
   const name = String(profile?.full_name || user.user_metadata?.full_name || "").trim();
   displayName.value = name || user.email?.split("@")[0] || "Użytkownik";
   avatarUrl.value = profile?.avatar_url || "";
   isAdmin.value = profile?.admin === true;
+  isOrganization.value = profile?.organisation === true;
 }
 
 let authSub = null;
