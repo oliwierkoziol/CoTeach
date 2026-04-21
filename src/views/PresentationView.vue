@@ -17,23 +17,61 @@
         </button>
       </div>
 
-      <div class="flex-1 overflow-auto p-4 sm:p-8 lg:p-10">
-        <div class="mx-auto w-full max-w-6xl rounded-3xl bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700 p-6 shadow-2xl sm:p-10 lg:p-14">
-          <h1 class="mb-5 text-3xl font-extrabold leading-tight sm:text-5xl">{{ current.title }}</h1>
-          <p v-if="current.subtitle" class="mb-4 text-lg text-white/85 sm:text-xl">{{ current.subtitle }}</p>
-          <div class="mb-6 flex flex-wrap gap-2 sm:gap-3">
-            <span
-              v-for="k in current.details"
-              :key="k"
-              class="rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold text-white sm:px-4 sm:py-2 sm:text-base"
-            >
-              {{ k }}
-            </span>
-          </div>
-          <p class="mb-8 text-lg leading-relaxed text-white/95 sm:text-2xl">{{ current.summary }}</p>
-          <div class="rounded-2xl border border-white/20 bg-white/10 p-5 sm:p-7">
-            <div class="aspect-video rounded-xl bg-black/20 p-4">
-              <p class="text-base text-white/80 sm:text-lg">{{ current.visualHint || "Podpowiedź wizualna pojawi się tutaj." }}</p>
+      <div class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
+        <div :class="['mx-auto h-full max-h-full w-full max-w-6xl rounded-3xl p-5 shadow-2xl sm:p-7 lg:p-9', activeTheme.wrapperClass]">
+          <div class="flex h-full min-h-0 flex-col">
+            <div class="mb-3">
+              <h1 class="clamp-2 text-2xl font-extrabold leading-tight sm:text-4xl">{{ current.title }}</h1>
+              <p v-if="current.subtitle" class="clamp-2 mt-2 text-base text-white/85 sm:text-lg">{{ current.subtitle }}</p>
+            </div>
+
+            <div class="mb-3 flex flex-wrap gap-2">
+              <span
+                v-for="k in currentDetailChips"
+                :key="k"
+                class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white sm:text-sm"
+              >
+                {{ k }}
+              </span>
+            </div>
+
+            <div class="min-h-0 flex-1">
+              <div v-if="isComparisonLayout" class="grid h-full min-h-0 grid-cols-2 gap-3">
+                <div :class="['rounded-xl border p-4', activeTheme.panelClass]">
+                  <p class="mb-2 text-sm font-semibold text-white/80">Aspekt A</p>
+                  <p class="clamp-8 text-sm text-white/95">{{ comparisonLeft }}</p>
+                </div>
+                <div :class="['rounded-xl border p-4', activeTheme.panelClass]">
+                  <p class="mb-2 text-sm font-semibold text-white/80">Aspekt B</p>
+                  <p class="clamp-8 text-sm text-white/95">{{ comparisonRight }}</p>
+                </div>
+              </div>
+
+              <div v-else-if="isAgendaLayout" :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
+                <p class="mb-3 text-sm font-semibold text-white/80">Agenda slajdu</p>
+                <ul class="space-y-2">
+                  <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-2 text-sm text-white/95">
+                    <span class="font-bold text-white/80">{{ i + 1 }}.</span>
+                    <span class="clamp-2">{{ item }}</span>
+                  </li>
+                </ul>
+                <p class="clamp-5 mt-4 text-sm text-white/90">{{ currentMainText }}</p>
+              </div>
+
+              <div v-else-if="isPracticeLayout" :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
+                <p class="mb-2 text-sm font-semibold text-white/80">Ćwiczenie</p>
+                <p class="clamp-5 mb-3 text-sm text-white/95">{{ currentMainText }}</p>
+                <div :class="['rounded-lg p-3', activeTheme.innerPanelClass]">
+                  <p class="clamp-5 text-sm text-white/85">{{ current.visualHint || "Zadanie: podaj przykład i krótko uzasadnij odpowiedź." }}</p>
+                </div>
+              </div>
+
+              <div v-else :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
+                <p class="clamp-8 text-sm leading-relaxed text-white/95 sm:text-base">{{ currentMainText }}</p>
+                <div :class="['mt-3 rounded-lg p-3', activeTheme.innerPanelClass]">
+                  <p class="clamp-4 text-sm text-white/85">{{ current.visualHint || "Wizualizacja: prosty schemat lub wykres wspierający ten slajd." }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -60,10 +98,15 @@
     </div>
   </div>
 
-  <div v-else-if="isGenerating" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900 to-pink-900 text-white">
-    <div class="text-center text-white">
-      <h2 class="text-3xl font-bold mb-2">Generuję prezentację...</h2>
-      <p class="text-purple-200">Tworzę slajdy na podstawie notatki, planu i poziomu klasy.</p>
+  <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#f7f9fc]/95 px-6">
+    <div class="w-full max-w-xl rounded-2xl bg-white p-8 text-center shadow-[0px_12px_32px_0px_rgba(25,28,30,0.08)]">
+      <div class="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-[#d8e0ff] border-t-[#0c3dfe]" />
+      <h2 class="mb-2 font-['Plus_Jakarta_Sans'] text-[30px] font-extrabold leading-[36px] tracking-[-0.6px] text-[#191c1e]">
+        Generuję prezentację...
+      </h2>
+      <p class="font-['Plus_Jakarta_Sans'] text-[16px] leading-[26px] text-[#454652]">
+        Tworzę slajdy na podstawie notatki, planu i poziomu grupy.
+      </p>
     </div>
   </div>
 
@@ -238,6 +281,11 @@ const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const selectedClassLevel = ref("");
 const generationMessage = ref("");
+const presentationTheme = ref({
+  wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
+  panelClass: "border-white/20 bg-white/10",
+  innerPanelClass: "bg-black/20"
+});
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
@@ -250,6 +298,28 @@ const preparedSlides = computed(() => {
   if (presentationScope.value === "full") return plan;
   return plan.filter((point) => point.status !== "discussed");
 });
+const currentMainText = computed(() => {
+  const text = String(current.value.summary || "").trim();
+  if (text) return text;
+  return "Treść slajdu jest pusta. Spróbuj wygenerować prezentację ponownie dla pełnego zakresu lekcji.";
+});
+const currentDetailChips = computed(() => {
+  const details = Array.isArray(current.value.details) ? current.value.details.filter(Boolean) : [];
+  if (details.length) return details;
+  const fallback = currentMainText.value
+    .split(/[.;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  return fallback.length ? fallback : ["Najważniejsze punkty", "Przykład", "Wniosek"];
+});
+const activeTheme = computed(() => presentationTheme.value);
+const currentType = computed(() => String(current.value.type || "").toLowerCase());
+const isComparisonLayout = computed(() => currentType.value === "comparison");
+const isAgendaLayout = computed(() => currentType.value === "agenda" || currentType.value === "summary");
+const isPracticeLayout = computed(() => currentType.value === "practice" || currentType.value === "next_steps");
+const comparisonLeft = computed(() => currentDetailChips.value.slice(0, Math.ceil(currentDetailChips.value.length / 2)).join(" • "));
+const comparisonRight = computed(() => currentDetailChips.value.slice(Math.ceil(currentDetailChips.value.length / 2)).join(" • ") || currentMainText.value);
 
 onMounted(async () => {
   const [lessonsResponse] = await Promise.all([fetchLessons(), fetchTeacherNotes()]);
@@ -313,6 +383,10 @@ function savePresentationSnapshot(currentSlides) {
 function startPresentation(currentSlides) {
   slides.value = currentSlides;
   slideIndex.value = 0;
+  presentationTheme.value = resolvePresentationTheme(
+    buildPresentationTitle(),
+    currentSlides
+  );
   isPresenting.value = true;
 }
 
@@ -368,4 +442,64 @@ function openPresentationWindow() {
   const url = window.location.href;
   window.open(url, "_blank", "noopener,noreferrer");
 }
+
+function resolvePresentationTheme(title, slides) {
+  const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
+  if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil)/.test(text)) {
+    return {
+      wrapperClass: "bg-gradient-to-br from-emerald-700 via-green-700 to-teal-700",
+      panelClass: "border-white/25 bg-white/12",
+      innerPanelClass: "bg-black/15"
+    };
+  }
+  if (/(histori|wojn|pa[nń]stw|kr[oó]l|staro|średniowie)/.test(text)) {
+    return {
+      wrapperClass: "bg-gradient-to-br from-amber-700 via-orange-700 to-red-700",
+      panelClass: "border-white/20 bg-white/10",
+      innerPanelClass: "bg-black/20"
+    };
+  }
+  if (/(matemat|fizy|chem|technicz|algorytm|program|kod)/.test(text)) {
+    return {
+      wrapperClass: "bg-gradient-to-br from-blue-700 via-indigo-700 to-cyan-700",
+      panelClass: "border-white/20 bg-white/10",
+      innerPanelClass: "bg-black/20"
+    };
+  }
+  return {
+    wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
+    panelClass: "border-white/20 bg-white/10",
+    innerPanelClass: "bg-black/20"
+  };
+}
 </script>
+
+<style scoped>
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clamp-5 {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clamp-8 {
+  display: -webkit-box;
+  -webkit-line-clamp: 8;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>

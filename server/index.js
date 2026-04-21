@@ -1025,7 +1025,7 @@ function approximateTokensFromText(text) {
   return Math.max(1, Math.ceil(String(text || "").length / 4));
 }
 
-async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens }) {
+async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens, temperature }) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing.");
 
@@ -1043,6 +1043,7 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens 
     body: JSON.stringify({
       model,
       max_tokens: finalMaxTokens,
+      temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.7,
       messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
     })
   });
@@ -1251,7 +1252,8 @@ async function generatePresentationWithLLM({
     const out = await callOpenRouter({
       model: OPENROUTER_PRESENTATION_MODEL,
       parts: [{ text: prompt }],
-      maxTokens: Math.max(2500, Math.min(5000, OPENROUTER_MAX_TOKENS + 1000))
+      maxTokens: Math.max(2500, Math.min(5000, OPENROUTER_MAX_TOKENS + 1000)),
+      temperature: 0.2
     });
     const parsed = parseJsonFromModel(out.text);
     const slidesRaw = Array.isArray(parsed?.slides) ? parsed.slides : Array.isArray(parsed) ? parsed : [];
