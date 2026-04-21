@@ -1368,64 +1368,136 @@ async function generatePlanWithLLM(rawText, context = {}) {
   }
 }
 
+// Fuzzy matching function for Polish language variations
+function polishFuzzyMatch(spoken, keyword) {
+  const normalizeFuzzy = (text) => {
+    let normalized = text.toLowerCase()
+      // Remove common Polish grammatical endings
+      .replace(/(ski|ska|skie|scy|skiej|skim|ską|skimi|skim)$/g, '')  // przymiotniki -ski
+      .replace(/(czny|czna|czne|czni|cznej|cznym|czną|cznymi|cznym)$/g, '')  // -czny
+      .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
+      .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
+      .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
+      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą)$/g, '')  // podstawowe końcówki
+      .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
+      .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
+      .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
+      .replace(/(stwo|stwa|stwie|stwu|stwem|stwami)$/g, '')  // -stwo
+      .replace(/(ot|ota|ocie|ocie|otę|otą|otami|ot)$/g, '')  // -ota
+      .replace(/(ość|ości|ością|ościom|ościach)$/g, '')  // -ość
+      .replace(/(nik|nika|niku|niku|nikiem|nikami|nik)$/g, '')  // -nik
+      .replace(/(ca|cy|cem|cami|cę|cą|cą)$/g, '')  // -ca
+      .replace(/(ar|ara|arem|arami|arzy|arze)$/g, '')  // -ar
+      .replace(/(er|era|erem|erami|erzy|erze)$/g, '')  // -er
+      .replace(/(or|ora|orem|orami|orzy|orze)$/g, '')  // -or
+      // Math and science specific endings
+      .replace(/(ia|ie|ii|ię|ią|ium)$/g, '')  // -ia, -ie (geometria, równania)
+      .replace(/(cja|cje|cji|cją|cjami|cję|cjach|cje)$/g, '')  // -cja (reakcja, pochodna)
+      .replace(/(ka|ki|kie|ki|kę|ką|kami|ką)$/g, '')  // -ka (matematyka)
+      .replace(/(ta|te|ty|tę|tą|tami|tom)$/g, '')  // -ta (jednostka)
+      .replace(/(na|ne|ni|nę|ną|nami|nom)$/g, '')  // -na (funkcja)
+      .replace(/(ga|ge|gi|gę|gą|gami|gom)$/g, '')  // -ga (jednostka)
+      .replace(/(ra|re|ri|rę|rą|rami|rom)$/g, '')  // -ra (jednostka)
+      .replace(/(da|de|di|dę|dą|dam|dom)$/g, '')  // -da (jednostka)
+      // Physics and chemistry specific
+      .replace(/(ma|me|mi|mę|mą|mami|mom)$/g, '')  // -ma (jednostka)
+      .replace(/(la|le|li|lę|lą|lami|lom)$/g, '')  // -la (jednostka)
+      .replace(/(wa|we|wi|wę|wą|wami|wom)$/g, '')  // -wa (jednostka)
+      // History and geography specific
+      .replace(/(ża|że|żi|żę|żą|żami|żom)$/g, '')  // -ża (jednostka)
+      .replace(/(za|ze|zi|zę|zą|zami|zom)$/g, '')  // -za (jednostka)
+      // Remove double letters and normalize common patterns
+      .replace(/([a-z])\1{2,}/g, '$1')  // Reduce triple+ letters to single
+      .replace(/([^aeiouyąęó])ie([a-z])/g, '$1e$2')  // Polish ie → e
+      // Normalize common spelling variations
+      .replace(/rz/g, 'ż')  // Standardize rz/ż
+      .replace(/ch/g, 'h')  // Standardize ch/h
+      .trim();
+    return normalized;
+  };
+
+  const spokenNormalized = normalizeFuzzy(spoken);
+  const keywordNormalized = normalizeFuzzy(keyword);
+
+  return spokenNormalized === keywordNormalized;
+}
+
 async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
   const transcript = (transcripts || []).map((item) => item.text).join(" ").slice(0, 25000);
   if (!plan?.length || !transcript.trim()) return plan || [];
-  try {
-    const prompt = `
-Masz plan lekcji i transkrypcję. Oznacz dla każdego punktu status:
-- discussed (omówione),
-- skipped (częściowo wspomniane),
-- pending (nieomówione).
-Zwróć WYŁĄCZNIE JSON array: [{ "id": string, "status": "pending"|"skipped"|"discussed" }].
-Plan:
-${JSON.stringify(plan.map((item) => ({ id: item.id, title: item.title, keywords: item.keywords, description: item.description })))}
-Transkrypcja:
-${transcript}
-`.trim();
-    const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: `${prompt}\nZwróć wyłącznie JSON.` }] });
-    recordCostFromBase({
-      lessonId: context.lessonId || null,
-      schoolId: context.schoolId || null,
-      teacherId: context.teacherId || null,
-      provider: "openrouter",
-      model: out.model,
-      feature: "live_coverage",
-      category: "live_coverage",
-      baseAmountPLN: out.baseUsd * USD_TO_PLN,
-      providerCostUsd: out.baseUsd,
-      costUsd: out.baseUsd,
-      promptTokens: out.usage.promptTokens,
-      completionTokens: out.usage.completionTokens,
-      totalTokens: out.usage.totalTokens,
-      requestId: out.requestId,
-      latencyMs: out.latencyMs
-    });
-    const statuses = parseJsonFromModel(out.text);
-    const statusById = new Map((Array.isArray(statuses) ? statuses : []).map((item) => [item.id, item.status]));
-    return plan.map((rawItem, index) => {
-      const item = normalizePlanPoint(rawItem, index);
-      if (item.manualApproved) {
-        return { ...item, status: "discussed" };
+
+  // Use simple keyword matching with fuzzy matching
+  const normalizedTranscript = normalize(transcript);
+
+  return plan.map((rawItem, index) => {
+    const item = normalizePlanPoint(rawItem, index);
+
+    // Manual approval always takes precedence
+    if (item.manualApproved) {
+      return { ...item, status: "discussed" };
+    }
+
+    // PRESERVE: If already discussed, keep it discussed
+    if (item.status === "discussed") {
+      console.log(`[Coverage] Point "${item.title}" already discussed - keeping status`);
+      return { ...item, status: "discussed" };
+    }
+
+    // Check each keyword individually with fuzzy matching
+    const keywords = item.keywords || [];
+    if (keywords.length === 0) {
+      return item; // No keywords, can't determine coverage
+    }
+
+    // Split transcript into words for better matching
+    const words = normalizedTranscript.split(/\s+/);
+
+    const foundKeywords = keywords.filter(keyword => {
+      // First try exact match
+      if (normalizedTranscript.includes(normalize(keyword))) {
+        return true;
       }
-      const nextStatus = ["pending", "skipped", "discussed"].includes(statusById.get(item.id))
-        ? statusById.get(item.id)
-        : item.status;
-      return { ...item, status: nextStatus };
+
+      // Then try fuzzy matching with each word
+      return words.some(word => polishFuzzyMatch(word, keyword));
     });
-  } catch {
-    const normalized = normalize(transcript);
-    return plan.map((rawItem, index) => {
-      const item = normalizePlanPoint(rawItem, index);
-      if (item.manualApproved) {
-        return { ...item, status: "discussed" };
-      }
-      const hits = (item.keywords || []).filter((keyword) => normalized.includes(normalize(keyword))).length;
-      const threshold = Math.max(1, Math.ceil((item.keywords || []).length / 2));
-      const status = hits >= threshold ? "discussed" : hits > 0 ? "skipped" : "pending";
-      return { ...item, status };
-    });
-  }
+
+    // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
+    const MIN_KEYWORDS_REQUIRED = 3;
+    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED) {
+      console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords:`, foundKeywords);
+      return {
+        ...item,
+        status: "discussed",
+        foundKeywords: foundKeywords,
+        coverage: foundKeywords.length / keywords.length
+      };
+    } else if (foundKeywords.length > 0) {
+      // Partial coverage if some keywords found but not enough
+      console.log(`[Coverage] Point "${item.title}" partially discussed. Found ${foundKeywords.length}/${keywords.length} keywords (min: ${MIN_KEYWORDS_REQUIRED}):`, foundKeywords);
+      return {
+        ...item,
+        status: "skipped",
+        foundKeywords: foundKeywords,
+        coverage: foundKeywords.length / keywords.length
+      };
+    }
+
+    // No keywords found - keep current status if not pending
+    if (item.status === "skipped") {
+      console.log(`[Coverage] Point "${item.title}" keeping skipped status`);
+      return { ...item, status: "skipped" };
+    }
+
+    // No keywords found - only set to pending if current status is also pending
+    console.log(`[Coverage] Point "${item.title}" remains ${item.status} (no new keywords found)`);
+    return {
+      ...item,
+      status: item.status === "pending" ? "pending" : item.status,
+      foundKeywords: [],
+      coverage: 0
+    };
+  });
 }
 
 function getFinalNoteCoverageBuckets(plan) {
@@ -2212,6 +2284,19 @@ app.get("/api/lessons/:lessonId/costs", async (req, res) => {
   return res.json(getCostSummary(lesson.id));
 });
 
+app.delete("/api/lessons/:lessonId/costs", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  if (!lesson) return;
+
+  // Reset costs for this lesson
+  db.costs.delete(lesson.id);
+  console.log(`[Costs] Reset costs for lesson ${lesson.id}`);
+
+  return res.json({ success: true, message: "Koszty zostały zresetowane." });
+});
+
 app.get("/api/share/:noteId", (req, res) => {
   const lesson = [...db.lessons.values()].find((item) => item.finalNote?.id === req.params.noteId);
   if (!lesson?.finalNote) return res.status(404).json({ error: "Not found" });
@@ -2943,29 +3028,61 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       return res.status(500).json({ error: "OPENAI_API_KEY is missing for Whisper STT." });
     }
 
+    console.log('[transcribe] Processing audio file:', {
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.buffer.length,
+      lessonId
+    });
+
     const file = await toFile(req.file.buffer, req.file.originalname || "audio.webm", {
       type: req.file.mimetype || "audio/webm"
     });
+
+    console.log('[transcribe] Calling Whisper API with model:', OPENAI_WHISPER_MODEL);
+
     const transcription = await openai.audio.transcriptions.create({
       file,
       model: OPENAI_WHISPER_MODEL,
       language: "pl",
-      response_format: "verbose_json"
+      response_format: "verbose_json",
+      temperature: 0.0, // Lower temperature for more deterministic results
+      prompt: "To jest nagranie z lekcji online." // Context prompt
+    }).catch(err => {
+      console.error('[transcribe] Whisper API error:', err);
+      throw err;
     });
+
+    console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars, ${transcription.duration}s)`);
 
     const durationSec = Number(transcription.duration || 0);
     const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
     const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
-    recordCostFromBase({
-      lessonId,
-      schoolId: teacher.schoolId,
-      teacherId: teacher.teacherId,
-      provider: OPENAI_PROVIDER_NAME,
-      category: "live_transcription",
-      baseAmountPLN: fragmentCost
-    });
 
-    const text = String(transcription.text || "").trim();
+    const rawText = String(transcription.text || "").trim();
+    console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
+
+    // Simplified server-side filtering - only filter obvious single-word hallucinations
+    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
+    const isValidTranscription = rawText &&
+                              rawText.length > 5 &&
+                              !obviousHallucinations.test(rawText);
+
+    // Only record cost if transcription is valid
+    if (isValidTranscription) {
+      recordCostFromBase({
+        lessonId,
+        schoolId: teacher.schoolId,
+        teacherId: teacher.teacherId,
+        provider: OPENAI_PROVIDER_NAME,
+        category: "live_transcription",
+        baseAmountPLN: fragmentCost
+      });
+    } else {
+      console.log(`[❌] Skipping cost - transcription filtered`);
+    }
+
+    const text = isValidTranscription ? rawText : "";
     return res.json({
       text,
       durationSec,
@@ -2973,6 +3090,20 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       limitReached: getCostSummary(lessonId).exceeded
     });
   } catch (error) {
+    console.error(`[❌] Transcription failed:`, error.message);
+
+    // Handle specific error cases
+    if (error.response) {
+      console.error('[transcribe] API response error:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+      return res.status(500).json({
+        error: `Whisper API error: ${error.response.data?.error?.message || error.message}`,
+        details: error.response.data
+      });
+    }
+
     return res.status(500).json({ error: `Whisper transcription failed: ${error.message}` });
   }
 });
