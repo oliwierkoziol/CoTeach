@@ -2039,7 +2039,19 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
     }
 
     lesson.plan = await generatePlanWithLLM(extractedText, { lessonId: lesson.id, teacherId: teacher.teacherId });
-    if (!lesson.plan.length) return res.status(400).json({ error: "Could not derive topics from material." });
+    if (!lesson.plan.length) {
+      const safeText = String(extractedText || "").trim();
+      lesson.plan = [
+        {
+          id: randomUUID(),
+          title: "Temat z przesłanego materiału",
+          keywords: [],
+          description: safeText.slice(0, 400) || "Dodaj więcej treści, aby wygenerować szczegółowy plan lekcji.",
+          status: "pending",
+          priority: 1
+        }
+      ];
+    }
     lesson.status = "ready";
     db.lessons.set(lesson.id, lesson);
     await persistLessonSafe(lesson);
