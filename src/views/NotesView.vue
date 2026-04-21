@@ -290,7 +290,7 @@ async function handleSave() {
       source: "ai"
     });
     info.value = "Notatka zapisana pomyślnie.";
-    await router.push("/archive");
+    await router.push("/preparation");
   } catch (e) {
     error.value = e.message || "Nie udało się zapisać notatki.";
   } finally {
