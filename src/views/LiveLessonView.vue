@@ -96,28 +96,55 @@
           <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] tracking-[0.9px] leading-[28px]">
             Napisy na żywo
           </h2>
+
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-['Inter'] text-[#454652]">
+              Koszt: {{ currentCost.toFixed(2) }} PLN / {{ costLimit.toFixed(2) }} PLN
+            </span>
+            <div class="flex items-center gap-2">
+              <span
+                class="font-['Inter'] font-semibold"
+                :class="currentCost >= costLimit ? 'text-red-600' : 'text-green-600'"
+              >
+                {{ ((currentCost / costLimit) * 100).toFixed(0) }}%
+              </span>
+              <button
+                @click="resetCosts"
+                class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="bg-[#f2f4f7] rounded-xl border-l-4 border-[#0059bb] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 h-[445px] overflow-y-auto">
           <p class="font-['Inter'] font-semibold text-[#0059bb] text-[12px] tracking-[1.2px] uppercase mb-3">
             NAPISY LIVE (W TRAKCIE)
           </p>
-          
-          <div v-if="lastFinalCaption || interimCaption" class="flex flex-col gap-4">
-            <p class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
-              {{ lastFinalCaption }}
-            </p>
-            <p class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
+
+          <div class="max-h-[350px] overflow-y-auto space-y-3" ref="transcriptionContainer" @scroll="handleScroll">
+            <div
+              v-for="(text, index) in transcription"
+              :key="index"
+              class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px] p-2 bg-white/50 rounded"
+            >
+              {{ index + 1 }}. {{ text }}
+            </div>
+
+            <p v-if="interimCaption" class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
               {{ interimCaption }}
             </p>
-            <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-              Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
-            </p>
+
+            <div v-if="transcription.length === 0 && !interimCaption" class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
+              Czekam na rozpoczęcie wypowiedzi...<br />
+              System jest gotowy do przechwytywania<br />
+              dźwięku w czasie rzeczywistym.
+            </div>
           </div>
-          <p v-else class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
-            Czekam na rozpoczęcie wypowiedzi...<br />
-            System jest gotowy do przechwytywania<br />
-            dźwięku w czasie rzeczywistym.
+
+          <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
           </p>
         </div>
       </div>
@@ -159,30 +186,6 @@
           </div>
         </div>
 
-        <!-- Silnik STT -->
-        <div class="space-y-2">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
-            Silnik STT
-          </label>
-          <div class="relative">
-            <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
-              <select
-                v-model="sttEngine"
-                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                @change="handleSttEngineChange"
-              >
-                <option value="browser">Przeglądarka Web Speech</option>
-                <option value="whisper">Whisper</option>
-              </select>
-              <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] pointer-events-none">
-                {{ sttEngine === 'whisper' ? 'Whisper' : 'Przeglądarka Web Speech' }}
-              </span>
-              <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
-                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
 
         <!-- Poziom mikrofonu -->
         <div class="space-y-2">
@@ -271,7 +274,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
@@ -283,7 +286,7 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
-const COVERAGE_REFRESH_MIN_INTERVAL_MS = 90_000;
+const COVERAGE_REFRESH_MIN_INTERVAL_MS = 5_000; // Reduced from 90s to 5s for faster coverage updates
 
 const lessonDurationOptions = [
   { label: "45 min", minutes: 45 },
@@ -308,27 +311,32 @@ const {
 } = useLessonStore();
 
 const isRecording = ref(false);
-const recognition = ref(null);
 const micDevices = ref([]);
 const selectedMicId = ref("");
 const micLevel = ref(0);
 const micGain = ref(1);
 const captionSensitivity = ref(2);
-const sttEngine = ref("whisper");
 const interimCaption = ref("");
 const lastFinalCaption = ref("");
 const micTestActive = ref(false);
 const sttStatus = ref("idle");
 const apiStatus = ref("checking");
+const currentCost = ref(0);
+const costLimit = ref(3.5);
 const micStream = ref(null);
+const isTranscribing = ref(false); // Prevent duplicate transcriptions
+const processedTranscriptionIds = new Set(); // Track processed transcriptions
+const transcriptionContainer = ref(null); // Ref for auto-scrolling
+const isUserScrolling = ref(false); // Track if user is manually scrolling
+const lastScrollPosition = ref(0); // Track last scroll position
 const audioContext = ref(null);
 const analyserNode = ref(null);
-const analyserTimer = ref(null);
 const mediaRecorder = ref(null);
 const startAt = ref(0);
 const elapsedSec = ref(0);
 const timer = ref(null);
 const transcription = ref([]);
+const audioChunks = ref([]); // Global audio chunks for transcription
 const error = ref("");
 const info = ref("");
 const shouldKeepListening = ref(false);
@@ -340,12 +348,29 @@ const lastCoverageRefreshMs = ref(0);
 const coverageRefreshTimer = ref(null);
 const demoMaxLiveMinutes = ref(null);
 let apiPingTimer = null;
+let interimScrollTimer = null;
 
 const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
 const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
 const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
 const isDemoLicense = computed(() => Number.isFinite(Number(demoMaxLiveMinutes.value)) && Number(demoMaxLiveMinutes.value) > 0);
+
+// Watch transcription changes for auto-scroll
+watch(transcription, () => {
+  autoScrollToBottom();
+}, { deep: true });
+
+// Watch interim caption for auto-scroll during processing (with throttling)
+watch(interimCaption, () => {
+  if (interimCaption.value) {
+    // Clear existing timer and set new one (throttled scroll)
+    if (interimScrollTimer) clearTimeout(interimScrollTimer);
+    interimScrollTimer = setTimeout(() => {
+      autoScrollToBottom();
+    }, 300); // Scroll every 300ms max while processing
+  }
+});
 const availableLessonDurationOptions = computed(() => {
   if (!isDemoLicense.value) return lessonDurationOptions;
   const maxMinutes = Number(demoMaxLiveMinutes.value);
@@ -420,7 +445,26 @@ onMounted(async () => {
   void loadMicDevices();
   void checkApiHealth();
   void fetchLicenseStatus();
+  void updateCurrentCost();
   apiPingTimer = setInterval(checkApiHealth, 10000);
+  setInterval(updateCurrentCost, 5000); // Update costs every 5 seconds
+
+  // Add scroll event listener for auto-scroll behavior
+  await nextTick();
+  if (transcriptionContainer.value) {
+    transcriptionContainer.value.addEventListener('scroll', handleScroll);
+  }
+
+  // Check microphone permissions first
+  try {
+    info.value = "Sprawdzam uprawnienia do mikrofonu...";
+    await loadMicDevices();
+    info.value = "";
+  } catch (micErr) {
+    console.error('[onMounted] Microphone permission check failed:', micErr);
+    error.value = `Brak uprawnień do mikrofonu. Sprawdź ustawienia przeglądarki i przyznaj dostęp do mikrofonu.`;
+  }
+
   if (routeLessonId) {
     if (routeLessonId !== currentLessonId) {
       if (cachedRouteLesson) {
@@ -444,29 +488,48 @@ onMounted(async () => {
   } else {
     hydrateLessonProgressFromState();
   }
-  if (!isRecording.value) {
+
+  // Only start session if we have microphone permission
+  if (!isRecording.value && micDevices.value.length > 0) {
     startSession();
+  } else if (!isRecording.value) {
+    info.value = "Oczekuję na uprawnienia do mikrofonu...";
   }
 });
 
 onUnmounted(() => {
   if (timer.value) clearInterval(timer.value);
-  if (analyserTimer.value) clearInterval(analyserTimer.value);
+  if (window.__whisperActivityInterval) clearInterval(window.__whisperActivityInterval);
+  if (window.__whisperCleanup) {
+    window.__whisperCleanup();
+    window.__whisperCleanup = null;
+  }
   if (coverageRefreshTimer.value) clearTimeout(coverageRefreshTimer.value);
   if (apiPingTimer) clearInterval(apiPingTimer);
+  if (interimScrollTimer) clearTimeout(interimScrollTimer);
   stopMicMeter();
-  recognition.value?.stop();
+
+  // Clean up scroll event listener
+  if (transcriptionContainer.value) {
+    transcriptionContainer.value.removeEventListener('scroll', handleScroll);
+  }
 });
 
 async function refreshCoverageThrottled(force = false) {
   if (!state.lesson?.id) return;
   const now = Date.now();
-  if (!force && now - lastCoverageRefreshMs.value < COVERAGE_REFRESH_MIN_INTERVAL_MS) return;
+  if (!force && now - lastCoverageRefreshMs.value < COVERAGE_REFRESH_MIN_INTERVAL_MS) {
+    console.log(`⏱️ Coverage check throttled (${(now - lastCoverageRefreshMs.value)/1000}s < ${COVERAGE_REFRESH_MIN_INTERVAL_MS/1000}s)`);
+    return;
+  }
 
   lastCoverageRefreshMs.value = now;
+  console.log(`🔄 Checking coverage (force: ${force})...`);
   try {
-    await refreshCoverage(state.lesson.id);
+    const result = await refreshCoverage(state.lesson.id);
+    console.log(`✅ Coverage check completed. Points discussed: ${result.plan.filter(p => p.status === 'discussed').length}/${result.plan.length}`);
   } catch (e) {
+    console.error(`❌ Coverage check error:`, e.message);
     info.value = `Błąd odświeżania pokrycia: ${e.message || "nieznany"}`;
   }
 }
@@ -516,8 +579,15 @@ async function fetchLicenseStatus() {
   }
 }
 
-function scheduleCoverageRefresh() {
+function scheduleCoverageRefresh(forceImmediate = false) {
   if (!state.lesson?.id) return;
+
+  // Force immediate check if requested (e.g., after transcription)
+  if (forceImmediate) {
+    console.log(`🚀 Forcing immediate coverage check`);
+    void refreshCoverageThrottled(true);
+    return;
+  }
 
   const now = Date.now();
   const elapsedSinceLast = now - lastCoverageRefreshMs.value;
@@ -533,6 +603,43 @@ function scheduleCoverageRefresh() {
     coverageRefreshTimer.value = null;
     void refreshCoverageThrottled(false);
   }, delay);
+}
+
+function autoScrollToBottom() {
+  if (transcriptionContainer.value && !isUserScrolling.value) {
+    const container = transcriptionContainer.value;
+    const scrollHeight = container.scrollHeight;
+    const scrollTop = container.scrollTop;
+    const clientHeight = container.clientHeight;
+
+    // Only auto-scroll if user is near the bottom (within 100px)
+    if (scrollHeight - scrollTop - clientHeight < 100) {
+      container.scrollTo({
+        top: scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }
+}
+
+// Track user scrolling behavior
+function handleScroll() {
+  if (!transcriptionContainer.value) return;
+  const container = transcriptionContainer.value;
+  const scrollPosition = container.scrollTop;
+  const scrollHeight = container.scrollHeight;
+  const clientHeight = container.clientHeight;
+  const distanceFromBottom = scrollHeight - scrollPosition - clientHeight;
+
+  // Detect if user is scrolling up (manually viewing earlier content)
+  if (distanceFromBottom > 50) {
+    isUserScrolling.value = true;
+  } else if (distanceFromBottom < 20) {
+    // User is back at the bottom, re-enable auto-scroll
+    isUserScrolling.value = false;
+  }
+
+  lastScrollPosition.value = scrollPosition;
 }
 
 async function startSession() {
@@ -556,179 +663,181 @@ async function startSession() {
         stopSession();
       }
     }, 1000);
-    await beginMic();
-    isRecording.value = true;
+
+    info.value = "Uruchamiam mikrofon i transkrypcję Whisper...";
+    isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
+    try {
+      await beginMic();
+      info.value = "Whisper aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+    } catch (micError) {
+      console.error('[startSession] Microphone error:', micError);
+      error.value = `Nie udało się uruchomić mikrofonu: ${micError.message}`;
+      sttStatus.value = "error";
+      isRecording.value = false;
+    }
   } catch (e) {
+    console.error('[startSession] Error:', e);
     error.value = e.message;
     sttStatus.value = "error";
   }
 }
 
 function stopSession() {
-  shouldKeepListening.value = false;
-  recognition.value?.stop();
-  recognition.value = null;
+  // Call cleanup function if it exists
+  if (window.__whisperCleanup) {
+    window.__whisperCleanup();
+    window.__whisperCleanup = null;
+  }
+
   mediaRecorder.value?.stop();
   mediaRecorder.value = null;
   isRecording.value = false;
   interimCaption.value = "";
+
   if (timer.value) clearInterval(timer.value);
   timer.value = null;
-  if (analyserTimer.value) clearInterval(analyserTimer.value);
-  analyserTimer.value = null;
+
+  if (window.__whisperActivityInterval) clearInterval(window.__whisperActivityInterval);
+  window.__whisperActivityInterval = null;
+
   stopMicMeter();
   sttStatus.value = "idle";
+
   if (coverageRefreshTimer.value) {
     clearTimeout(coverageRefreshTimer.value);
     coverageRefreshTimer.value = null;
   }
-  void refreshCoverageThrottled(true);
-}
 
-async function handleSttEngineChange() {
-  if (!isRecording.value && !micTestActive.value) return;
-  try {
-    error.value = "";
-    shouldKeepListening.value = false;
-    recognition.value?.stop();
-    recognition.value = null;
-    mediaRecorder.value?.stop();
-    mediaRecorder.value = null;
-    interimCaption.value = "";
-    sttStatus.value = "starting";
-    info.value = sttEngine.value === "whisper"
-      ? "Przełączono na Whisper. Restartuję nasłuch..."
-      : "Przełączono na Web Speech. Restartuję nasłuch...";
-    await beginMic();
-  } catch (e) {
-    sttStatus.value = "error";
-    error.value = e.message || "Nie udało się przełączyć silnika STT.";
-  }
+  void refreshCoverageThrottled(true);
 }
 
 async function beginMic() {
   sttStatus.value = "starting";
-  await startMicMeter();
-  if (sttEngine.value === "whisper") {
-    await beginWhisperMode();
-    return;
-  }
-  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Ctor) {
+
+  try {
+    await startMicMeter();
+  } catch (err) {
     sttStatus.value = "error";
-    throw new Error("Ta przeglądarka nie wspiera SpeechRecognition. Użyj Chrome.");
+    throw new Error(`Nie udało się uruchomić mikrofonu: ${err.message}`);
   }
-  const rec = new Ctor();
-  rec.lang = "pl-PL";
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.maxAlternatives = 1;
-  shouldKeepListening.value = true;
-  rec.onresult = async (event) => {
-    const finals = [];
-    const interim = [];
 
-    for (let i = 0; i < event.results.length; i += 1) {
-      const result = event.results[i];
-      const alternatives = Array.from(result || []);
-      const text = alternatives.map((a) => a?.transcript || "").join(" ").trim();
-      if (!text) continue;
-      if (result.isFinal) {
-        finals.push(text);
-      } else if (text.length >= captionSensitivity.value) {
-        interim.push(text);
-      }
-    }
-
-    interimCaption.value = interim.join(" ").trim();
-
-    if (finals.length) {
-      const finalText = finals.join(" ").trim();
-      lastFinalCaption.value = finalText;
-      transcription.value.push(finalText);
-      interimCaption.value = "";
-
-      // Fire and forget to keep UI captions responsive.
-      if (state.lesson?.id) {
-        sendTranscript(state.lesson.id, finalText)
-          .then(() => scheduleCoverageRefresh())
-          .catch((e) => {
-            info.value = `Błąd wysyłki transkrypcji: ${e.message || "nieznany"}`;
-          });
-      }
-    }
-  };
-  rec.onstart = () => {
-    sttStatus.value = "listening";
-    info.value = "STT działa. Mów normalnie do mikrofonu.";
-  };
-  rec.onaudiostart = () => {
-    micLevel.value = Math.min(100, Math.max(micLevel.value, 20 * micGain.value));
-  };
-  rec.onspeechstart = () => {
-    micLevel.value = Math.min(100, 90 * micGain.value);
-  };
-  rec.onspeechend = () => {
-    micLevel.value = Math.min(100, 25 * micGain.value);
-  };
-  rec.onaudioend = () => {
-    if (!isRecording.value && !micTestActive.value) {
-      micLevel.value = 0;
-    }
-  };
-  rec.onend = () => {
-    sttStatus.value = "idle";
-    if (shouldKeepListening.value) {
-      try {
-        sttStatus.value = "starting";
-        rec.start();
-      } catch {
-        // no-op
-      }
-    }
-  };
-  rec.onerror = (ev) => {
-    const reason = ev.error || "nieznany";
-    info.value = `Błąd mikrofonu: ${reason}`;
-
-    // Common transient errors in browser speech recognition.
-    if (reason === "no-speech" || reason === "aborted") {
-      sttStatus.value = "starting";
-      return;
-    }
-    sttStatus.value = "error";
-  };
-  recognition.value = rec;
-  rec.start();
-  sttStatus.value = "listening";
+  await beginWhisperMode();
 }
 
+
 async function beginWhisperMode() {
+  console.log("[WhisperMode] Starting beginWhisperMode function");
+
   if (!micStream.value) {
     throw new Error("Nie udało się uruchomić strumienia mikrofonu.");
   }
-  // Continuous MediaRecorder: nie restartujemy, tylko obsługujemy kolejne fragmenty
-  if (!micStream.value || sttEngine.value !== 'whisper') return;
-  let recorder;
-  try {
-    recorder = new MediaRecorder(micStream.value, { mimeType: "audio/webm" });
-  } catch {
-    recorder = new MediaRecorder(micStream.value);
+  console.log("[WhisperMode] Mic stream available");
+
+  // Set up Web Audio API for silence detection
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const audioContext = new AudioContextClass();
+
+  // Resume AudioContext if it's suspended (required for user gesture)
+  if (audioContext.state === 'suspended') {
+    console.log("[WhisperMode] Resuming suspended AudioContext");
+    await audioContext.resume();
   }
+
+  const source = audioContext.createMediaStreamSource(micStream.value);
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  source.connect(analyser);
+
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  let silenceStart = null;
+  const SILENCE_THRESHOLD = 20; // Balanced threshold for speech detection
+  const SILENCE_DURATION = 500; // 0.5 seconds of silence before sending (faster response)
+
+  console.log(`[WhisperMode] Audio setup complete. Threshold: ${SILENCE_THRESHOLD}, Duration: ${SILENCE_DURATION}ms`);
+
+  // Set up MediaRecorder
+  let recorder;
+  const supportedTypes = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4"
+  ];
+
+  for (const type of supportedTypes) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      try {
+        recorder = new MediaRecorder(micStream.value, {
+          mimeType: type,
+          audioBitsPerSecond: 128000
+        });
+        break;
+      } catch (e) {
+        continue;
+      }
+    }
+  }
+
+  if (!recorder) {
+    recorder = new MediaRecorder(micStream.value, {
+      audioBitsPerSecond: 128000
+    });
+  }
+
   mediaRecorder.value = recorder;
   sttStatus.value = "listening";
-  info.value = "Whisper aktywny. Wysyłam fragmenty audio co kilka sekund.";
+  info.value = "Whisper aktywny. System wykrywa mowę i automatycznie wysyła fragmenty.";
 
-  recorder.onstart = () => {
-    console.log('[whisper debug] MediaRecorder started');
+  recorder.ondataavailable = (event) => {
+    if (event.data && event.data.size > 0) {
+      audioChunks.value.push(event.data);
+      lastChunkTime = Date.now();
+      console.log(`📦 Audio chunk: ${event.data.size} bytes (total: ${audioChunks.value.length})`);
+    }
   };
-  recorder.ondataavailable = async (event) => {
-    console.log('[whisper debug] ondataavailable', event.data ? event.data.size : 0);
-    if (!event.data || event.data.size < 1 || !state.lesson?.id) return;
+
+  // Function to send collected audio for transcription
+  const sendAudioForTranscription = async () => {
+    if (audioChunks.value.length === 0 || !state.lesson?.id) {
+      return;
+    }
+
+    // Prevent duplicate transcriptions
+    if (isTranscribing.value) {
+      console.log("⏸️ Already transcribing, skipping duplicate");
+      return;
+    }
+
+    isTranscribing.value = true;
+
     try {
+      interimCaption.value = "Przetwarzanie audio...";
+
+      const audioBlob = new Blob(audioChunks.value, { type: recorder.mimeType || 'audio/webm' });
+      console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${audioChunks.value.length} chunks`);
+
+      // More reasonable filtering - balance between filtering noise and capturing speech
+      const minSize = 5000; // Minimum 5KB of audio
+      const estimatedDurationMs = audioChunks.value.length * 1000; // ~1 second per chunk
+      const minDuration = 1500; // Require at least 1.5 seconds of audio
+
+      if (audioBlob.size < minSize || estimatedDurationMs < minDuration) {
+        console.log(`❌ Audio too short: ${audioBlob.size}b / ${estimatedDurationMs}ms (min: ${minSize}b/${minDuration}ms)`);
+        audioChunks.value.length = 0;
+        interimCaption.value = "";
+        return;
+      }
+
+      const blobType = audioBlob.type || 'audio/webm';
+      const fileExt = blobType.includes('mp4') ? 'mp4' :
+                     blobType.includes('ogg') ? 'ogg' : 'webm';
+
       const form = new FormData();
       form.set("lessonId", state.lesson.id);
-      form.set("file", event.data, `chunk-${Date.now()}.webm`);
+      form.set("file", audioBlob, `audio-${Date.now()}.${fileExt}`);
+
+      console.log(`[Transcribe] Sending to API: ${API_BASE}/api/transcribe`);
+
       const { data: authData } = await supabase.auth.getSession();
       const token = authData?.session?.access_token;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -738,95 +847,239 @@ async function beginWhisperMode() {
         headers,
         body: form
       });
+
+      console.log(`📡 API status: ${response.status}`);
+
       const data = await response.json();
+
       if (!response.ok) {
-        info.value = (data.message || data.error || "Błąd Whisper API.") + " Przełączam na STT przeglądarki.";
-        // Automatic recovery: switch to browser STT when provider fails.
-        sttEngine.value = "browser";
-        mediaRecorder.value?.stop();
-        mediaRecorder.value = null;
-        await beginMic();
-        return;
+        // Handle budget exceeded error specifically
+        if (response.status === 402 || data.error === "Budget exceeded") {
+          const errorMessage = "Limit kosztów transkrypcji został osiągnięty. Spróbuj ponownie później lub skontaktuj się z administratorem.";
+          error.value = errorMessage;
+          throw new Error(errorMessage);
+        }
+        throw new Error(data.error || data.message || "Błąd transkrypcji");
       }
+
       const text = String(data.text || "").trim();
-      if (text.length >= captionSensitivity.value) {
-        // Show Whisper text immediately on screen before lesson analysis.
-        interimCaption.value = "Przetworzono fragment audio.";
-        lastFinalCaption.value = text;
-        transcription.value.push(text);
-        await sendTranscript(state.lesson.id, text);
-        scheduleCoverageRefresh();
-        interimCaption.value = "";
+      console.log(`📝 Transcription: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
+
+      // Simplified filtering - only filter obvious single-word hallucinations
+      const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
+      const isValidTranscription = text &&
+                              text.length > 5 && // Only require minimum length
+                              !obviousHallucinations.test(text);
+
+      if (isValidTranscription) {
+        // Check if this text is already in the array to prevent duplicates
+        const isDuplicate = transcription.value.includes(text);
+        if (isDuplicate) {
+          console.log(`⚠️ Duplicate skipped: "${text.substring(0, 30)}..."`);
+        } else {
+          transcription.value.push(text);
+          console.log(`✅ Added transcription #${transcription.value.length}`);
+          await nextTick();
+
+          // Reset user scrolling flag when new content is added
+          isUserScrolling.value = false;
+
+          // Auto-scroll to bottom after adding new transcription
+          autoScrollToBottom();
+
+          await sendTranscript(state.lesson.id, text);
+
+          // Small delay to prevent overwhelming the server, then check coverage
+          setTimeout(() => {
+            scheduleCoverageRefresh(true); // Force immediate coverage check after transcription
+          }, 100);
+
+          void updateCurrentCost(); // Update costs after successful transcription
+        }
+      } else {
+        console.log(`❌ Filtered: "${text}" (hallucination/too short)`);
       }
+
       if (data.limitReached) {
         info.value = "Osiągnięto limit kosztów sesji.";
       }
-    } catch (e) {
-      info.value = `Błąd Whisper: ${e.message || "nieznany"}`;
-    }
-  };
-  recorder.onerror = () => {
-    sttStatus.value = "error";
-    info.value = "Błąd rejestratora audio dla Whisper.";
-    console.log('[whisper debug] MediaRecorder error');
-  };
-  recorder.start(2000);
-  console.log('[whisper debug] MediaRecorder .start(2000) called');
 
-  // Debug: log MediaRecorder state every 2 seconds
-  if (window.__whisperStateLogger) clearInterval(window.__whisperStateLogger);
-  window.__whisperStateLogger = setInterval(() => {
-    if (mediaRecorder.value) {
-      console.log('[whisper debug] MediaRecorder state', mediaRecorder.value.state);
+      console.log("[Transcribe] ✅ Success");
+    } catch (e) {
+      console.error(`❌ Transcription error: ${e.message}`);
+      error.value = `Błąd transkrypcji: ${e.message}`;
+    } finally {
+      interimCaption.value = "";
+      audioChunks.value.length = 0;
+      isTranscribing.value = false; // Reset transcription flag
+      console.log(`🧹 Cleaned up`);
     }
-  }, 2000);
+  };
+
+  recorder.onerror = (error) => {
+    console.error("[MediaRecorder] Error:", error);
+    sttStatus.value = "error";
+    info.value = "Błąd nagrywania audio.";
+  };
+
+  recorder.onstart = () => {
+    console.log("[MediaRecorder] Started successfully");
+  };
+
+  recorder.onstop = () => {
+    console.log(`[MediaRecorder] Stopped. Chunks collected: ${audioChunks.value.length}`);
+  };
+
+  try {
+    recorder.start(1000); // Start with 1 second intervals to get chunks
+    console.log("[MediaRecorder] Start called with 1000ms interval");
+  } catch (startErr) {
+    console.error("[MediaRecorder] Failed to start:", startErr);
+    audioContext.close();
+    throw new Error(`Nie udało się uruchomić nagrywania: ${startErr.message}`);
+  }
+
+  // Monitor audio levels for silence detection
+  let recordingStartTime = Date.now();
+  const MAX_RECORDING_TIME = 30000; // Max 30 seconds before forcing send
+  let frameCount = 0;
+  let lastChunkTime = Date.now();
+  let isMonitoring = true;
+
+  const monitorAudio = () => {
+    if (!isRecording.value && frameCount > 10) {
+      console.log("🛑 Monitor stopped - recording inactive");
+      audioContext.close();
+      isMonitoring = false;
+      return;
+    }
+
+    if (!isMonitoring) return;
+
+    analyser.getByteFrequencyData(dataArray);
+
+    // Calculate average volume
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+    const average = sum / dataArray.length;
+
+    // Update mic level for UI
+    micLevel.value = Math.min(100, average);
+
+    frameCount++;
+
+    // Status logging every 60 frames
+    if (frameCount % 60 === 0) {
+      console.log(`🎤 Recording active | Level: ${average.toFixed(1)} | Chunks: ${audioChunks.value.length}`);
+    }
+
+    // Force send after max recording time
+    const recordingDuration = Date.now() - recordingStartTime;
+    if (recordingDuration > MAX_RECORDING_TIME && audioChunks.value.length > 0) {
+      console.log(`⏱️ Max time reached, forcing transcription`);
+      sendAudioForTranscription();
+      recorder.stop();
+      audioChunks.value.length = 0;
+      recorder.start(1000);
+      recordingStartTime = Date.now();
+      silenceStart = null;
+      requestAnimationFrame(monitorAudio);
+      return;
+    }
+
+    // Detect silence or speech
+    if (average > SILENCE_THRESHOLD) {
+      silenceStart = null;
+      if (frameCount % 60 === 0) {
+        info.value = `Mowa wykryta (poziom: ${Math.round(average)})`;
+      }
+    } else if (silenceStart === null) {
+      silenceStart = Date.now();
+    } else {
+      // Check if silence has lasted long enough
+      const silenceDuration = Date.now() - silenceStart;
+      if (silenceDuration >= SILENCE_DURATION && audioChunks.value.length > 0) {
+        console.log(`⏸️ Silence detected, sending transcription`);
+        sendAudioForTranscription();
+        recorder.stop();
+        audioChunks.value.length = 0;
+        recorder.start(1000);
+        recordingStartTime = Date.now();
+        silenceStart = null;
+      } else if (frameCount % 60 === 0) {
+        info.value = `Czekam na mowę... (${Math.round(silenceDuration/1000)}s ciszy)`;
+      }
+    }
+
+    requestAnimationFrame(monitorAudio);
+  };
+
+  // Start monitoring
+  console.log("[WhisperMode] Starting audio monitoring");
+  monitorAudio();
+
+  // Store cleanup function
+  window.__whisperCleanup = () => {
+    console.log("[WhisperMode] Cleanup called");
+    audioContext.close();
+    if (audioChunks.value.length > 0) {
+      console.log("[WhisperMode] Sending remaining chunks during cleanup");
+      sendAudioForTranscription();
+    }
+  };
+  console.log("[WhisperMode] ✅ beginWhisperMode completed successfully");
 }
 
 async function loadMicDevices() {
   try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Przeglądarka nie obsługuje API mediów. Spróbuj użyć innej przeglądarki.");
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((t) => t.stop());
     const devices = await navigator.mediaDevices.enumerateDevices();
     micDevices.value = devices.filter((d) => d.kind === "audioinput");
-  } catch {
+  } catch (err) {
     micDevices.value = [];
+
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      error.value = "Odmówiono dostępu do mikrofonu. Sprawdź ustawienia przeglądarki i przyznaj uprawnienia.";
+    } else if (err.name === 'NotFoundError') {
+      error.value = "Nie znaleziono mikrofonu. Podłącz mikrofon i spróbuj ponownie.";
+    } else if (err.name === 'NotReadableError') {
+      error.value = "Mikrofon jest zajęty przez inną aplikację. Zamknij inne aplikacje używające mikrofonu.";
+    } else {
+      error.value = `Nie udało się załadować urządzeń audio: ${err.message || 'Sprawdź uprawnienia'}`;
+    }
   }
 }
 
 async function startMicMeter() {
-  stopMicMeter();
+  // Reuse existing stream if available and live
+  if (micStream.value && micStream.value.getAudioTracks().some(t => t.readyState === 'live')) {
+    if (audioContext.value) {
+      audioContext.value.close();
+      audioContext.value = null;
+    }
+    analyserNode.value = null;
+    micLevel.value = 10;
+    return;
+  }
+
+  // Need to get a new stream
   const constraints = selectedMicId.value
     ? { audio: { deviceId: { exact: selectedMicId.value } } }
     : { audio: true };
-  micStream.value = await navigator.mediaDevices.getUserMedia(constraints);
-  console.log('[mic debug] micStream', micStream.value);
-  console.log('[mic debug] micDevices', micDevices.value, 'selectedMicId', selectedMicId.value);
-  if (micStream.value) {
-    const tracks = micStream.value.getAudioTracks();
-    console.log('[mic debug] audioTracks', tracks);
-    if (tracks.length > 0) {
-      console.log('[mic debug] track settings', tracks[0].getSettings());
-      console.log('[mic debug] track muted', tracks[0].muted);
-    }
+  try {
+    micStream.value = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (err) {
+    throw new Error(`Nie udało się uzyskać dostępu do mikrofonu: ${err.message || 'Sprawdź uprawnienia'}`);
   }
-  audioContext.value = new (window.AudioContext || window.webkitAudioContext)();
-  const source = audioContext.value.createMediaStreamSource(micStream.value);
-  analyserNode.value = audioContext.value.createAnalyser();
-  analyserNode.value.fftSize = 512;
-  source.connect(analyserNode.value);
 
-  const data = new Uint8Array(analyserNode.value.frequencyBinCount);
-  analyserTimer.value = setInterval(() => {
-    if (!analyserNode.value) return;
-    analyserNode.value.getByteTimeDomainData(data);
-    let sum = 0;
-    for (let i = 0; i < data.length; i += 1) {
-      const v = (data[i] - 128) / 128;
-      sum += v * v;
-    }
-    const rms = Math.sqrt(sum / data.length);
-    micLevel.value = Math.min(100, Math.max(0, rms * 260));
-  }, 100);
+  micLevel.value = 10;
 }
 
 function stopMicMeter() {
@@ -851,21 +1104,30 @@ async function checkApiHealth() {
   }
 }
 
+async function updateCurrentCost() {
+  if (!state.lesson?.id) return;
+  try {
+    const { data: authData } = await supabase.auth.getSession();
+    const token = authData?.session?.access_token;
+    const response = await fetch(`${API_BASE}/api/lessons/${state.lesson.id}/costs`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (response.ok) {
+      const data = await response.json();
+      currentCost.value = data.total || 0;
+      costLimit.value = data.limit || 3.5;
+    }
+  } catch (e) {
+    console.error("Failed to fetch costs:", e);
+  }
+}
+
 async function startMicTest() {
   try {
     error.value = "";
-    if (sttEngine.value === "whisper") {
-      info.value = "Tryb testu działa na silniku przeglądarki. Whisper testuj w aktywnej lekcji.";
-    } else {
-      info.value = "Tryb testu: mów do mikrofonu i sprawdź napisy na żywo.";
-    }
+    info.value = "Tryb testu: mów do mikrofonu - Whisper przetworzy Twój głos.";
     micTestActive.value = true;
-    const originalEngine = sttEngine.value;
-    if (sttEngine.value === "whisper") {
-      sttEngine.value = "browser";
-    }
     await beginMic();
-    sttEngine.value = originalEngine;
   } catch (e) {
     micTestActive.value = false;
     error.value = e.message;
@@ -873,16 +1135,22 @@ async function startMicTest() {
 }
 
 function stopMicTest() {
-  shouldKeepListening.value = false;
-  recognition.value?.stop();
-  recognition.value = null;
+  // Call cleanup function if it exists
+  if (window.__whisperCleanup) {
+    window.__whisperCleanup();
+    window.__whisperCleanup = null;
+  }
+
   mediaRecorder.value?.stop();
   mediaRecorder.value = null;
+  if (window.__whisperActivityInterval) clearInterval(window.__whisperActivityInterval);
+  window.__whisperActivityInterval = null;
+
   micTestActive.value = false;
   interimCaption.value = "";
   lastFinalCaption.value = "";
   sttStatus.value = "idle";
-  if (analyserTimer.value) clearInterval(analyserTimer.value);
+
   stopMicMeter();
   micLevel.value = 0;
 }
@@ -930,6 +1198,29 @@ async function toggleManualApproval(point) {
     error.value = e.message || "Nie udało się zaktualizować statusu podtematu.";
   } finally {
     manualUpdateLoadingId.value = "";
+  }
+}
+
+async function resetCosts() {
+  if (!state.lesson?.id) return;
+  try {
+    error.value = "";
+    const { data: authData } = await supabase.auth.getSession();
+    const token = authData?.session?.access_token;
+    const response = await fetch(`${API_BASE}/api/lessons/${state.lesson.id}/costs`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      info.value = data.message || "Koszty zostały zresetowane.";
+      await updateCurrentCost();
+    } else {
+      throw new Error("Nie udało się zresetować kosztów");
+    }
+  } catch (e) {
+    error.value = e.message || "Błąd podczas resetowania kosztów";
   }
 }
 </script>
