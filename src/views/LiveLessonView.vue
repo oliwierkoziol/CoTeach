@@ -1,20 +1,20 @@
 <template>
-  <div class="bg-background min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative transition-colors duration-300">
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
     <!-- Background Decor -->
-    <div class="fixed bottom-0 right-0 bg-primary/5 blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
-    <div class="p-4 sm:p-8 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
+    <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
     <!-- Header -->
     <div class="mb-7 max-w-[1024px]">
       <div class="flex items-center gap-2 mb-2">
-        <div class="size-2 rounded-full bg-destructive" :class="{ 'animate-pulse': isRecording }"></div>
-        <p class="font-['Plus_Jakarta_Sans'] font-bold text-destructive text-[10.5px] tracking-[0.525px] uppercase">
+        <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }"></div>
+        <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#9e3f4e] text-[10.5px] tracking-[0.525px] uppercase">
           W TRAKCIE
         </p>
       </div>
-      <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+      <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
         Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
       </h1>
-      <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[18px] leading-[28px]">
+      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
         Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
       </p>
     </div>
@@ -22,9 +22,8 @@
     <!-- Main Grid -->
     <div class="grid grid-cols-12 gap-8 mb-7">
       <!-- Plan lekcji -->
-      <div class="col-span-12 xl:col-span-4 bg-card rounded-3xl border border-border p-6 flex flex-col h-[520px] shadow-sm">
-        <h2 class="font-['Manrope'] font-bold text-primary text-[18px] leading-[28px] mb-6 flex items-center gap-2">
-          <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+      <div class="col-span-12 xl:col-span-4 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 flex flex-col h-[497px]">
+        <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] leading-[28px] mb-2">
           Plan lekcji
         </h2>
 
@@ -38,18 +37,18 @@
             <div class="flex items-start gap-4">
               <div 
                   class="size-8 rounded-full flex items-center justify-center shrink-0 transition"
-                  :class="point.status === 'discussed' || point.manualApproved ? 'bg-emerald-600' : 'bg-muted group-hover:bg-muted/80 border border-border'"
+                  :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962]' : 'bg-[#e0e3e6] group-hover:bg-[#d0d3d6]'"
                 >
                 <span 
                   class="font-['Inter'] font-semibold text-[16px]"
-                  :class="point.status === 'discussed' || point.manualApproved ? 'text-white' : 'text-muted-foreground'"
+                  :class="point.status === 'discussed' || point.manualApproved ? 'text-white' : 'text-[#454652]'"
                 >
                   <span v-if="manualUpdateLoadingId === point.id" class="block animate-spin">⟳</span>
                   <span v-else>{{ index + 1 }}</span>
                 </span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="font-['Inter'] font-semibold text-foreground text-[16px] leading-[24px] mb-2">
+                <p class="font-['Inter'] font-semibold text-[#191c1e] text-[16px] leading-[24px] mb-2">
                   {{ point.title }}
                 </p>
                 <div class="flex flex-wrap gap-1.5">
@@ -57,7 +56,7 @@
                     v-for="(tag, i) in point.keywords"
                     :key="i"
                     class="px-2 py-0.5 rounded text-[12px] font-['Inter'] font-bold transition"
-                    :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-muted text-muted-foreground'"
+                    :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
                   >
                     {{ tag }}
                   </span>
@@ -68,18 +67,18 @@
         </div>
 
         <!-- Progress -->
-        <div class="space-y-2 pt-2 border-t border-border">
+        <div class="space-y-2 pt-2 border-t border-gray-100">
           <div class="flex items-center justify-between">
-            <p class="font-['Manrope'] font-bold text-primary text-[18px] leading-[28px]">
+            <p class="font-['Manrope'] font-bold text-[#142588] text-[18px] leading-[28px]">
               {{ discussedCount }} z {{ points.length }} punktów omówionych
             </p>
-            <p class="font-['Inter'] font-semibold text-primary text-[16px]">
+            <p class="font-['Inter'] font-semibold text-[#142588] text-[16px]">
               {{ progress }}%
             </p>
           </div>
-          <div class="bg-muted h-4 rounded-full overflow-hidden border border-border/50">
+          <div class="bg-[#d8e2ff] h-4 rounded-full overflow-hidden">
             <div 
-              class="bg-primary h-full rounded-full shadow-primary transition-all duration-300" 
+              class="bg-[#0059bb] h-full rounded-full shadow-[0px_0px_8px_0px_rgba(0,89,187,0.4)] transition-all duration-300" 
               :style="{ width: `${progress}%` }" 
             ></div>
           </div>
@@ -91,26 +90,26 @@
         <div class="flex items-center gap-2">
           <!-- Mic Wave Icon -->
             <svg class="w-[22px] h-[19px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" class="stroke-primary" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke="#0059BB" />
             </svg>
-          <h2 class="font-['Manrope'] font-bold text-primary text-[18px] tracking-[0.9px] leading-[28px]">
+          <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] tracking-[0.9px] leading-[28px]">
             Napisy na żywo
           </h2>
 
           <div class="flex items-center justify-between text-xs">
-            <span class="font-['Inter'] text-muted-foreground">
+            <span class="font-['Inter'] text-[#454652]">
               Koszt: {{ currentCost.toFixed(2) }} PLN / {{ costLimit.toFixed(2) }} PLN
             </span>
             <div class="flex items-center gap-2">
               <span
                 class="font-['Inter'] font-semibold"
-                :class="currentCost >= costLimit ? 'text-destructive' : 'text-emerald-500'"
+                :class="currentCost >= costLimit ? 'text-red-600' : 'text-green-600'"
               >
                 {{ ((currentCost / costLimit) * 100).toFixed(0) }}%
               </span>
               <button
                 @click="resetCosts"
-                class="text-[10px] px-2 py-1 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
+                class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
               >
                 Reset
               </button>
@@ -118,8 +117,8 @@
           </div>
         </div>
 
-        <div class="bg-card border border-border rounded-3xl border-l-4 border-l-primary shadow-sm p-6 h-[465px] overflow-y-auto transition-colors">
-          <p class="font-['Inter'] font-semibold text-primary text-[12px] tracking-[1.2px] uppercase mb-3">
+        <div class="bg-[#f2f4f7] rounded-xl border-l-4 border-[#0059bb] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 h-[445px] overflow-y-auto">
+          <p class="font-['Inter'] font-semibold text-[#0059bb] text-[12px] tracking-[1.2px] uppercase mb-3">
             NAPISY LIVE (W TRAKCIE)
           </p>
 
@@ -127,16 +126,16 @@
             <div
               v-for="(text, index) in transcription"
               :key="index"
-              class="font-['Inter'] italic text-foreground text-[18px] leading-[29.25px] p-2 bg-muted/20 rounded"
+              class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px] p-2 bg-white/50 rounded"
             >
               {{ index + 1 }}. {{ text }}
             </div>
 
-            <p v-if="interimCaption" class="font-['Inter'] italic text-muted-foreground opacity-70 text-[18px] leading-[29.25px]">
+            <p v-if="interimCaption" class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
               {{ interimCaption }}
             </p>
 
-            <div v-if="transcription.length === 0 && !interimCaption" class="font-['Inter'] italic text-muted-foreground text-[18px] leading-[29.25px]">
+            <div v-if="transcription.length === 0 && !interimCaption" class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px]">
               Czekam na rozpoczęcie wypowiedzi...<br />
               System jest gotowy do przechwytywania<br />
               dźwięku w czasie rzeczywistym.
@@ -150,38 +149,38 @@
       </div>
 
       <!-- Microphone Settings -->
-      <div class="col-span-12 xl:col-span-3 bg-card rounded-3xl border border-border shadow-sm p-8 space-y-8">
+      <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 space-y-6">
         <div class="flex items-center gap-3">
           <!-- Mic Icon -->
-          <svg class="w-6 h-[22px] stroke-primary" fill="none" viewBox="0 0 24 24" stroke-width="2.5">
+          <svg class="w-6 h-[22px]" fill="none" stroke="#142588" viewBox="0 0 24 24" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
-          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
+          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
             Ustawienia mikrofonu
           </h3>
         </div>
 
         <!-- Mikrofon -->
         <div class="space-y-2">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] block">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
             Mikrofon
           </label>
-          <div class="bg-input-background rounded-xl border border-border px-4 py-3 flex items-center justify-between relative">
+          <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
             <select
               v-model="selectedMicId"
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               :disabled="isRecording"
             >
               <option value="">Domyślny mikrofon systemowy</option>
-              <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId" class="bg-card">
+              <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId">
                 {{ d.label || `Mikrofon ${d.deviceId.slice(0, 6)}` }}
               </option>
             </select>
-            <span class="font-['Plus_Jakarta_Sans'] text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
+            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
               {{ micDevices.find(d => d.deviceId === selectedMicId)?.label || 'Domyślny - System Mic' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
-              <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="currentColor" class="text-muted-foreground/60" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </div>
@@ -190,37 +189,37 @@
         <!-- Poziom mikrofonu -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="font-['Inter'] font-semibold text-muted-foreground text-[12px]">
+            <span class="font-['Inter'] font-semibold text-[#454652] text-[12px]">
               POZIOM MIKROFONU
             </span>
-            <span class="font-['Inter'] font-semibold text-primary text-[12px]">
+            <span class="font-['Inter'] font-semibold text-[#142588] text-[12px]">
               +{{ Math.round(micLevel) }}db
             </span>
           </div>
-          <div class="bg-muted h-1 rounded-full overflow-hidden">
-            <div class="bg-primary h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }"></div>
+          <div class="bg-[#e0e3e6] h-1 rounded-full overflow-hidden">
+            <div class="bg-[#142588] h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }"></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Ask Me Component -->
-    <div class="col-span-12 bg-card rounded-3xl border border-border shadow-md p-8 mb-7 transition-colors">
+    <div class="col-span-12 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 mb-7">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <!-- Tabs -->
-          <div class="flex gap-2 bg-muted rounded-xl p-1 w-fit border border-border">
+          <div class="flex gap-2 bg-[#e0e3e6] rounded-lg p-1 w-fit">
             <button
               @click="activeTab = 'ask'"
-              :class="activeTab === 'ask' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-lg transition-colors flex items-center gap-2"
+              :class="activeTab === 'ask' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               Zapytaj mnie
             </button>
             <button
               @click="activeTab = 'equation'"
-              :class="activeTab === 'equation' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-lg transition-colors flex items-center gap-2"
+              :class="activeTab === 'equation' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
               Rozwiąż równanie
@@ -232,7 +231,7 @@
             <button
               v-if="aiQuery || aiResponse || aiError"
               @click="clearAI"
-              class="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              class="text-sm font-semibold text-[#6B7280] hover:text-[#191c1e] transition-colors"
             >
               Wyczyść
             </button>
@@ -243,19 +242,17 @@
           <!-- Left: Controls -->
           <div class="lg:col-span-1 space-y-6">
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[12px] uppercase tracking-wider">Poziom klasy</label>
-              <div class="bg-input-background rounded-xl border border-border px-4 py-2.5 relative">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Poziom klasy</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5 relative">
                 <select v-model="selectedClassLevel" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                   <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
                 </select>
-                <span class="font-['Plus_Jakarta_Sans'] text-foreground text-[14px] truncate block pr-6">
+                <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[14px] truncate block pr-6">
                   {{ selectedClassLevel }}
                 </span>
               </div>
             </div>
 
-            <div class="space-y-3">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[12px] uppercase tracking-wider">Szybkie symbole</label>
             <div v-if="activeTab === 'equation'" class="space-y-3">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Szybkie symbole</label>
               <div class="flex flex-wrap gap-2">
@@ -263,14 +260,14 @@
                 v-for="shortcut in mathShortcuts"
                 :key="shortcut.label"
                 @click="shortcut.action ? handleShortcutAction(shortcut.action) : insertMathShortcut(shortcut.template)"
-                class="px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground font-['Inter'] text-[12px] rounded-lg transition-colors border border-border"
+                class="px-3 py-1.5 bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#191c1e] font-['Inter'] text-[12px] rounded-md transition-colors border border-gray-200"
                 :title="shortcut.label"
               >
                 {{ shortcut.label }}
               </button>
               <button
                 @click="openFractionBuilder"
-                class="px-3 py-1.5 bg-primary hover:bg-primary/95 text-white font-['Inter'] text-[12px] rounded-md transition-colors border border-primary shadow-primary"
+                class="px-3 py-1.5 bg-[#0059BB] hover:bg-[#004799] text-white font-['Inter'] text-[12px] rounded-md transition-colors border border-[#0059BB]"
                 title="Stwórz ułamek"
               >
                 <span class="text-lg font-bold">a/b</span>
@@ -287,14 +284,14 @@
                 v-model="aiQuery"
                 @keydown.enter.prevent="handleAISubmit"
                 :placeholder="activeTab === 'ask' ? 'Wpisz pytanie lub zadanie...' : 'Wpisz równanie do rozwiązania...'"
-                class="w-full h-32 px-4 py-3 bg-input-background border border-border rounded-xl font-['Inter'] text-foreground text-[16px] leading-[24px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground"
+                class="w-full h-32 px-4 py-3 bg-[#e0e3e6] rounded-lg font-['Inter'] text-[#191c1e] text-[16px] leading-[24px] resize-none focus:outline-none focus:ring-2 focus:ring-[#0059BB] placeholder:text-[#6B7280]"
                 :disabled="aiLoading"
               ></textarea>
               <div class="absolute bottom-3 right-3">
                 <button
                   @click="handleAISubmit"
                   :disabled="aiLoading || !aiQuery.trim()"
-                  class="px-4 py-2 bg-primary text-primary-foreground font-['Inter'] font-bold text-[14px] rounded-xl hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                  class="px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   <svg v-if="aiLoading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   <span>{{ activeTab === 'ask' ? 'Zapytaj' : 'Rozwiąż' }}</span>
@@ -303,27 +300,27 @@
             </div>
 
             <!-- Error Message -->
-            <div v-if="aiError" class="px-4 py-3 bg-destructive/10 border-l-4 border-destructive rounded-xl">
-              <p class="font-['Inter'] text-destructive text-[14px]">{{ aiError }}</p>
+            <div v-if="aiError" class="px-4 py-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <p class="font-['Inter'] text-red-700 text-[14px]">{{ aiError }}</p>
             </div>
 
             <!-- Loading State -->
-            <div v-if="aiLoading" class="px-4 py-6 bg-muted rounded-xl flex items-center gap-3">
-              <svg class="w-5 h-5 animate-spin text-primary" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              <p class="font-['Inter'] text-muted-foreground text-[14px]">AI przetwarza Twoje zapytanie...</p>
+            <div v-if="aiLoading" class="px-4 py-6 bg-[#f2f4f7] rounded-lg flex items-center gap-3">
+              <svg class="w-5 h-5 animate-spin text-[#0059BB]" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <p class="font-['Inter'] text-[#454652] text-[14px]">AI przetwarza Twoje zapytanie...</p>
             </div>
 
             <!-- Result Area -->
             <div v-if="aiResponse" id="ai-result" class="space-y-4">
-              <div class="px-4 py-3 bg-muted border-l-4 border-primary rounded-xl">
-                <p class="font-['Inter'] font-bold text-primary text-[12px] tracking-[1.2px] uppercase mb-3">Odpowiedź AI</p>
-                <div class="font-['Inter'] text-foreground text-[16px] leading-[26px] ask-me-content" v-html="renderedAIAnswer"></div>
+              <div class="px-4 py-3 bg-[#f2f4f7] border-l-4 border-[#0059BB] rounded-lg">
+                <p class="font-['Inter'] font-semibold text-[#0059BB] text-[12px] tracking-[1.2px] uppercase mb-3">Odpowiedź AI</p>
+                <div class="font-['Inter'] text-[#191c1e] text-[16px] leading-[26px] ask-me-content" v-html="renderedAIAnswer"></div>
               </div>
             </div>
 
             <!-- Placeholder -->
             <div v-if="!aiQuery && !aiResponse && !aiError && !aiLoading" class="text-center py-10 opacity-60">
-              <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <p class="font-['Inter'] text-[#6B7280] text-[14px]">
                 {{ activeTab === 'ask' 
                     ? 'Możesz zapytać o wszystko: przykłady lekcji, pomysły na zadania czy wyjaśnienie pojęć.' 
                     : 'Wpisz równanie matematyczne lub wzór, aby otrzymać rozwiązanie krok po kroku.' }}
@@ -333,28 +330,28 @@
         </div>
 
         <!-- Fraction Builder Modal -->
-        <div v-if="showFractionBuilder" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div class="bg-card rounded-3xl shadow-2xl p-8 w-[500px] max-w-[95vw] border border-border">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[20px]">
+        <div v-if="showFractionBuilder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-2xl p-6 w-[500px] max-w-[95vw]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
                 Stwórz ułamek
               </h3>
-              <button @click="closeFractionBuilder" class="text-muted-foreground hover:text-foreground transition-colors">
+              <button @click="closeFractionBuilder" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             <!-- Math Symbols Toolbar (inside modal) -->
-            <div class="mb-6 p-4 bg-muted rounded-xl border border-border">
-              <p class="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-wider">Wstaw symbol do ułamka</p>
-              <div class="flex flex-wrap gap-2">
+            <div class="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Wstaw symbol do ułamka</p>
+              <div class="flex flex-wrap gap-1.5">
                 <button
                   v-for="shortcut in mathShortcuts.slice(0, 15)"
                   :key="'modal-' + shortcut.label"
                   @click="insertMathShortcut(shortcut.template)"
-                  class="px-2.5 py-1.5 bg-input-background hover:bg-accent text-foreground text-[11px] rounded border border-border transition-colors font-semibold"
+                  class="px-2 py-1 bg-white hover:bg-gray-100 text-[#191c1e] text-[11px] rounded border border-gray-200 transition-colors"
                 >
                   {{ shortcut.label }}
                 </button>
@@ -362,44 +359,44 @@
             </div>
 
             <!-- Fraction Visual -->
-            <div class="flex flex-col items-center mb-8">
+            <div class="flex flex-col items-center mb-6">
               <input
                 ref="numeratorInput"
                 v-model="fractionNumerator"
                 @focus="activeModalInput = 'numerator'"
                 type="text"
                 placeholder="Licznik"
-                class="w-32 h-14 text-center border-2 border-border rounded-xl bg-input-background focus:border-primary focus:outline-none font-['Inter'] text-[18px] text-foreground transition-all"
+                class="w-32 h-12 text-center border-2 border-gray-300 rounded-lg focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
               />
-              <div class="w-40 h-[3px] bg-primary/40 my-3 rounded-full"></div>
+              <div class="w-40 h-[2px] bg-gray-400 my-2"></div>
               <input
                 ref="denominatorInput"
                 v-model="fractionDenominator"
                 @focus="activeModalInput = 'denominator'"
                 type="text"
                 placeholder="Mianownik"
-                class="w-32 h-14 text-center border-2 border-border rounded-xl bg-input-background focus:border-primary focus:outline-none font-['Inter'] text-[18px] text-foreground transition-all"
+                class="w-32 h-12 text-center border-2 border-gray-300 rounded-lg focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
               />
             </div>
 
             <!-- Preview -->
-            <div v-if="fractionNumerator && fractionDenominator" class="mb-6 p-4 bg-muted rounded-xl text-center border border-border">
-              <p class="font-['Inter'] text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Podgląd:</p>
-              <div class="text-[20px] text-foreground" v-html="renderedFractionPreview"></div>
+            <div v-if="fractionNumerator && fractionDenominator" class="mb-4 p-3 bg-[#f2f4f7] rounded-lg text-center">
+              <p class="font-['Inter'] text-[#14px] text-gray-600 mb-1">Podgląd:</p>
+              <div class="text-[20px]" v-html="renderedFractionPreview"></div>
             </div>
 
             <!-- Buttons -->
-            <div class="flex gap-4">
+            <div class="flex gap-3">
               <button
                 @click="closeFractionBuilder"
-                class="flex-1 px-4 py-3 bg-muted text-muted-foreground font-['Inter'] font-semibold text-[16px] rounded-xl hover:bg-accent hover:text-foreground transition-all"
+                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Anuluj
               </button>
               <button
                 @click="insertFraction"
                 :disabled="!fractionNumerator || !fractionDenominator"
-                class="flex-1 px-4 py-3 bg-primary text-white font-['Inter'] font-semibold text-[16px] rounded-xl hover:bg-primary/95 transition-all shadow-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                class="flex-1 px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Wstaw ułamek
               </button>
@@ -408,73 +405,73 @@
         </div>
 
         <!-- Quadratic Equation Builder Modal -->
-        <div v-if="showQuadraticBuilder" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div class="bg-card rounded-3xl shadow-2xl p-8 w-[400px] max-w-[95vw] border border-border">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[20px]">
-                Stwórz równanie
+        <div v-if="showQuadraticBuilder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-2xl p-6 w-[400px] max-w-[95vw]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
+                Stwórz równanie kwadratowe
               </h3>
-              <button @click="closeQuadraticBuilder" class="text-muted-foreground hover:text-foreground transition-all">
+              <button @click="closeQuadraticBuilder" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             <div class="space-y-4 mb-6">
               <label class="block">
-                <span class="text-sm font-bold text-muted-foreground uppercase tracking-wider">Współczynnik a:</span>
+                <span class="text-sm text-gray-700">Współczynnik a:</span>
                 <input
                   ref="quadraticInputA"
                   v-model="quadraticA"
                   type="number"
                   placeholder="np. 1"
-                  class="mt-1.5 w-full rounded-xl border-2 border-border bg-input-background px-4 py-3 focus:border-primary focus:outline-none font-['Inter'] text-[16px] text-foreground transition-all"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
                   @keydown.enter.prevent="quadraticInputB?.focus()"
                 />
               </label>
               <label class="block">
-                <span class="text-sm font-bold text-muted-foreground uppercase tracking-wider">Współczynnik b:</span>
+                <span class="text-sm text-gray-700">Współczynnik b:</span>
                 <input
                   ref="quadraticInputB"
                   v-model="quadraticB"
                   type="number"
                   placeholder="np. 2"
-                  class="mt-1.5 w-full rounded-xl border-2 border-border bg-input-background px-4 py-3 focus:border-primary focus:outline-none font-['Inter'] text-[16px] text-foreground transition-all"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
                   @keydown.enter.prevent="quadraticInputC?.focus()"
                 />
               </label>
               <label class="block">
-                <span class="text-sm font-bold text-muted-foreground uppercase tracking-wider">Współczynnik c:</span>
+                <span class="text-sm text-gray-700">Współczynnik c:</span>
                 <input
                   ref="quadraticInputC"
                   v-model="quadraticC"
                   type="number"
                   placeholder="np. 3"
-                  class="mt-1.5 w-full rounded-xl border-2 border-border bg-input-background px-4 py-3 focus:border-primary focus:outline-none font-['Inter'] text-[16px] text-foreground transition-all"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
                   @keydown.enter.prevent="insertQuadraticEquation"
                 />
               </label>
             </div>
 
             <!-- Preview -->
-            <div class="mb-6 p-4 bg-muted rounded-xl text-center border border-border">
-              <p class="font-['Inter'] text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Podgląd:</p>
-              <div class="text-[20px] text-foreground" v-html="renderedQuadraticPreview"></div>
+            <div class="mb-4 p-3 bg-[#f2f4f7] rounded-lg text-center">
+              <p class="font-['Inter'] text-[#14px] text-gray-600 mb-1">Podgląd:</p>
+              <div class="text-[20px]" v-html="renderedQuadraticPreview"></div>
             </div>
 
             <!-- Buttons -->
-            <div class="flex gap-4">
+            <div class="flex gap-3">
               <button
                 @click="closeQuadraticBuilder"
-                class="flex-1 px-4 py-3 bg-muted text-muted-foreground font-['Inter'] font-semibold text-[16px] rounded-xl hover:bg-accent hover:text-foreground transition-all"
+                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Anuluj
               </button>
               <button
                 @click="insertQuadraticEquation"
                 :disabled="!quadraticA && !quadraticB && !quadraticC"
-                class="flex-1 px-4 py-3 bg-primary text-white font-['Inter'] font-semibold text-[16px] rounded-xl hover:bg-primary/95 transition-all shadow-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                class="flex-1 px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Wstaw równanie
               </button>
@@ -486,25 +483,25 @@
     <!-- Bottom Section -->
     <div class="grid grid-cols-12 gap-8">
       <!-- Progress Tracker -->
-      <div class="col-span-12 lg:col-span-9 bg-card rounded-3xl border border-border shadow-sm p-6 space-y-3">
+      <div class="col-span-12 lg:col-span-9 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <!-- Calendar Icon -->
-            <svg class="w-[21px] h-[22px] stroke-primary" fill="none" viewBox="0 0 24 24" stroke-width="2.5">
+            <svg class="w-[21px] h-[22px]" fill="none" stroke="#0053DB" viewBox="0 0 24 24" stroke-width="2.5">
                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-muted-foreground text-[14px] tracking-[0.7px] uppercase">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#566166] text-[14px] tracking-[0.7px] uppercase">
               POSTĘP LEKCJI
             </h3>
           </div>
-          <p class="font-['Plus_Jakarta_Sans'] font-bold text-primary text-[14px]">
+          <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#0053db] text-[14px]">
             {{ lessonProgressTimeLabel }}
           </p>
         </div>
 
-        <div class="bg-muted h-8 rounded-2xl overflow-hidden relative border border-border/30">
+        <div class="bg-[#d9e4ea] h-8 rounded-2xl overflow-hidden relative">
           <div 
-            class="absolute inset-y-0 left-0 bg-primary rounded-2xl transition-all duration-1000 ease-linear" 
+            class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
             :style="{ width: `${lessonProgressPercent}%` }" 
           ></div>
           <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30"></div>
@@ -513,36 +510,36 @@
         </div>
 
         <div class="flex items-center justify-between text-[10px] font-['Plus_Jakarta_Sans'] font-bold tracking-[1px] uppercase">
-          <span class="text-muted-foreground">POCZĄTEK</span>
-          <span class="text-primary">KONIEC</span>
+          <span class="text-[#566166]">POCZĄTEK</span>
+          <span class="text-[#0053db]">KONIEC</span>
         </div>
       </div>
 
       <!-- Action Buttons -->
       <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
         <button 
-          class="w-full bg-muted rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-muted/80 transition-colors cursor-pointer border border-border"
+          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
           @click="goPresentation"
         >
           <!-- Presentation Icon -->
-          <svg class="size-5 stroke-primary" fill="none" viewBox="0 0 24 24" stroke-width="2">
+          <svg class="size-5" fill="none" stroke="#142588" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
           </svg>
-          <span class="font-['Inter'] font-bold text-primary text-[16px]">
+          <span class="font-['Inter'] font-semibold text-[#142588] text-[16px]">
             Utwórz prezentację
           </span>
         </button>
 
         <button 
-          class="w-full bg-primary/10 rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-primary/20 transition-all cursor-pointer border border-primary/20 shadow-sm"
+          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#7b3400]"
           :disabled="isFinalizingLesson"
           @click="finalizeNow"
         >
           <!-- Archive Icon -->
-          <svg class="size-5 text-primary" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <svg class="size-5" fill="none" stroke="#FFA26E" stroke-width="2.2" viewBox="0 0 24 24">
              <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
           </svg>
-          <span class="font-['Inter'] font-bold text-primary text-[16px]">
+          <span class="font-['Inter'] font-semibold text-[#ffa26e] text-[16px]">
             {{ isFinalizingLesson ? "Przetwarzanie..." : "Zakończ i archiwizuj" }}
           </span>
         </button>

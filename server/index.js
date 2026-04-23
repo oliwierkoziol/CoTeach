@@ -423,37 +423,8 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
-  let activeLicense = getActiveUserLicense(user.id);
-  if (!activeLicense) {
-    activeLicense = await provisionDemoLicenseIfMissing(user.id, schoolId);
-  }
-
-  await syncProfileLicenseStateSafe({ userId: user.id, activeLicense, profileSnapshot: profile });
+  await syncProfileLicenseStateSafe({ userId: user.id, activeLicense: getActiveUserLicense(user.id), profileSnapshot: profile });
   return { teacherId, userId: user.id, schoolId };
-}
-
-async function provisionDemoLicenseIfMissing(userId, schoolId) {
-  const licenseId = randomUUID();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 dni
-  const license = {
-    id: licenseId,
-    key: `AUTO-DEMO-${userId.slice(0, 8).toUpperCase()}`,
-    maxActiveUsers: 1,
-    expiresAt,
-    demoMode: true,
-    schoolId: schoolId || defaultSchoolId,
-    assignedUserId: userId,
-    createdAt: new Date().toISOString()
-  };
-
-  try {
-    await persistLicense(license);
-    db.licenses.set(licenseId, license);
-    return license;
-  } catch (err) {
-    console.error(`[License] Nie udało się automatycznie przyznać licencji: ${err.message}`);
-    return null;
-  }
 }
 
 function getActiveUserLicense(userId) {

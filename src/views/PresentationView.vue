@@ -1,7 +1,7 @@
 <template>
   <div v-if="isPresenting" class="fixed inset-0 z-[120] bg-[#05070f] text-white">
     <div class="flex h-full flex-col">
-      <div v-if="!isExternalDisplay" class="flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 sm:px-6">
+      <div class="flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 sm:px-6">
         <button
           class="rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
           @click="exitPresentation"
@@ -81,10 +81,10 @@
         </div>
       </div>
 
-      <div v-else :class="['flex-1 overflow-hidden', isExternalDisplay ? 'p-0' : 'p-4 sm:p-6 lg:p-8']">
-        <div :class="['mx-auto h-full max-h-full w-full shadow-2xl', isExternalDisplay ? '' : 'max-w-6xl rounded-3xl p-5 sm:p-7 lg:p-9', activeTheme.wrapperClass]">
+      <div v-else class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
+        <div :class="['mx-auto h-full max-h-full w-full max-w-6xl rounded-3xl p-5 shadow-2xl sm:p-7 lg:p-9', activeTheme.wrapperClass]">
           <div class="flex h-full min-h-0 flex-col">
-            <div :class="['mb-3', isExternalDisplay ? '' : 'p-10']">
+            <div class="mb-3">
               <h1 class="clamp-2 text-2xl font-extrabold leading-tight sm:text-4xl">{{ current.title }}</h1>
               <p v-if="current.subtitle" class="clamp-2 mt-2 text-base text-white/85 sm:text-lg">{{ current.subtitle }}</p>
             </div>
@@ -147,7 +147,7 @@
         </div>
       </div>
 
-      <div v-if="!isPilot && !isExternalDisplay" class="border-t border-white/10 bg-black/35 px-4 py-3 sm:px-6">
+      <div v-if="!isPilot" class="border-t border-white/10 bg-black/35 px-4 py-3 sm:px-6">
         <div class="mx-auto flex w-full max-w-6xl items-center justify-between">
           <button
             :disabled="slideIndex === 0"
@@ -168,13 +168,13 @@
     </div>
   </div>
 
-  <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 px-6">
-    <div class="w-full max-w-xl rounded-3xl bg-card p-8 text-center shadow-[0px_12px_32px_0px_rgba(25,28,30,0.08)] border border-border">
+  <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#f7f9fc]/95 px-6">
+    <div class="w-full max-w-xl rounded-2xl bg-white p-8 text-center shadow-[0px_12px_32px_0px_rgba(25,28,30,0.08)]">
       <div class="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-[#d8e0ff] border-t-[#0c3dfe]" />
-      <h2 class="mb-2 font-['Plus_Jakarta_Sans'] text-[30px] font-extrabold leading-[36px] tracking-[-0.6px] text-foreground">
+      <h2 class="mb-2 font-['Plus_Jakarta_Sans'] text-[30px] font-extrabold leading-[36px] tracking-[-0.6px] text-[#191c1e]">
         Generuję prezentację...
       </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-[16px] leading-[26px] text-muted-foreground">
+      <p class="font-['Plus_Jakarta_Sans'] text-[16px] leading-[26px] text-[#454652]">
         Tworzę slajdy na podstawie notatki, planu i poziomu grupy.
       </p>
     </div>
@@ -248,45 +248,14 @@
     </div>
   </div>
 
-  <div v-else class="bg-background min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+  <div v-else class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
-    <header class="mb-7 relative z-10 w-full text-left">
-      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-        Generator prezentacji
-      </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[18px] leading-[28px] font-normal">
-        Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.
-      </p>
-    </header>
-
-    <div class="bg-card rounded-3xl border border-border shadow-[0px_12px_32px_0px_rgba(25,28,30,0.04)] p-6 md:p-8 w-full relative z-10 mb-6 overflow-hidden">
-      <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[20px] leading-[28px] mb-6 flex items-center gap-2">
-        <div class="w-1.5 h-6 bg-[#0c3dfe] rounded-full"></div>
-        Źródło materiałów
-      </h3>
-
-      <div class="mb-8 flex p-1.5 bg-muted rounded-2xl w-fit border border-border">
-        <button
-          type="button"
-          @click="presentationSource = 'note'"
-          :class="[
-            'inline-flex h-10 items-center gap-2 rounded-xl px-6 text-[13px] font-bold transition-all',
-            presentationSource === 'note' ? 'bg-background text-[#0c3dfe] shadow-sm' : 'text-muted-foreground hover:text-[#0c3dfe]'
-          ]"
-        >
-          Notatki przedmiotowe
-        </button>
-        <button
-          type="button"
-          @click="presentationSource = 'lesson'"
-          :class="[
-            'inline-flex h-10 items-center gap-2 rounded-xl px-6 text-[13px] font-bold transition-all',
-            presentationSource === 'lesson' ? 'bg-background text-[#0c3dfe] shadow-sm' : 'text-muted-foreground hover:text-[#0c3dfe]'
-          ]"
-        >
-          Lekcje na żywo
-        </button>
+    <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
+      <!-- Header -->
+      <div class="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full mb-4">
+        <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Generator prezentacji</h2>
+        <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.</p>
       </div>
       <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
         <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-2 flex items-center gap-2">Źródło materiałów
@@ -297,10 +266,8 @@
             type="button"
             @click="presentationSource = 'note'"
             :class="[
-              'flex w-full flex-col gap-1 p-5 rounded-2xl transition-all text-left border-2',
-              selectedSourceId === item.id
-                ? 'bg-[#0c3dfe] border-[#0c3dfe] text-white shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)]'
-                : 'bg-muted border-transparent text-foreground hover:border-gray-300'
+              'inline-flex h-10 items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-all',
+              presentationSource === 'note' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
             ]"
           >
             Notatki przedmiotowe
@@ -440,7 +407,6 @@ const isGenerating = ref(false);
 const isPresenting = ref(false);
 const slides = ref([]);
 const slideIndex = ref(0);
-const isExternalDisplay = ref(false);
 const presentationHistory = ref([]);
 const isReviewing = ref(false);
 const isPilot = ref(false);
@@ -553,9 +519,6 @@ onMounted(async () => {
     // Request sync in case another window is already presenting
     syncChannel.value.postMessage({ type: 'REQUEST_INITIAL_SYNC' });
   }
-
-  const urlParams = new URLSearchParams(window.location.search);
-  isExternalDisplay.value = urlParams.get('external') === 'true';
 
   const {
     data: { session }
@@ -804,17 +767,10 @@ function tryOpenRequestedPresentation() {
   slides.value = storedSlides;
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const isExternal = urlParams.get('external') === 'true';
-  isExternalDisplay.value = isExternal;
   
   if (shouldSkipReview) {
     isPresenting.value = true;
     isReviewing.value = false;
-    if (isExternal) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
   } else {
     isReviewing.value = true;
     isPresenting.value = false;
@@ -837,11 +793,11 @@ function openPresentationWindow() {
   localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, presentationId);
   localStorage.setItem(SKIP_REVIEW_KEY, 'true');
   
-  const url = new URL(window.location.href);
-  url.searchParams.set('external', 'true');
-
+  // Open in new window and turn current window into a pilot
+  // Dodanie wymiarów (width/height) wymusza na większości przeglądarek otwarcie nowego okna zamiast karty.
+  // Menubar=no, toolbar=no dodatkowo sprawiają, że okno wygląda bardziej jak czysty odtwarzacz prezentacji.
   const windowFeatures = `width=${window.screen.availWidth * 0.8},height=${window.screen.availHeight * 0.8},menubar=no,toolbar=no,location=no,status=no,noopener,noreferrer`;
-  window.open(url.toString(), "_blank", windowFeatures);
+  window.open(window.location.href, "_blank", windowFeatures);
   isPilot.value = true;
 }
 
