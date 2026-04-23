@@ -4,19 +4,31 @@
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
     <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
     <!-- Header -->
-    <div class="mb-7 max-w-[1024px]">
-      <div class="flex items-center gap-2 mb-2">
-        <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }"></div>
-        <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#9e3f4e] text-[10.5px] tracking-[0.525px] uppercase">
-          W TRAKCIE
+    <div class="mb-7 flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div class="max-w-[1024px]">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }"></div>
+          <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#9e3f4e] text-[10.5px] tracking-[0.525px] uppercase">
+            W TRAKCIE
+          </p>
+        </div>
+        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+          Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
+        </h1>
+        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+          Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
         </p>
       </div>
-      <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-        Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
-      </h1>
-      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-        Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
-      </p>
+
+      <button
+        @click="cancelLessonAndRedirect"
+        class="shrink-0 flex items-center gap-2 px-6 py-3 rounded-[12px] bg-[#9e3f4e]/10 text-[#9e3f4e] font-['Plus_Jakarta_Sans'] font-bold border border-[#9e3f4e]/20 hover:bg-[#9e3f4e]/20 transition-all shadow-sm active:scale-95"
+      >
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Anuluj lekcję
+      </button>
     </div>
 
     <!-- Main Grid -->
@@ -621,6 +633,7 @@ const router = useRouter();
 const {
   state,
   startLive,
+  cancelLesson,
   sendTranscript,
   refreshCoverage,
   setManualPointApproval,
@@ -1816,6 +1829,20 @@ async function finalizeNow() {
     error.value = e.message || "Nie udało się zakończyć lekcji.";
   } finally {
     isFinalizingLesson.value = false;
+  }
+}
+
+async function cancelLessonAndRedirect() {
+  if (!state.lesson?.id) return;
+  try {
+    error.value = "";
+    stopSession(); // Stop recording and timers
+    await cancelLesson(state.lesson.id);
+    info.value = "Lekcja została anulowana i przywrócona do wersji roboczej.";
+    router.push("/preparation"); // Redirect to preparation view
+  } catch (e) {
+    error.value = e.message || "Nie udało się anulować lekcji.";
+    console.error("Cancel lesson error:", e);
   }
 }
 

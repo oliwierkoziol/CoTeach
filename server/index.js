@@ -28,10 +28,10 @@ const DEMO_POLICY = {
 const upload = multer({ limits: { fileSize: UPLOAD_LIMITS.licensed.maxFileSizeBytes } });
 const port = Number(process.env.PORT || 3001);
 
-const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemini-2.5-flash";
-const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-4-31b";
+const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemma-4-31b";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
-const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemma-4-31b";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
 const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
@@ -1136,6 +1136,16 @@ async function loadCostEventsFromSupabase() {
     events.push(event);
     db.costs.set(event.lessonId, events);
   }
+}
+
+async function removeCostEventsForLesson(lessonId) {
+  if (!supabase) return;
+  const { error } = await supabase.from("openrouter_usage_events").delete().eq("lesson_id", lessonId);
+  if (error) throw new Error(`Supabase cost events delete failed: ${error.message}`);
+}
+
+async function removeCostEventsForLessonSafe(lessonId) {
+  try { await removeCostEventsForLesson(lessonId); } catch (error) { console.error(error.message); }
 }
 
 function fallbackGeneratePlan(rawText) {
@@ -2436,6 +2446,35 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   lesson.startedAt = new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
+  return res.json({
+    lesson,
+    demo: {
+      isDemo: activeLicense.demoMode === true,
+      maxLiveMinutes: activeLicense.demoMode ? DEMO_POLICY.maxLiveMinutes : null
+    }
+  });
+});
+
+app.put("/api/lessons/:lessonId/cancel", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Anulowanie lekcji");
+  if (!activeLicense) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  if (!lesson) return;
+
+  lesson.status = "draft";
+  lesson.startedAt = null;
+  lesson.finishedAt = null;
+  lesson.transcripts = [];
+  lesson.finalNote = null;
+
+  db.lessons.set(lesson.id, lesson);
+  db.costs.delete(lesson.id); // Clear in-memory costs
+  await persistLessonSafe(lesson);
+  await removeFinalNoteSafe(lesson.id); // Remove final note from DB
+  await removeCostEventsForLessonSafe(lesson.id); // Remove cost events from DB
+
   return res.json({
     lesson,
     demo: {

@@ -201,6 +201,19 @@ export function useLessonStore() {
     return data.lesson;
   }
 
+  async function cancelLesson(lessonId) {
+    const data = await api(`/api/lessons/${lessonId}/cancel`, { method: "PUT" });
+    if (state.lesson?.id === lessonId) {
+      const cancelledLesson = { ...state.lesson, status: "draft", startedAt: null, finishedAt: null, transcripts: [], finalNote: null };
+      setCurrentLessonInState(cancelledLesson);
+      upsertLessonInState(cancelledLesson);
+    } else {
+      // If not the current lesson, just update it in the lessons array
+      state.lessons = state.lessons.map((lesson) => (lesson.id === lessonId ? data.lesson : lesson));
+    }
+    return data.lesson;
+  }
+
   async function sendTranscript(lessonId, text) {
     await api(`/api/lessons/${lessonId}/transcript`, {
       method: "POST",
@@ -375,6 +388,7 @@ export function useLessonStore() {
     uploadLessonMaterial,
     savePlan,
     startLive,
+    cancelLesson,
     sendTranscript,
     refreshCoverage,
     setManualPointApproval,
