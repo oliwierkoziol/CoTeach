@@ -1,13 +1,12 @@
 <template>
   <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
     <!-- Background Decor -->
-    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
-    
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
     <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
     <!-- Header -->
     <div class="mb-7 max-w-[1024px]">
       <div class="flex items-center gap-2 mb-2">
-        <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }" />
+        <div class="size-2 rounded-full bg-[#9e3f4e]" :class="{ 'animate-pulse': isRecording }"></div>
         <p class="font-['Plus_Jakarta_Sans'] font-bold text-[#9e3f4e] text-[10.5px] tracking-[0.525px] uppercase">
           W TRAKCIE
         </p>
@@ -37,9 +36,9 @@
           >
             <div class="flex items-start gap-4">
               <div 
-                class="size-8 rounded-full flex items-center justify-center shrink-0 transition"
-                :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962]' : 'bg-[#e0e3e6] group-hover:bg-[#d0d3d6]'"
-              >
+                  class="size-8 rounded-full flex items-center justify-center shrink-0 transition"
+                  :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962]' : 'bg-[#e0e3e6] group-hover:bg-[#d0d3d6]'"
+                >
                 <span 
                   class="font-['Inter'] font-semibold text-[16px]"
                   :class="point.status === 'discussed' || point.manualApproved ? 'text-white' : 'text-[#454652]'"
@@ -81,7 +80,7 @@
             <div 
               class="bg-[#0059bb] h-full rounded-full shadow-[0px_0px_8px_0px_rgba(0,89,187,0.4)] transition-all duration-300" 
               :style="{ width: `${progress}%` }" 
-            />
+            ></div>
           </div>
         </div>
       </div>
@@ -90,9 +89,9 @@
       <div class="col-span-12 xl:col-span-5 space-y-6">
         <div class="flex items-center gap-2">
           <!-- Mic Wave Icon -->
-          <svg class="w-[22px] h-[19px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke="#0059BB" />
-          </svg>
+            <svg class="w-[22px] h-[19px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke="#0059BB" />
+            </svg>
           <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] tracking-[0.9px] leading-[28px]">
             Napisy na żywo
           </h2>
@@ -198,10 +197,287 @@
             </span>
           </div>
           <div class="bg-[#e0e3e6] h-1 rounded-full overflow-hidden">
-            <div class="bg-[#142588] h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }" />
+            <div class="bg-[#142588] h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }"></div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Ask Me Component -->
+    <div class="col-span-12 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 mb-7">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <!-- Tabs -->
+          <div class="flex gap-2 bg-[#e0e3e6] rounded-lg p-1 w-fit">
+            <button
+              @click="activeTab = 'ask'"
+              :class="activeTab === 'ask' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Zapytaj mnie
+            </button>
+            <button
+              @click="activeTab = 'equation'"
+              :class="activeTab === 'equation' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              Rozwiąż równanie
+            </button>
+          </div>
+
+          <!-- Options & Actions -->
+          <div class="flex items-center justify-between">
+            <button
+              v-if="aiQuery || aiResponse || aiError"
+              @click="clearAI"
+              class="text-sm font-semibold text-[#6B7280] hover:text-[#191c1e] transition-colors"
+            >
+              Wyczyść
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <!-- Left: Controls -->
+          <div class="lg:col-span-1 space-y-6">
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Poziom klasy</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5 relative">
+                <select v-model="selectedClassLevel" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                  <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
+                </select>
+                <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[14px] truncate block pr-6">
+                  {{ selectedClassLevel }}
+                </span>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Szybkie symbole</label>
+              <div class="flex flex-wrap gap-2">
+              <button
+                v-for="shortcut in mathShortcuts"
+                :key="shortcut.label"
+                @click="shortcut.action ? handleShortcutAction(shortcut.action) : insertMathShortcut(shortcut.template)"
+                class="px-3 py-1.5 bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#191c1e] font-['Inter'] text-[12px] rounded-md transition-colors border border-gray-200"
+                :title="shortcut.label"
+              >
+                {{ shortcut.label }}
+              </button>
+              <button
+                @click="openFractionBuilder"
+                class="px-3 py-1.5 bg-[#0059BB] hover:bg-[#004799] text-white font-['Inter'] text-[12px] rounded-md transition-colors border border-[#0059BB]"
+                title="Stwórz ułamek"
+              >
+                <span class="text-lg font-bold">a/b</span>
+              </button>
+            </div>
+          </div>
+          </div>
+
+          <!-- Right: Input & Response -->
+          <div class="lg:col-span-3 space-y-4">
+            <div class="relative">
+              <textarea
+                ref="aiQueryTextarea"
+                v-model="aiQuery"
+                @keydown.enter.prevent="handleAISubmit"
+                :placeholder="activeTab === 'ask' ? 'Wpisz pytanie lub zadanie...' : 'Wpisz równanie do rozwiązania...'"
+                class="w-full h-32 px-4 py-3 bg-[#e0e3e6] rounded-lg font-['Inter'] text-[#191c1e] text-[16px] leading-[24px] resize-none focus:outline-none focus:ring-2 focus:ring-[#0059BB] placeholder:text-[#6B7280]"
+                :disabled="aiLoading"
+              ></textarea>
+              <div class="absolute bottom-3 right-3">
+                <button
+                  @click="handleAISubmit"
+                  :disabled="aiLoading || !aiQuery.trim()"
+                  class="px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  <svg v-if="aiLoading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <span>{{ activeTab === 'ask' ? 'Zapytaj' : 'Rozwiąż' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Error Message -->
+            <div v-if="aiError" class="px-4 py-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <p class="font-['Inter'] text-red-700 text-[14px]">{{ aiError }}</p>
+            </div>
+
+            <!-- Loading State -->
+            <div v-if="aiLoading" class="px-4 py-6 bg-[#f2f4f7] rounded-lg flex items-center gap-3">
+              <svg class="w-5 h-5 animate-spin text-[#0059BB]" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <p class="font-['Inter'] text-[#454652] text-[14px]">AI przetwarza Twoje zapytanie...</p>
+            </div>
+
+            <!-- Result Area -->
+            <div v-if="aiResponse" id="ai-result" class="space-y-4">
+              <div class="px-4 py-3 bg-[#f2f4f7] border-l-4 border-[#0059BB] rounded-lg">
+                <p class="font-['Inter'] font-semibold text-[#0059BB] text-[12px] tracking-[1.2px] uppercase mb-3">Odpowiedź AI</p>
+                <div class="font-['Inter'] text-[#191c1e] text-[16px] leading-[26px] ask-me-content" v-html="renderedAIAnswer"></div>
+              </div>
+            </div>
+
+            <!-- Placeholder -->
+            <div v-if="!aiQuery && !aiResponse && !aiError && !aiLoading" class="text-center py-10 opacity-60">
+              <p class="font-['Inter'] text-[#6B7280] text-[14px]">
+                {{ activeTab === 'ask' 
+                    ? 'Możesz zapytać o wszystko: przykłady lekcji, pomysły na zadania czy wyjaśnienie pojęć.' 
+                    : 'Wpisz równanie matematyczne lub wzór, aby otrzymać rozwiązanie krok po kroku.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fraction Builder Modal -->
+        <div v-if="showFractionBuilder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-2xl p-6 w-[500px] max-w-[95vw]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
+                Stwórz ułamek
+              </h3>
+              <button @click="closeFractionBuilder" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Math Symbols Toolbar (inside modal) -->
+            <div class="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Wstaw symbol do ułamka</p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="shortcut in mathShortcuts.slice(0, 15)"
+                  :key="'modal-' + shortcut.label"
+                  @click="insertMathShortcut(shortcut.template)"
+                  class="px-2 py-1 bg-white hover:bg-gray-100 text-[#191c1e] text-[11px] rounded border border-gray-200 transition-colors"
+                >
+                  {{ shortcut.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Fraction Visual -->
+            <div class="flex flex-col items-center mb-6">
+              <input
+                ref="numeratorInput"
+                v-model="fractionNumerator"
+                @focus="activeModalInput = 'numerator'"
+                type="text"
+                placeholder="Licznik"
+                class="w-32 h-12 text-center border-2 border-gray-300 rounded-lg focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
+              />
+              <div class="w-40 h-[2px] bg-gray-400 my-2"></div>
+              <input
+                ref="denominatorInput"
+                v-model="fractionDenominator"
+                @focus="activeModalInput = 'denominator'"
+                type="text"
+                placeholder="Mianownik"
+                class="w-32 h-12 text-center border-2 border-gray-300 rounded-lg focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
+              />
+            </div>
+
+            <!-- Preview -->
+            <div v-if="fractionNumerator && fractionDenominator" class="mb-4 p-3 bg-[#f2f4f7] rounded-lg text-center">
+              <p class="font-['Inter'] text-[#14px] text-gray-600 mb-1">Podgląd:</p>
+              <div class="text-[20px]" v-html="renderedFractionPreview"></div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3">
+              <button
+                @click="closeFractionBuilder"
+                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                @click="insertFraction"
+                :disabled="!fractionNumerator || !fractionDenominator"
+                class="flex-1 px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Wstaw ułamek
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quadratic Equation Builder Modal -->
+        <div v-if="showQuadraticBuilder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-2xl p-6 w-[400px] max-w-[95vw]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
+                Stwórz równanie kwadratowe
+              </h3>
+              <button @click="closeQuadraticBuilder" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="space-y-4 mb-6">
+              <label class="block">
+                <span class="text-sm text-gray-700">Współczynnik a:</span>
+                <input
+                  ref="quadraticInputA"
+                  v-model="quadraticA"
+                  type="number"
+                  placeholder="np. 1"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
+                  @keydown.enter.prevent="quadraticInputB?.focus()"
+                />
+              </label>
+              <label class="block">
+                <span class="text-sm text-gray-700">Współczynnik b:</span>
+                <input
+                  ref="quadraticInputB"
+                  v-model="quadraticB"
+                  type="number"
+                  placeholder="np. 2"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
+                  @keydown.enter.prevent="quadraticInputC?.focus()"
+                />
+              </label>
+              <label class="block">
+                <span class="text-sm text-gray-700">Współczynnik c:</span>
+                <input
+                  ref="quadraticInputC"
+                  v-model="quadraticC"
+                  type="number"
+                  placeholder="np. 3"
+                  class="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-[#0059BB] focus:outline-none font-['Inter'] text-[16px]"
+                  @keydown.enter.prevent="insertQuadraticEquation"
+                />
+              </label>
+            </div>
+
+            <!-- Preview -->
+            <div class="mb-4 p-3 bg-[#f2f4f7] rounded-lg text-center">
+              <p class="font-['Inter'] text-[#14px] text-gray-600 mb-1">Podgląd:</p>
+              <div class="text-[20px]" v-html="renderedQuadraticPreview"></div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3">
+              <button
+                @click="closeQuadraticBuilder"
+                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                @click="insertQuadraticEquation"
+                :disabled="!quadraticA && !quadraticB && !quadraticC"
+                class="flex-1 px-4 py-2 bg-[#0059BB] text-white font-['Inter'] font-semibold text-[14px] rounded-lg hover:bg-[#004799] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Wstaw równanie
+              </button>
+            </div>
+          </div>
+        </div>
     </div>
 
     <!-- Bottom Section -->
@@ -227,10 +503,10 @@
           <div 
             class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
             :style="{ width: `${lessonProgressPercent}%` }" 
-          />
-          <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30" />
-          <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
-          <div class="absolute left-3/4 top-0 bottom-0 w-0.5 bg-white/30" />
+          ></div>
+          <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30"></div>
+          <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30"></div>
+          <div class="absolute left-3/4 top-0 bottom-0 w-0.5 bg-white/30"></div>
         </div>
 
         <div class="flex items-center justify-between text-[10px] font-['Plus_Jakarta_Sans'] font-bold tracking-[1px] uppercase">
@@ -269,15 +545,59 @@
         </button>
       </div>
     </div>
-  </div>
+    </div>
   </div>
 </template>
+
+<style>
+/* KaTeX styles for math equations */
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css');
+
+/* Custom styles for math rendering */
+.ask-me-content,
+.equation-content {
+  line-height: 1.8;
+}
+
+.ask-me-content .katex,
+.equation-content .katex {
+  font-size: 1.1em;
+}
+
+.ask-me-content .katex-display,
+.equation-content .katex-display {
+  margin: 1.5em 0;
+  overflow-x: auto;
+  padding: 0.5em 0;
+}
+
+.ask-me-content .katex-display > .katex,
+.equation-content .katex-display > .katex {
+  text-align: left;
+}
+
+.ask-me-content strong,
+.equation-content strong {
+  color: #191c1e;
+}
+
+.ask-me-content code,
+.equation-content code {
+  background: rgba(0, 89, 187, 0.1);
+  color: #0059BB;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+</style>
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
+import katex from "katex";
 
 function normalizeBaseUrl(url) {
   return String(url || "")
@@ -307,21 +627,22 @@ const {
   finalizeLesson,
   fetchLessons,
   fetchLesson,
-  hydrateLessonFromCache
+  hydrateLessonFromCache,
+  askMeAI
 } = useLessonStore();
 
+const aiQueryTextarea = ref(null);
+const numeratorInput = ref(null);
+const denominatorInput = ref(null);
+const activeModalInput = ref('numerator');
 const isRecording = ref(false);
 const micDevices = ref([]);
 const selectedMicId = ref("");
 const micLevel = ref(0);
-const micGain = ref(1);
-const captionSensitivity = ref(2);
 const interimCaption = ref("");
-const lastFinalCaption = ref("");
-const micTestActive = ref(false);
 const sttStatus = ref("idle");
 const apiStatus = ref("checking");
-const currentCost = ref(0);
+const currentCost = ref(0); 
 const costLimit = ref(3.5);
 const micStream = ref(null);
 const isTranscribing = ref(false); // Prevent duplicate transcriptions
@@ -349,6 +670,281 @@ const coverageRefreshTimer = ref(null);
 const demoMaxLiveMinutes = ref(null);
 let apiPingTimer = null;
 let interimScrollTimer = null;
+let handleEscapeKey = null;
+
+// Unified AI Assistant state
+const aiQuery = ref("");
+const aiResponse = ref("");
+const aiLoading = ref(false);
+const aiError = ref("");
+const selectedClassLevel = ref("");
+const activeTab = ref("ask"); // "ask" or "equation"
+
+const classOptions = ref([]);
+
+// Math shortcuts for quick formula insertion
+const mathShortcuts = [
+  { label: "√x", template: "$\\sqrt{liczba}$" },
+  { label: "x²", template: "$liczba^2$" },
+  { label: "x³", template: "$liczba^3$" },
+  { label: "xⁿ", template: "$podstawa^{wykładnik}$" },
+  { label: "∑", template: "$\\sum_{i=od}^{do}$" },
+  { label: "∫", template: "$\\int_{od}^{do} f(x) dx$" },
+  { label: "H₂O", template: "$H_2O$" },
+  { label: "CO₂", template: "$CO_2$" },
+  { label: "aᵇ", template: "$podstawa^{wykładnik}$" },
+  { label: "log₂", template: "$\\log_{podstawa}(liczba)$" },
+  { label: "sin/cos", template: "$\\sin(kąt)$" },
+  { label: "α, β, γ", template: "$\\alpha, \\beta, \\gamma$" },
+  { label: "±", template: "$\\pm$" },
+  { label: "≈", template: "$\\approx$" },
+  { label: "≠", template: "$\\neq$" }, 
+  { label: "Δ", template: "$\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$" },
+  { label: "ax²+bx+c=0", action: "openQuadraticBuilder" },
+  { label: "=", template: "$=$" },
+  { label: "≤", template: "$\\leq$" },
+  { label: "≥", template: "$\\geq$" },
+  { label: "→", template: "$\\rightarrow$" },
+  { label: "∞", template: "$\\infty$" }
+];
+
+// Fraction builder state
+const showFractionBuilder = ref(false);
+const fractionNumerator = ref("");
+const fractionDenominator = ref("");
+
+// Quadratic equation builder state
+const showQuadraticBuilder = ref(false);
+const quadraticA = ref("");
+const quadraticB = ref("");
+const quadraticC = ref("");
+const quadraticInputA = ref(null);
+const quadraticInputB = ref(null);
+const quadraticInputC = ref(null);
+
+function insertMathShortcut(template) {
+  // Jeśli okno ułamka jest otwarte, usuwamy znaki $ z szablonu, aby nie dublować kontekstu matematycznego
+  const cleanTemplate = showFractionBuilder.value ? template.replace(/\$/g, '') : template;
+
+  let targetInput;
+  let targetValue;
+
+  if (showFractionBuilder.value) {
+    if (activeModalInput.value === 'numerator') {
+      targetInput = numeratorInput.value;
+      targetValue = fractionNumerator;
+    } else {
+      targetInput = denominatorInput.value;
+      targetValue = fractionDenominator;
+    }
+  } else {
+    targetInput = aiQueryTextarea.value;
+    targetValue = aiQuery;
+  }
+
+  if (targetInput) {
+    const start = targetInput.selectionStart;
+    const end = targetInput.selectionEnd;
+    const currentVal = targetValue.value;
+    
+    targetValue.value = currentVal.slice(0, start) + cleanTemplate + currentVal.slice(end);
+
+    nextTick(() => {
+      targetInput.selectionStart = targetInput.selectionEnd = start + cleanTemplate.length;
+      targetInput.focus();
+    });
+  }
+}
+
+function handleShortcutAction(action) {
+  if (action === 'openQuadraticBuilder') {
+    openQuadraticBuilder();
+  }
+}
+
+function openQuadraticBuilder() {
+  showQuadraticBuilder.value = true;
+  quadraticA.value = '';
+  quadraticB.value = '';
+  quadraticC.value = '';
+  nextTick(() => {
+    quadraticInputA.value?.focus();
+  });
+}
+
+function closeQuadraticBuilder() {
+  showQuadraticBuilder.value = false;
+  quadraticA.value = '';
+  quadraticB.value = '';
+  quadraticC.value = '';
+}
+
+function insertQuadraticEquation() {
+  const a = parseFloat(quadraticA.value);
+  const b = parseFloat(quadraticB.value);
+  const c = parseFloat(quadraticC.value);
+
+  if (isNaN(a) && isNaN(b) && isNaN(c)) {
+    insertMathShortcut('$ax^2 + bx + c = 0$');
+    closeQuadraticBuilder();
+    return;
+  }
+
+  let equation = '';
+  let isFirstTerm = true;
+
+  // Wyraz ax^2
+  if (!isNaN(a) && a !== 0) {
+    if (a === 1) equation += 'x^2';
+    else if (a === -1) equation += '-x^2';
+    else equation += `${a}x^2`;
+    isFirstTerm = false;
+  }
+
+  // Wyraz bx
+  if (!isNaN(b) && b !== 0) {
+    if (b > 0) {
+      equation += (isFirstTerm ? '' : ' + ');
+      if (b === 1) equation += 'x';
+      else equation += `${b}x`;
+    } else {
+      equation += (isFirstTerm ? '' : ' - ');
+      if (b === -1) equation += 'x';
+      else equation += `${Math.abs(b)}x`;
+    }
+    isFirstTerm = false;
+  }
+
+  // Wyraz wolny c
+  if (!isNaN(c) && c !== 0) {
+    if (c > 0) {
+      equation += (isFirstTerm ? '' : ' + ');
+      equation += `${c}`;
+    } else {
+      equation += (isFirstTerm ? '' : ' - ');
+      equation += `${Math.abs(c)}`;
+    }
+    isFirstTerm = false;
+  }
+
+  if (!equation) equation = '0';
+
+  // Czyszczenie ewentualnych spacji na początku
+  if (equation.startsWith(' + ')) equation = equation.substring(3);
+  else if (equation.startsWith('+')) equation = equation.substring(1);
+
+  insertMathShortcut(`$${equation} = 0$`);
+  closeQuadraticBuilder();
+}
+
+function openFractionBuilder() {
+  if (showFractionBuilder.value) {
+    // Jeśli okno jest już otwarte, wstaw kod ułamka w aktualne pole (piętrowy ułamek)
+    insertMathShortcut('\\frac{}{}');
+  } else {
+    showFractionBuilder.value = true;
+    fractionNumerator.value = "";
+    fractionDenominator.value = "";
+    activeModalInput.value = 'numerator';
+    nextTick(() => {
+      numeratorInput.value?.focus();
+    });
+  }
+}
+
+function insertFraction() {
+  if (fractionNumerator.value && fractionDenominator.value) {
+    const fractionTemplate = `$\\frac{${fractionNumerator.value}}{${fractionDenominator.value}}$`;
+    // Najpierw zamykamy modal, aby insertMathShortcut wiedział, że ma teraz celować 
+    // w główne pole tekstowe aiQuery i nie usuwać znaków $
+    showFractionBuilder.value = false;
+    nextTick(() => {
+      insertMathShortcut(fractionTemplate);
+    });
+  }
+}
+
+function closeFractionBuilder() {
+  showFractionBuilder.value = false;
+  fractionNumerator.value = "";
+  fractionDenominator.value = "";
+}
+// KaTeX rendering function for math equations
+function renderMathInText(text) {
+  if (!text) return "";
+
+  // Split text into LaTeX math parts and regular text parts
+  // Supports both $...$ and $$...$$ delimiters
+  const parts = [];
+  let currentPos = 0;
+  let regex = /\$\$?([^$]+)\$\$?/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the LaTeX equation
+    if (match.index > currentPos) {
+      parts.push({ type: 'text', content: text.substring(currentPos, match.index) });
+    }
+
+    // Process the LaTeX equation
+    const latex = match[1];
+    const isDisplayMode = match[0].startsWith('$$');
+
+    try {
+      const renderedHtml = katex.renderToString(latex, {
+        displayMode: isDisplayMode,
+        throwOnError: false,
+        strict: false
+      });
+      parts.push({ type: 'math', content: renderedHtml, isDisplayMode });
+    } catch (error) {
+      // If KaTeX fails, fallback to the raw LaTeX text
+      parts.push({ type: 'text', content: match[0] });
+    }
+
+    currentPos = match.index + match[0].length;
+  }
+
+  // Add remaining text after the last LaTeX equation
+  if (currentPos < text.length) {
+    parts.push({ type: 'text', content: text.substring(currentPos) });
+  }
+
+  // Combine all parts into HTML
+  return parts.map(part => {
+    if (part.type === 'math') {
+      return part.isDisplayMode ? `<div class="my-4">${part.content}</div>` : `<span>${part.content}</span>`;
+    } else {
+      return part.content
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') // Bold text
+        .replace(/\*(.+?)\*/g, '<em>$1</em>') // Italic text
+        .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>'); // Code
+    }
+  }).join('');
+}
+
+// Computed property for rendered unified AI response
+const renderedAIAnswer = computed(() => renderMathInText(aiResponse.value));
+
+// Computed property for rendered fraction preview
+const renderedFractionPreview = computed(() => {
+  if (!fractionNumerator.value || !fractionDenominator.value) return "";
+
+  // Czyścimy licznik i mianownik z ewentualnych znaków $, aby KaTeX mógł je poprawnie złożyć
+  const n = fractionNumerator.value.replace(/\$/g, '');
+  const d = fractionDenominator.value.replace(/\$/g, '');
+
+  try {
+    // Renderujemy grafikę ułamka bezpośrednio za pomocą KaTeX
+    return katex.renderToString(`\\frac{${n}}{${d}}`, {
+      throwOnError: false,
+      displayMode: true // Tryb blokowy sprawia, że ułamek wygląda profesjonalnie (większy rozmiar)
+    });
+  } catch (e) {
+    return `\\frac{${n}}{${d}}`;
+  }
+});
 
 const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
@@ -441,6 +1037,9 @@ onMounted(async () => {
     }
   }
 
+  // Pobierz listę klas z profilu użytkownika
+  await loadUserClasses();
+
   // Do not block lesson UI hydration on secondary async tasks.
   void loadMicDevices();
   void checkApiHealth();
@@ -448,12 +1047,6 @@ onMounted(async () => {
   void updateCurrentCost();
   apiPingTimer = setInterval(checkApiHealth, 10000);
   setInterval(updateCurrentCost, 5000); // Update costs every 5 seconds
-
-  // Add scroll event listener for auto-scroll behavior
-  await nextTick();
-  if (transcriptionContainer.value) {
-    transcriptionContainer.value.addEventListener('scroll', handleScroll);
-  }
 
   // Check microphone permissions first
   try {
@@ -489,12 +1082,30 @@ onMounted(async () => {
     hydrateLessonProgressFromState();
   }
 
+  // Add scroll event listener for auto-scroll behavior
+  await nextTick();
+  if (transcriptionContainer.value) {
+    transcriptionContainer.value.addEventListener('scroll', handleScroll);
+  }
+
   // Only start session if we have microphone permission
   if (!isRecording.value && micDevices.value.length > 0) {
     startSession();
   } else if (!isRecording.value) {
     info.value = "Oczekuję na uprawnienia do mikrofonu...";
   }
+
+  // Handle Escape key to close fraction builder
+  handleEscapeKey = (e) => {
+    if (e.key === 'Escape') {
+      if (showFractionBuilder.value) {
+        closeFractionBuilder();
+      } else if (showQuadraticBuilder.value) {
+        closeQuadraticBuilder();
+      }
+    }
+  };
+  document.addEventListener('keydown', handleEscapeKey);
 });
 
 onUnmounted(() => {
@@ -513,7 +1124,29 @@ onUnmounted(() => {
   if (transcriptionContainer.value) {
     transcriptionContainer.value.removeEventListener('scroll', handleScroll);
   }
+
+  // Clean up Escape key listener
+  document.removeEventListener('keydown', handleEscapeKey);
 });
+
+async function loadUserClasses() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("classes")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.classes && profile.classes.length > 0) {
+    classOptions.value = profile.classes;
+    if (!selectedClassLevel.value) selectedClassLevel.value = profile.classes[0];
+  } else {
+    classOptions.value = ["Brak klas w profilu"];
+    selectedClassLevel.value = classOptions.value[0];
+  }
+}
 
 async function refreshCoverageThrottled(force = false) {
   if (!state.lesson?.id) return;
@@ -1148,11 +1781,10 @@ function stopMicTest() {
 
   micTestActive.value = false;
   interimCaption.value = "";
-  lastFinalCaption.value = "";
   sttStatus.value = "idle";
 
   stopMicMeter();
-  micLevel.value = 0;
+  micLevel.value = 0; 
 }
 
 async function goPresentation() {
@@ -1222,5 +1854,39 @@ async function resetCosts() {
   } catch (e) {
     error.value = e.message || "Błąd podczas resetowania kosztów";
   }
+}
+
+async function handleAISubmit() {
+  if (!aiQuery.value.trim()) return;
+  
+  try {
+    aiLoading.value = true;
+    aiError.value = "";
+    aiResponse.value = "";
+
+    const prompt = activeTab.value === 'equation' 
+      ? `Rozwiąż to równanie krok po kroku i wyjaśnij metodę: ${aiQuery.value.trim()}` 
+      : aiQuery.value.trim();
+
+    const answer = await askMeAI(prompt, state.lesson?.id || null, selectedClassLevel.value);
+    aiResponse.value = answer;
+
+    await nextTick();
+    const resultElement = document.getElementById('ai-result');
+    if (resultElement) {
+      resultElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } catch (e) {
+    aiError.value = e.message || "Błąd komunikacji z AI.";
+    console.error("AI Submit error:", e);
+  } finally {
+    aiLoading.value = false;
+  }
+}
+
+function clearAI() {
+  aiQuery.value = "";
+  aiResponse.value = "";
+  aiError.value = "";
 }
 </script>

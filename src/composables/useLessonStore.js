@@ -337,6 +337,15 @@ export function useLessonStore() {
     return String(data.summary || "");
   }
 
+  async function askMeAI(question, lessonId = null, classLevel = null) {
+    const data = await api("/api/ask-me", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, lessonId, classLevel })
+    });
+    return String(data.answer || "");
+  }
+
   async function saveTeacherNote(payload) {
     const data = await api("/api/notes", {
       method: "POST",
@@ -380,6 +389,7 @@ export function useLessonStore() {
     generateTeacherNote,
     generatePresentation,
     generateLiveLessonSummary,
+    askMeAI,
     saveTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes

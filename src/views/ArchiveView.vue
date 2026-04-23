@@ -3,13 +3,30 @@
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
 
     <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
-      <div class="mb-7 max-w-[1024px]">
-        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-          Archiwum lekcji
-        </h1>
-        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-          Archiwizacja i dystrybucja notatek końcowych.
-        </p>
+      <div class="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-[1024px]">
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+            Archiwum lekcji
+          </h1>
+          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+            Archiwizacja i dystrybucja notatek końcowych.
+          </p>
+        </div>
+
+        <!-- Global Class Filter -->
+        <div class="w-full md:w-64 space-y-2">
+          <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Filtruj Archiwum</label>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 relative">
+            <select v-model="selectedClass" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+              <option value="all">Wszystkie klasy</option>
+              <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
+            </select>
+            <div class="flex items-center justify-between pointer-events-none">
+              <span class="font-bold text-[#191c1e] text-sm">{{ selectedClass === 'all' ? 'Wszystkie klasy' : selectedClass }}</span>
+              <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-cols-12 gap-8">
@@ -364,17 +381,31 @@ const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
 const isQrModalOpen = ref(false);
+const userClasses = ref([]);
+const selectedClass = ref("all");
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), fetchTeacherNotes()]);
+  await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
   await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
   if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
 });
 
+async function loadUserClasses() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
+  if (profile?.classes) userClasses.value = profile.classes;
+}
+
 const filteredLessons = computed(() => {
-  const archivedLessons = state.lessons.filter((lesson) => Boolean(lesson?.finalNote));
+  let archivedLessons = state.lessons.filter((lesson) => Boolean(lesson?.finalNote));
+  
+  if (selectedClass.value !== 'all') {
+    archivedLessons = archivedLessons.filter(l => l.classLevel === selectedClass.value);
+  }
+
   const q = searchQuery.value.toLowerCase().trim();
   if (!q) return archivedLessons;
   return archivedLessons.filter((l) => {
@@ -385,7 +416,12 @@ const filteredLessons = computed(() => {
 });
 
 const filteredNotes = computed(() => {
-  const notes = Array.isArray(state.notes) ? state.notes : [];
+  let notes = Array.isArray(state.notes) ? state.notes : [];
+
+  if (selectedClass.value !== 'all') {
+    notes = notes.filter(n => n.classLevel === selectedClass.value);
+  }
+
   const q = searchQuery.value.toLowerCase().trim();
   if (!q) return notes;
   return notes.filter((note) => {

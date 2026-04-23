@@ -3405,6 +3405,125 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
   }
 });
 
+app.post("/api/ask-me", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Zapytaj mnie - AI")) return;
+
+    const question = String(req.body?.question || "").trim();
+    const lessonId = String(req.body?.lessonId || "").trim();
+    const providedClassLevel = String(req.body?.classLevel || "").trim();
+
+    if (!question) {
+      return res.status(400).json({ error: "Pytanie jest wymagane." });
+    }
+
+    // Get lesson context if provided
+    let lessonContext = "";
+    let classLevelInfo = "";
+    if (lessonId) {
+      const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+      if (!lesson) return;
+
+      // Build lesson context
+      const lessonTitle = lesson.title || "";
+      const lessonSubject = lesson.subject || "";
+      const lessonPlan = Array.isArray(lesson.plan)
+        ? lesson.plan.map(p => `• ${p.title || ""}`).join("\n")
+        : "";
+
+      if (lessonTitle || lessonSubject || lessonPlan) {
+        lessonContext = `
+Kontekst lekcji:
+- Tytuł: ${lessonTitle}
+- Przedmiot: ${lessonSubject}
+- Plan lekcji:
+${lessonPlan}
+`;
+      }
+    }
+
+    // Use provided class level from UI first, then fall back to lesson class level
+    const effectiveClassLevel = providedClassLevel || (lessonId ? getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId)?.classLevel : "");
+    if (effectiveClassLevel) {
+      const classLevel = String(effectiveClassLevel).toLowerCase();
+      const classNum = parseInt(classLevel.match(/\d+/)?.[0] || "0");
+      if (classNum >= 1 && classNum <= 3) {
+        classLevelInfo = "POZIOM: Podstawowy (klasy 1-3) - Używaj prostego języka, wyjaśniaj wszystko krok po kroku, używaj wielu przykładów, unikaj skomplikowanego słownictwa.";
+      } else if (classNum >= 4 && classNum <= 6) {
+        classLevelInfo = "POZIOM: Średni (klasy 4-6) - Używaj zrozumiałego języka, wyjaśniaj koncepty, ale nie nadmiernie rozwijaj, podaj praktyczne przykłady.";
+      } else if (classNum >= 7 && classNum <= 8) {
+        classLevelInfo = "POZIOM: Zaawansowany (klasy 7-8) - Odpowiadaj zwięźle, używaj profesjonalnego języka, koncentruj się na istocie, minimalne wyjaśnienia.";
+      } else if (classLevel.includes("średnia") || classLevel.includes("średnia") || classNum >= 9) {
+        classLevelInfo = "POZIOM: Szkoła Średnia - Krótkie, zwięzłe odpowiedzi, skomplikowane formy wywodu, założone znajomości podstawowe, brak zbędnych wyjaśnień.";
+      }
+    }
+
+    const activeLicense = getActiveUserLicense(teacher.userId);
+
+    // Build prompt for AI
+    const prompt = `Jesteś asystentem nauczyciela specjalizującym się w zwięzłych, dostosowanych do poziomu odpowiedziach.
+
+Pytanie/zadanie: ${question}
+
+${classLevelInfo ? `${classLevelInfo}\n` : ""}
+${lessonContext ? `Dodatkowy kontekst:${lessonContext}` : ""}
+
+KLUCZOWE ZASADY:
+1. Odpowiedz ZWIĘŹLE i NA TEMAT - bez zbędnych wstępów i upiększeń
+2. Dostosuj styl do poziomu klasy (młodsze - więcej wyjaśnień, starsze - bardzo zwięźle)
+3. Używaj profesjonalnej terminologii (wzory matematyczne w LaTeX: $...$, blokowe: $$...$$)
+4. Jeśli to procedura - podaj kroki (punktacja)
+5. Jeśli to definicja - krótka, precyzyjna
+6. Jeśli to problem - rozwiązanie bez zbędnych komentarzy
+7. Nie pokazuj toku rozumowania ani treści promptu
+8. Bez wstępów typu "Oto odpowiedź" - przejdź od razu do istoty
+
+Dla klas 1-4: Rozpisuj, tłumacz krok po kroku, dużo przykładów.
+Dla klas 5-8: Zwięźle, ale z wyjaśnieniami kluczowych kroków.
+Dla liceum/technikum: Bardzo krótko, zakładając dobrą znajomość tematu.`;
+
+    const response = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: prompt }],
+      maxTokens: Math.min(1500, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS : 1500)
+    });
+
+    if (!response?.text) {
+      throw new Error("AI returned an empty response.");
+    }
+
+    // Record cost
+    recordCostFromBase({
+      lessonId: lessonId || null,
+      schoolId: teacher.schoolId || null,
+      teacherId: teacher.teacherId || null,
+      provider: "openrouter",
+      model: response.model,
+      feature: "ask_me",
+      category: "ask_me",
+      baseAmountPLN: response.baseUsd * USD_TO_PLN,
+      providerCostUsd: response.baseUsd,
+      costUsd: response.baseUsd,
+      promptTokens: response.usage.promptTokens,
+      completionTokens: response.usage.completionTokens,
+      totalTokens: response.usage.totalTokens,
+      requestId: response.requestId,
+      latencyMs: response.latencyMs
+    });
+
+    const finalAnswer = applyDemoTextWatermark(response.text, activeLicense?.demoMode === true);
+    return res.json({
+      answer: finalAnswer,
+      lessonId: lessonId || null,
+      model: response.model
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Failed to process question." });
+  }
+});
+
 app.get("/api/health", (_req, res) => {
   return res.json({
     ok: true,

@@ -5,13 +5,32 @@
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
     <!-- Welcome Header -->
-    <header class="max-w-[1024px] mb-7 relative z-10">
-      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-4xl tracking-tight leading-10 mb-2">
-        Witaj, {{ displayName }}
-      </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-7">
-        Rozpocznij nową lekcję używając przycisku po lewej.
-      </p>
+    <header class="mb-7 relative z-10 w-full">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-4xl tracking-tight leading-10 mb-2">
+            Witaj, {{ displayName }}
+          </h2>
+          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-7">
+            Rozpocznij nową lekcję używając przycisku po lewej.
+          </p>
+        </div>
+
+        <!-- Class Selector -->
+        <div class="w-full md:w-64 space-y-2">
+          <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Filtruj według klasy</label>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-2 relative">
+            <select v-model="selectedClass" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+              <option value="all">Wszystkie klasy</option>
+              <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
+            </select>
+            <div class="flex items-center justify-between pointer-events-none">
+              <span class="font-bold text-[#191c1e] text-sm">{{ selectedClass === 'all' ? 'Wszystkie klasy' : selectedClass }}</span>
+              <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Stats Grid -->
@@ -28,7 +47,7 @@
         </div>
         <div class="space-y-1">
           <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Liczba lekcji</p>
-          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ lessonsCount }} lekcji</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ filteredLessons.length }} lekcji</p>
           <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">+3 od ostatniego miesiąca</p>
         </div>
       </div>
@@ -171,7 +190,10 @@ const summaryError = ref("");
 const summaryModalOpen = ref(false);
 const summaryText = ref("");
 
-async function loadDisplayName() {
+const userClasses = ref([]);
+const selectedClass = ref("all");
+
+async function loadUserData() {
   const {
     data: { session }
   } = await supabase.auth.getSession();
@@ -181,39 +203,47 @@ async function loadDisplayName() {
     return;
   }
 
-  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, classes")
+    .eq("id", user.id)
+    .maybeSingle();
 
   const profileName = String(profile?.full_name || "").trim();
   if (profileName) {
     displayName.value = profileName;
-    return;
+  } else {
+    const metaName = String(user.user_metadata?.full_name || "").trim();
+    displayName.value = metaName || user.email?.split("@")[0] || "użytkowniku";
   }
 
-  const metaName = String(user.user_metadata?.full_name || "").trim();
-  if (metaName) {
-    displayName.value = metaName;
-    return;
+  if (profile?.classes && Array.isArray(profile.classes)) {
+    userClasses.value = profile.classes;
   }
-
-  displayName.value = user.email?.split("@")[0] || "użytkowniku";
 }
 
 onMounted(async () => {
-  await Promise.allSettled([fetchLessons(), loadDisplayName()]);
+  await Promise.allSettled([fetchLessons(), loadUserData()]);
 });
 
 watch(
   () => route.path,
   (path) => {
     if (path === "/dashboard") {
-      loadDisplayName();
+      loadUserData();
     }
   }
 );
 
-const lessonsCount = computed(() => state.lessons.length);
+const filteredLessons = computed(() => {
+  if (selectedClass.value === "all") return state.lessons;
+  return state.lessons.filter(l => l.classLevel === selectedClass.value);
+});
+
+const lessonsCount = computed(() => filteredLessons.value.length);
+
 const previousLiveLesson = computed(() => {
-  const finishedLessons = state.lessons
+  const finishedLessons = filteredLessons.value
     .filter((lesson) => lesson?.status === "finished")
     .map((lesson) => ({
       lesson,
@@ -253,8 +283,8 @@ const previousLiveLessonDiscussed = computed(() => {
 });
 
 const completionRate = computed(() => {
-  if (!state.lessons.length) return 0;
-  const values = state.lessons.map((lesson) => {
+  if (!filteredLessons.value.length) return 0;
+  const values = filteredLessons.value.map((lesson) => {
     if (!lesson.plan?.length) return 0;
     const discussed = lesson.plan.filter((p) => p.status === "discussed").length;
     return Math.round((discussed / lesson.plan.length) * 100);
