@@ -1,14 +1,14 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
+  <div class="bg-background min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative transition-colors duration-300">
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
 
     <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
       <div class="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div class="max-w-[1024px]">
-          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-3xl md:text-[36px] tracking-[-0.9px] leading-tight mb-2">
             Archiwum lekcji
           </h1>
-          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+          <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-lg leading-relaxed">
             Archiwizacja i dystrybucja notatek końcowych.
           </p>
         </div>
@@ -16,13 +16,13 @@
         <!-- Global Class Filter -->
         <div class="w-full md:w-64 space-y-2">
           <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Filtruj Archiwum</label>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 relative">
+          <div class="bg-card rounded-2xl shadow-sm border border-border px-4 py-3 relative hover:border-primary/50 transition-colors">
             <select v-model="selectedClass" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
               <option value="all">Wszystkie klasy</option>
               <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
             </select>
             <div class="flex items-center justify-between pointer-events-none">
-              <span class="font-bold text-[#191c1e] text-sm">{{ selectedClass === 'all' ? 'Wszystkie klasy' : selectedClass }}</span>
+              <span class="font-bold text-foreground text-sm">{{ selectedClass === 'all' ? 'Wszystkie klasy' : selectedClass }}</span>
               <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
           </div>
@@ -31,131 +31,131 @@
 
       <div class="grid grid-cols-12 gap-8">
         <div class="col-span-12 xl:col-span-8 space-y-6">
-          <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-6">
-            <div class="mb-4 flex flex-wrap gap-3">
+          <div class="bg-card rounded-3xl shadow-sm p-5 sm:p-8 border border-border">
+            <div class="mb-6 flex flex-wrap gap-3">
               <button
                 type="button"
                 @click="activeTab = 'notes'"
                 :class="[
-                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
-                  activeTab === 'notes' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                  'inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[14px] font-bold transition-all border border-border shadow-sm',
+                  activeTab === 'notes' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
                 ]"
               >
-                <img :src="archiveIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'notes' ? 'brightness-0 invert' : ''" />
+                <img :src="archiveIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'notes' ? 'brightness-0 invert' : 'dark:invert'" />
                 Notatki
               </button>
               <button
                 type="button"
                 @click="activeTab = 'lessons'"
                 :class="[
-                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
-                  activeTab === 'lessons' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                  'inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[14px] font-bold transition-all border border-border shadow-sm',
+                  activeTab === 'lessons' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
                 ]"
               >
-                <img :src="liveLessonIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'lessons' ? 'brightness-0 invert' : ''" />
+                <img :src="liveLessonIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'lessons' ? 'brightness-0 invert' : 'dark:invert'" />
                 Lekcje
               </button>
               <button
                 type="button"
                 @click="activeTab = 'presentations'"
                 :class="[
-                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
-                  activeTab === 'presentations' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                  'inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[14px] font-bold transition-all border border-border shadow-sm',
+                  activeTab === 'presentations' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
                 ]"
               >
-                <img :src="presentationIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'presentations' ? 'brightness-0 invert' : ''" />
+                <img :src="presentationIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'presentations' ? 'brightness-0 invert' : 'dark:invert'" />
                 Prezentacje
               </button>
             </div>
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-2">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] block mb-2">
               {{ searchLabel }}
             </label>
-            <div class="bg-[#e0e3e6] rounded-lg px-4 py-3">
+            <div class="bg-input-background rounded-xl px-4 py-3 border border-border">
               <input
                 v-model="searchQuery"
-                class="w-full bg-transparent outline-none border-none font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e] placeholder-[#767683]"
+                class="w-full bg-transparent outline-none border-none font-['Plus_Jakarta_Sans'] text-[16px] text-foreground placeholder-muted-foreground"
                 :placeholder="searchPlaceholder"
               />
             </div>
           </div>
 
-          <div v-if="activeTab === 'lessons' && !filteredLessons.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
-            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zarchiwizowanych lekcji.</p>
+          <div v-if="activeTab === 'lessons' && !filteredLessons.length" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center border border-border">
+            <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[16px]">Brak zarchiwizowanych lekcji.</p>
           </div>
 
           <div
             v-if="activeTab === 'lessons'"
             v-for="lesson in filteredLessons"
             :key="lesson.id"
-            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            class="bg-card rounded-3xl p-5 cursor-pointer transition-all border border-border mb-4"
+            :class="selected?.id === lesson.id ? 'ring-2 ring-primary/50 bg-primary/5' : 'hover:bg-muted/30'"
             @click="selectLesson(lesson)"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0 flex w-full items-center gap-4">
-                <img :src="liveLessonIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+                <img :src="liveLessonIcon" alt="" class="h-6 w-6 shrink-0 opacity-85 dark:invert" />
                 <div class="min-w-0">
-                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px] truncate">
                     {{ lesson.finalNote?.title || lesson.title }}
                   </h3>
-                  <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  <p class="font-['Inter'] text-muted-foreground text-[14px] mt-1">
                     {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
-                    <span class="font-semibold text-[#0053db]">
+                    <span class="font-bold text-primary">
                       Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
                     </span>
                   </p>
                 </div>
               </div>
-              <span class="shrink-0 rounded-lg bg-[#e8eefb] px-3 py-1.5 font-['Inter'] font-semibold text-[12px] text-[#142588]">
+              <span class="shrink-0 rounded-xl bg-primary/10 px-3 py-1.5 font-['Inter'] font-bold text-[11px] uppercase tracking-wider text-primary">
                 {{ lesson.month || "Brak miesiąca" }}
               </span>
             </div>
           </div>
 
-          <div v-if="activeTab === 'notes' && !filteredNotes.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
-            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych notatek.</p>
+          <div v-if="activeTab === 'notes' && !filteredNotes.length" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center border border-border">
+            <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[16px]">Brak zapisanych notatek.</p>
           </div>
 
           <div
             v-if="activeTab === 'notes'"
             v-for="note in filteredNotes"
             :key="note.id"
-            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            class="bg-card rounded-3xl p-5 cursor-pointer transition-all border border-border mb-4"
+            :class="selectedNote?.id === note.id ? 'ring-2 ring-primary/50 bg-primary/5' : 'hover:bg-muted/30'"
             @click="selectedNote = note"
           >
             <div class="flex w-full items-center gap-4">
-              <img :src="archiveIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+              <img :src="archiveIcon" alt="" class="h-6 w-6 shrink-0 opacity-85 dark:invert" />
               <div class="min-w-0">
-                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px] truncate">
                   {{ note.title || "Bez tytułu" }}
                 </h3>
-                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                <p class="font-['Inter'] text-muted-foreground text-[14px] mt-1">
                   {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
                 </p>
               </div>
             </div>
           </div>
 
-          <div v-if="activeTab === 'presentations' && !filteredPresentations.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
-            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych prezentacji.</p>
+          <div v-if="activeTab === 'presentations' && !filteredPresentations.length" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center border border-border">
+            <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[16px]">Brak zapisanych prezentacji.</p>
           </div>
 
           <div
             v-if="activeTab === 'presentations'"
             v-for="item in filteredPresentations"
             :key="item.id"
-            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selectedPresentation?.id === item.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            class="bg-card rounded-3xl p-5 cursor-pointer transition-all border border-border mb-4"
+            :class="selectedPresentation?.id === item.id ? 'ring-2 ring-primary/50 bg-primary/5' : 'hover:bg-muted/30'"
             @click="selectedPresentation = item"
           >
             <div class="flex w-full items-center gap-4">
-              <img :src="presentationIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+              <img :src="presentationIcon" alt="" class="h-6 w-6 shrink-0 opacity-85 dark:invert" />
               <div class="min-w-0">
-                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px] truncate">
                   {{ item.title || "Prezentacja" }}
                 </h3>
-                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                <p class="font-['Inter'] text-muted-foreground text-[14px] mt-1">
                   {{ item.createdAtLabel || formatDate(item.createdAt) }} • {{ item.slideCount || 0 }} slajdów
                 </p>
               </div>
@@ -164,13 +164,13 @@
         </div>
 
         <div class="col-span-12 xl:col-span-4 space-y-6">
-          <div v-if="activeTab === 'lessons' && selected?.finalNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+          <div v-if="activeTab === 'lessons' && selected?.finalNote" class="bg-card rounded-3xl p-6 space-y-6 border border-border shadow-md sticky top-6">
             <div class="flex items-center justify-between gap-3">
-              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
                 Złota notatka
               </h3>
               <button
-                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors disabled:opacity-60 cursor-pointer"
+                class="px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-60 cursor-pointer"
                 @click="handleDeleteFinalNote"
                 :disabled="saving"
               >
@@ -179,28 +179,28 @@
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Nazwa notatki</label>
-              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <input v-model="editTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] block">Nazwa notatki</label>
+              <div class="bg-input-background rounded-xl px-4 py-2.5 border border-border">
+                <input v-model="editTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-foreground" placeholder="Tytuł notatki" />
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Temat</label>
-              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <input v-model="editSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] block">Temat</label>
+              <div class="bg-input-background rounded-xl px-4 py-2.5 border border-border">
+                <input v-model="editSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-foreground" placeholder="Przedmiot" />
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Data</label>
-              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <input v-model="editDate" type="date" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] [color-scheme:light]" />
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] block">Data</label>
+              <div class="bg-input-background rounded-xl px-4 py-2.5 border border-border">
+                <input v-model="editDate" type="date" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-foreground [color-scheme:dark]" />
               </div>
             </div>
 
             <button
-              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              class="w-full rounded-xl bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
               :disabled="saving"
               @click="handleSaveFinalNote"
             >
@@ -209,7 +209,7 @@
 
             <button
               type="button"
-              class="w-full rounded-xl bg-[#f2f4f7] p-3 transition-colors hover:bg-[#e8ebf0] cursor-pointer"
+              class="w-full rounded-xl bg-muted p-3 transition-colors hover:bg-muted/80 cursor-pointer"
               @click="openQrModal"
             >
               <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
@@ -217,7 +217,7 @@
 
             <button
               v-if="selected?.finalNote?.shareUrl"
-              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
               @click="openFinalNote"
             >
               Otwórz notatkę (link)
@@ -225,7 +225,7 @@
 
             <button
               type="button"
-              class="w-full rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
               @click="openGoldenNotePreview"
             >
               Pokaż treść notatki
@@ -233,81 +233,81 @@
 
             <RouterLink
               to="/notes"
-              class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              class="block w-full rounded-xl bg-muted py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-muted/80 transition-colors cursor-pointer"
             >
               Wróć do notatek
             </RouterLink>
           </div>
 
-          <div v-else-if="activeTab === 'lessons' && selected" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6">
-            <p class="font-['Inter'] text-[#454652] text-[14px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
+          <div v-else-if="activeTab === 'lessons' && selected" class="bg-card rounded-3xl p-8 border border-border text-center sticky top-6">
+            <p class="font-['Inter'] text-muted-foreground text-[15px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
           </div>
 
-          <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+          <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4 border border-border">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
               Szczegóły notatki
             </h3>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Tytuł:</span> {{ selectedNote.title || "Bez tytułu" }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Tytuł:</span> {{ selectedNote.title || "Bez tytułu" }}
             </p>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Przedmiot:</span> {{ selectedNote.subject || "Brak" }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Przedmiot:</span> {{ selectedNote.subject || "Brak" }}
             </p>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Poziom:</span> {{ selectedNote.classLevel || "Brak" }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Poziom:</span> {{ selectedNote.classLevel || "Brak" }}
             </p>
             <button
               type="button"
-              class="w-full rounded-lg bg-[#142588] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0f1d66] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-[#142588] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0f1d66] transition-colors cursor-pointer"
               @click="openTeacherNotePreview"
             >
               Pokaż treść notatki
             </button>
             <button
               type="button"
-              class="w-full rounded-lg bg-[#ffe8dd] py-2.5 text-center font-['Inter'] font-semibold text-[#9e3f4e] hover:bg-[#ffdacc] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-destructive/10 py-2.5 text-center font-['Inter'] font-semibold text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
               @click="handleDeleteTeacherNote"
             >
               Usuń notatkę
             </button>
             <RouterLink
               to="/notes"
-              class="block w-full rounded-lg bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
+              class="block w-full rounded-xl bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
             >
               Przejdź do notatek
             </RouterLink>
           </div>
 
-          <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+          <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4 border border-border">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
               Szczegóły prezentacji
             </h3>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Tytuł:</span> {{ selectedPresentation.title || "Prezentacja" }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Tytuł:</span> {{ selectedPresentation.title || "Prezentacja" }}
             </p>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Slajdy:</span> {{ selectedPresentation.slideCount || 0 }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Slajdy:</span> {{ selectedPresentation.slideCount || 0 }}
             </p>
-            <p class="font-['Inter'] text-[#454652] text-[14px]">
-              <span class="font-semibold text-[#191c1e]">Data:</span> {{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}
+            <p class="font-['Inter'] text-muted-foreground text-[14px]">
+              <span class="font-semibold text-foreground">Data:</span> {{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}
             </p>
             <button
               type="button"
-              class="w-full rounded-lg bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
               @click="openPresentationGenerator"
             >
               Otwórz generator prezentacji
             </button>
             <button
               type="button"
-              class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-muted py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-muted/80 transition-colors cursor-pointer"
               @click="openSelectedPresentation"
             >
               Otwórz tę prezentację
             </button>
             <button
               type="button"
-              class="w-full rounded-lg bg-[#ffe8dd] py-2.5 text-center font-['Inter'] font-semibold text-[#9e3f4e] hover:bg-[#ffdacc] transition-colors cursor-pointer"
+              class="w-full rounded-xl bg-destructive/10 py-2.5 text-center font-['Inter'] font-semibold text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
               @click="handleDeletePresentation"
             >
               Usuń prezentację
@@ -324,7 +324,7 @@
           class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
           @click="closeQrModal"
         >
-          <div class="rounded-3xl bg-white p-5 shadow-2xl" @click.stop>
+          <div class="rounded-3xl bg-card p-5 shadow-2xl border border-border" @click.stop>
             <img :src="qrCodeUrl" alt="QR" width="320" height="320" class="mx-auto h-auto w-full max-w-[320px]" />
           </div>
         </div>
@@ -337,17 +337,17 @@
         class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4"
         @click.self="textPreviewOpen = false"
       >
-        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" @click.stop>
+        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-card p-6 shadow-xl border border-border" @click.stop>
           <div class="mb-4 flex justify-end">
             <button
               type="button"
-              class="rounded-lg bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#454652] hover:bg-[#e5e5e5]"
+              class="rounded-xl bg-muted px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted/80"
               @click="textPreviewOpen = false"
             >
               Zamknij
             </button>
           </div>
-          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ textPreviewBody }}</pre>
+          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-foreground">{{ textPreviewBody }}</pre>
         </div>
       </div>
     </Teleport>

@@ -41,6 +41,13 @@
   --sidebar-border: oklch(0.89 0.01 250);
   --sidebar-ring: oklch(0.6 0.1 205);
   --brand-logo-filter: brightness(0) saturate(100%) invert(31%) sepia(34%) saturate(1836%) hue-rotate(198deg) brightness(96%) contrast(94%);
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(25 28 30 / 0.06), 0 2px 4px -2px rgb(25 28 30 / 0.06);
+  --shadow-lg: 0px 12px 32px 0px rgba(25, 28, 30, 0.06);
+  --shadow-primary: 0px 10px 15px -3px rgba(12, 61, 254, 0.2);
+  
+  --placeholder: oklch(0.6 0.02 260);
 }
 
 .logo {
@@ -52,24 +59,24 @@
 }
 
 .dark {
-  --background: oklch(0.21 0.028 265);
-  --foreground: oklch(0.93 0.02 95);
-  --card: oklch(0.25 0.03 265);
-  --card-foreground: oklch(0.93 0.02 95);
-  --popover: oklch(0.27 0.03 265);
-  --popover-foreground: oklch(0.93 0.02 95);
-  --primary: oklch(0.74 0.12 195);
-  --primary-foreground: oklch(0.14 0.03 265);
-  --secondary: oklch(0.3 0.03 265);
-  --secondary-foreground: oklch(0.92 0.02 95);
-  --muted: oklch(0.3 0.025 265);
-  --muted-foreground: oklch(0.66 0.02 95);
-  --accent: oklch(0.32 0.05 300);
-  --accent-foreground: oklch(0.93 0.02 95);
-  --destructive: oklch(0.58 0.2 25);
+  --background: oklch(0.08 0.01 260); /* Jeszcze głębsza noc */
+  --foreground: oklch(0.95 0.01 95);
+  --card: oklch(0.12 0.015 260);
+  --card-foreground: oklch(0.95 0.01 95);
+  --popover: oklch(0.12 0.015 260);
+  --popover-foreground: oklch(0.95 0.01 95);
+  --primary: oklch(0.58 0.18 250);
+  --primary-foreground: oklch(0.98 0.01 95);
+  --secondary: oklch(0.2 0.02 260);
+  --secondary-foreground: oklch(0.95 0.01 95);
+  --muted: oklch(0.18 0.02 260);
+  --muted-foreground: oklch(0.7 0.02 260); /* Jaśniejszy tekst pomocniczy dla kontrastu */
+  --accent: oklch(0.25 0.03 260);
+  --accent-foreground: oklch(0.95 0.01 95);
+  --destructive: oklch(0.5 0.15 25);
   --destructive-foreground: oklch(0.98 0.01 95);
-  --border: oklch(0.34 0.03 265);
-  --input: oklch(0.34 0.03 265);
+  --border: oklch(0.22 0.02 265); /* Bardzo ciemna ramka */
+  --input: oklch(0.22 0.02 265);
   --input-background: oklch(0.19 0.03 265);
   --switch-background: oklch(0.4 0.03 265);
   --ring: oklch(0.74 0.12 195);
@@ -89,6 +96,14 @@
   --sidebar-border: oklch(0.24 0.035 265);
   --sidebar-ring: oklch(0.74 0.12 195);
   --brand-logo-filter: brightness(0) saturate(100%) invert(77%) sepia(21%) saturate(2113%) hue-rotate(191deg) brightness(102%) contrast(98%);
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0px 12px 32px 0px rgba(0, 0, 0, 0.4);
+  --shadow-primary: 0px 10px 15px -3px rgba(0, 0, 0, 0.5);
+  
+  --muted-foreground: oklch(0.75 0.02 260); /* Increased contrast */
+  --placeholder: oklch(0.45 0.02 260);
 }
 
 @theme inline {
@@ -131,6 +146,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-primary: var(--shadow-primary);
+  
+  --color-placeholder: var(--placeholder);
 }
 
 @layer base {
@@ -214,83 +236,128 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--placeholder);
+  }
+
+  /* Fix for chrome autofill background in dark mode */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0px 1000px var(--input-background) inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 /* Legacy view palette overrides so header dark-mode affects all app pages.
    Colors are mapped to the same semantic dark tokens used by LoginView. */
-.dark .app-shell .bg-\[\#f7f9fc\],
-.dark .app-shell .bg-\[\#f8fafc\] {
+
+/* Wymuszenie tła dla głównych kontenerów i bocznego panelu */
+.dark .app-shell,
+.dark aside,
+.dark [role="complementary"],
+.dark .bg-white,
+.dark .bg-sidebar,
+.dark .bg-\[#f7f9fc\],
+.dark .bg-\[#f8fafc\] {
   background-color: var(--background) !important;
 }
 
-.dark .app-shell .bg-white {
-  background-color: var(--card) !important;
+.dark body, 
+.dark #app,
+.dark main,
+.dark .min-h-screen {
+  background-color: var(--background) !important;
 }
 
-.dark .app-shell .bg-\[\#e0e3e6\],
-.dark .app-shell .bg-\[\#e6e8eb\],
-.dark .app-shell .bg-\[\#f2f4f7\] {
-  background-color: var(--input-background) !important;
-}
-
-.dark .app-shell .text-\[\#191c1e\] {
-  color: var(--foreground) !important;
-}
-
-.dark .app-shell .text-\[\#454652\],
-.dark .app-shell .text-\[\#475569\],
-.dark .app-shell .text-\[\#767683\] {
-  color: var(--muted-foreground) !important;
-}
-
-.dark .app-shell .placeholder-\[\#767683\]::placeholder {
-  color: var(--muted-foreground) !important;
-  opacity: 0.85;
-}
-
-.dark .app-shell .border-black\/30 {
+/* Globalne naprawianie "jasnych ramek" (dodano paletę slate i gray) */
+.dark .border,
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-slate-50,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-black\/30,
+.dark .border-border {
   border-color: var(--border) !important;
 }
 
-.dark .app-shell .hover\:bg-black\/5:hover {
-  background-color: var(--muted) !important;
+/* Globalne naprawianie zlewającego się tekstu - wymuszenie jasnych kolorów dla ciemnych tekstów Tailwind */
+.dark .text-gray-400,
+.dark .text-gray-500,
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-muted-foreground {
+  color: var(--muted-foreground) !important;
 }
 
-.dark .app-shell svg path[fill="#566166"] {
-  fill: var(--muted-foreground) !important;
+.dark .text-\[\#191c1e\],
+.dark .text-\[\#2a3439\],
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-\[\#475569\],
+.dark .text-foreground {
+  color: var(--foreground) !important;
 }
 
-/* Increase contrast for legacy dark-blue accents on dark backgrounds. */
-.dark .app-shell .bg-\[\#0c3dfe\] {
-  background-color: #60a5fa !important;
+.dark .text-\[\#454652\],
+.dark .text-\[\#566166\],
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: var(--muted-foreground) !important;
 }
 
-.dark .app-shell .hover\:bg-\[\#0a34d4\]:hover {
-  background-color: #3b82f6 !important;
+/* Naprawa tła elementów interaktywnych i list */
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-muted {
+  background-color: var(--card) !important;
 }
 
-.dark .app-shell .bg-\[\#0053db\] {
-  background-color: #60a5fa !important;
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--background);
 }
 
-.dark .app-shell .hover\:bg-\[\#0043b2\]:hover {
-  background-color: #3b82f6 !important;
+/* Naprawa tła Sidebarów specyficznych dla shadcn/ui */
+.dark .bg-sidebar {
+  background-color: var(--sidebar) !important;
+  border-right: 1px solid var(--border) !important;
 }
 
-.dark .app-shell .text-\[\#0c3dfe\],
-.dark .app-shell .text-\[\#0053db\],
-.dark .app-shell .text-\[\#142588\] {
-  color: #93c5fd !important;
+/* Dodatkowe mapowanie kolorów nawigacji */
+.dark .text-\[\#475569\],
+.dark .text-\[\#566166\] {
+  color: var(--muted-foreground) !important;
 }
 
-.dark .app-shell .bg-\[\#e8eefb\] {
-  background-color: rgba(96, 165, 250, 0.2) !important;
+.dark .text-\[\#0c3dfe\] {
+  color: var(--primary) !important;
 }
 
-.dark .app-shell .bg-\[rgba\(12\,61\,254\,0\.08\)\] {
-  background-color: rgba(96, 165, 250, 0.18) !important;
+/* Wymuszenie tła dla selectów na ciemne */
+.dark select {
+  background-color: var(--input-background) !important;
+  color: var(--foreground) !important;
 }
 
-.dark .app-shell .hover\:bg-\[rgba\(12\,61\,254\,0\.14\)\]:hover {
-  background-color: rgba(96, 165, 250, 0.28) !important;
+.dark select option {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
 }
+

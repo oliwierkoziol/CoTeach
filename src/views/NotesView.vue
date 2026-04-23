@@ -1,31 +1,31 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
-    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
+  <div class="bg-background min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
+    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-primary/5 blur-[60px] pointer-events-none" />
 
     <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
       <!-- Header -->
       <div class="content-stretch flex flex-col gap-[8px] items-center justify-center relative shrink-0 w-full mb-4">
         <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Dodaj materiały</h2>
+          <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-[36px] tracking-[-0.9px] leading-[40px]">Dodaj materiały</h2>
         </div>
         <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.</p>
+          <p class="font-['Plus_Jakarta_Sans'] font-normal text-muted-foreground text-[18px] leading-[28px]">Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.</p>
         </div>
       </div>
 
       <!-- Podstawowe Informacje -->
-      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+      <div class="bg-card content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-lg shrink-0 w-full border border-border/50">
         <div class="content-stretch flex flex-col items-start relative shrink-0">
-          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px]">Podstawowe informacje</h3>
+          <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px]">Podstawowe informacje</h3>
         </div>
 
         <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 lg:grid-cols-2 relative shrink-0 w-full mt-2">
           <!-- Przedmiot -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Przedmiot</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input v-model="subject" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="np. Matematyka, Język Polski..." />
-              <svg class="absolute right-[12px] w-[22px] h-[18px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 22 18">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Przedmiot</label>
+            <div class="bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center border border-border transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+              <input v-model="subject" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-foreground placeholder-muted-foreground/60 font-['Plus_Jakarta_Sans']" placeholder="np. Matematyka, Język Polski..." />
+              <svg class="absolute right-[12px] w-[22px] h-[18px] pointer-events-none opacity-40 text-primary" fill="currentColor" viewBox="0 0 22 18">
                 <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
               </svg>
             </div>
@@ -33,10 +33,10 @@
 
           <!-- Data -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Data</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input type="date" v-model="lessonDate" class="bg-transparent border-none outline-none w-full h-full px-[16px] pr-[40px] text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] [color-scheme:light]" />
-              <svg class="absolute right-[12px] w-[18px] h-[20px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 20">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Data</label>
+            <div class="bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center border border-border transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+              <input type="date" v-model="lessonDate" class="bg-transparent border-none outline-none w-full h-full px-[16px] pr-[40px] text-[16px] text-foreground font-['Plus_Jakarta_Sans'] [color-scheme:light] dark:[color-scheme:dark]" />
+              <svg class="absolute right-[12px] w-[18px] h-[20px] pointer-events-none opacity-40 text-primary" fill="currentColor" viewBox="0 0 18 20">
                 <path d="M4 2H14V0H16V2H18V20H0V2H2V0H4V2ZM16 18V6H2V18H16ZM14 10H4V8H14V10ZM14 14H4V12H14V14Z" />
               </svg>
             </div>
@@ -44,10 +44,10 @@
 
           <!-- Temat -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Temat</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
-              <svg class="absolute right-[12px] w-[18px] h-[16px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Temat</label>
+            <div class="bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center border border-border transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+              <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-foreground placeholder-muted-foreground/60 font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
+              <svg class="absolute right-[12px] w-[18px] h-[16px] pointer-events-none opacity-40 text-primary" fill="currentColor" viewBox="0 0 18 16">
                 <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
               </svg>
             </div>
@@ -55,12 +55,12 @@
 
           <!-- Klasa -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Klasa</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Klasa</label>
+            <div class="bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center border border-border transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
-              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-primary opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
                   <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
                 </svg>
@@ -78,32 +78,32 @@
         
         <!-- Text Input Area -->
         <div class="xl:col-[1/span_9] content-stretch flex flex-col items-start relative shrink-0 w-full h-full">
-          <div class="bg-white relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full h-full">
+          <div class="bg-card relative rounded-[12px] shadow-lg shrink-0 w-full h-full border border-border/50">
             <div class="content-stretch flex flex-col gap-[24px] items-start p-[20px] sm:p-[32px] relative size-full h-full">
               <div class="relative flex w-full shrink-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="content-stretch flex flex-col items-start relative shrink-0">
-                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] whitespace-nowrap">Materiały źródłowe</h3>
+                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px] whitespace-nowrap">Materiały źródłowe</h3>
                 </div>
                 <div class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-[16px]">
-                  <button type="button" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[20px] sm:px-[32px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto" :disabled="loading" @click="handleGenerate">
+                  <button type="button" class="bg-primary content-stretch flex items-center justify-center px-[20px] sm:px-[32px] py-[10px] rounded-[8px] hover:bg-primary/95 transition-colors shadow-primary disabled:opacity-50 w-full sm:w-auto" :disabled="loading" @click="handleGenerate">
                     <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ loading ? "Generowanie..." : "Generuj notatkę AI" }}</span>
                     <svg class="ml-2 w-[16px] h-[16px]" fill="none" viewBox="0 0 15.7635 15.7635">
                       <path d="M7.88175 0L10.3204 5.4431L15.7635 7.88175L10.3204 10.3204L7.88175 15.7635L5.4431 10.3204L0 7.88175L5.4431 5.4431L7.88175 0Z" fill="white" />
                     </svg>
                   </button>
                   <div class="content-stretch flex flex-col items-start sm:items-end">
-                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-[12px] leading-[16px]">
+                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-muted-foreground text-[12px] leading-[16px]">
                       {{ rawTextContent.length }} / 25,000 Znaki
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[150px]">
+              <div class="bg-input-background relative rounded-[8px] w-full flex-grow flex transition-colors border border-border focus-within:ring-2 focus-within:ring-primary/50 min-h-[150px]">
                 <textarea 
                   v-model="rawTextContent"
-                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
-                  placeholder="Paste lecture notes, book transcripts, or structured syllabi here for deep analysis..."
+                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-foreground placeholder-muted-foreground/60 font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
+                  placeholder="Tutaj wklej swoje notatki, fragmenty książek lub sylabusy do głębokiej analizy..."
                 ></textarea>
               </div>
             </div>
@@ -111,7 +111,7 @@
         </div>
 
         <!-- Drag and Drop Zone -->
-        <div class="xl:col-[10/span_3] bg-white relative rounded-[12px] self-stretch shrink-0 w-full min-h-[250px] xl:min-h-[282px]">
+        <div class="xl:col-[10/span_3] bg-card relative rounded-[12px] self-stretch shrink-0 w-full min-h-[250px] xl:min-h-[282px] border border-border/50 shadow-lg">
           <div class="overflow-hidden rounded-[12px] h-full w-full absolute inset-0">
             <div class="flex flex-col items-center justify-center p-[34px] xl:pb-[34px] xl:pt-[11px] size-full">
               <!-- Icon -->
@@ -126,19 +126,19 @@
               </p>
               <div class="h-[24px] w-full shrink-0"></div>
               <!-- Button -->
-              <button type="button" @click="$refs.fileInput.click()" class="bg-[#e0e3e6] px-[24px] py-[10px] rounded-[8px] hover:bg-[#d0d3d6] transition-colors shrink-0">
-                <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#0c3dfe] text-[16px] leading-[24px]">Wybierz pliki</span>
+              <button type="button" @click="$refs.fileInput.click()" class="bg-primary/10 px-[24px] py-[10px] rounded-[8px] hover:bg-primary/20 transition-colors shrink-0">
+                <span class="font-['Plus_Jakarta_Sans'] font-semibold text-primary text-[16px] leading-[24px]">Wybierz pliki</span>
               </button>
               <input type="file" ref="fileInput" class="hidden" @change="handleFileChange" accept=".pdf,.doc,.docx,.pptx,.txt" />
               <p v-if="selectedFile" class="mt-3 text-sm text-[#0c3dfe] truncate max-w-[200px]">{{ selectedFile.name }}</p>
             </div>
           </div>
-          <div class="absolute border-2 border-[rgba(0,0,0,0.1)] border-dashed inset-0 pointer-events-none rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]"></div>
+          <div class="absolute border-2 border-primary/20 border-dashed inset-0 pointer-events-none rounded-[12px]"></div>
         </div>
       </div>
 
       <!-- Action Buttons Footer -->
-      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
+      <div class="bg-card content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-lg shrink-0 w-full mb-7 border border-border/50">
         <div v-if="error" class="mb-4 text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold">
            {{ error }}
         </div>
@@ -146,14 +146,14 @@
            {{ info }}
         </div>
         <div class="content-stretch flex gap-[12px] flex-col md:flex-row items-center justify-between relative shrink-0 w-full">
-          <button type="button" @click="downloadNotePdf()" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors w-full md:w-auto disabled:opacity-50" :disabled="!rawTextContent">
-            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">Pobierz notatkę jako PDF</span>
+          <button type="button" @click="downloadNotePdf()" class="bg-primary content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-primary/95 transition-colors w-full md:w-auto disabled:opacity-50" :disabled="!rawTextContent">
+            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">Pobierz jako PDF</span>
           </button>
           <div class="flex gap-[12px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end flex-col sm:flex-row">
-            <button type="button" @click="resetForm" class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto">
-              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[16px] leading-[24px]">Anuluj</span>
+            <button type="button" @click="resetForm" class="bg-muted content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-accent transition-colors w-full sm:w-auto">
+              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[16px] leading-[24px]">Anuluj</span>
             </button>
-            <button type="button" :disabled="saving" @click="handleSave" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto">
+            <button type="button" :disabled="saving" @click="handleSave" class="bg-primary content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-primary hover:bg-primary/95 transition-colors disabled:opacity-50 w-full sm:w-auto">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
             </button>
           </div>
