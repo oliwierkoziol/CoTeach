@@ -180,25 +180,27 @@
     </div>
   </div>
 
-  <div v-else-if="isReviewing" class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
-    <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-      <div>
-        <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-          Przegląd slajdów
-        </h2>
-        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-          Możesz edytować treści przed rozpoczęciem prezentacji.
-        </p>
+  <div v-else-if="isReviewing" class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
+
+    <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
+      <div class="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-[1024px]">
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">Przegląd slajdów
+          </h1>
+          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+            Możesz edytować treści przed rozpoczęciem prezentacji.
+          </p>
+        </div>
+        <div class="flex gap-4">
+          <button @click="isReviewing = false" class="px-6 py-3 rounded-xl border-2 border-gray-100 bg-white font-bold text-[#454652] hover:bg-gray-50 transition-all">Wróć</button>
+          <button @click="isPresenting = true" class="px-8 py-3 rounded-xl bg-[#0c3dfe] text-white font-bold shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] hover:-translate-y-0.5 transition-all">Rozpocznij prezentację</button>
+        </div>
       </div>
-      <div class="flex gap-4">
-        <button @click="isReviewing = false" class="px-6 py-3 rounded-2xl border-2 border-gray-200 font-bold text-[#454652] hover:bg-white transition-all">Wróć</button>
-        <button @click="isPresenting = true" class="px-8 py-3 rounded-2xl bg-[#0c3dfe] text-white font-bold shadow-lg hover:bg-[#0a34d4] hover:-translate-y-0.5 transition-all">Rozpocznij prezentację</button>
-      </div>
-    </header>
+    </div>
 
     <div class="space-y-6 max-w-5xl mx-auto pb-20 relative z-10">
-      <div v-for="(slide, index) in slides" :key="index" class="bg-white rounded-[2.5rem] p-8 border border-gray-200/60 shadow-sm relative group">
-        <div class="absolute -left-4 top-8 w-10 h-10 bg-[#0c3dfe] text-white rounded-full flex items-center justify-center font-black text-sm shadow-md">{{ index + 1 }}</div>
+      <div v-for="(slide, index) in slides" :key="index" class="bg-white rounded-[12px] p-6 sm:p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] relative group">
         
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div class="lg:col-span-1">
@@ -211,11 +213,11 @@
           <div class="lg:col-span-3 space-y-5">
             <div>
               <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tytuł slajdu</label>
-              <input v-model="slide.title" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 font-bold text-xl text-[#191c1e] focus:ring-2 focus:ring-[#0c3dfe]/20 transition-all" />
+              <input v-model="slide.title" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-2 font-bold text-[18px] text-[#191c1e] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all" />
             </div>
             <div>
               <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Główne podsumowanie</label>
-              <textarea v-model="slide.summary" rows="3" class="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-[15px] leading-relaxed text-[#454652] focus:ring-2 focus:ring-[#0c3dfe]/20 transition-all"></textarea>
+              <textarea v-model="slide.summary" rows="3" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-3 text-[15px] leading-relaxed text-[#454652] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all"></textarea>
             </div>
             <div class="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
               <div class="flex-1">
@@ -246,134 +248,135 @@
     </div>
   </div>
 
-  <div v-else class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
+  <div v-else class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
-    <header class="mb-7 relative z-10 w-full text-left">
-      <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-        Generator prezentacji
-      </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px] font-normal">
-        Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.
-      </p>
-    </header>
-
-    <div class="bg-white rounded-3xl border border-gray-200/60 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.04)] p-6 md:p-8 w-full relative z-10 mb-6 overflow-hidden">
-      <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[20px] leading-[28px] mb-6 flex items-center gap-2">
-        <div class="w-1.5 h-6 bg-[#0c3dfe] rounded-full"></div>
-        Źródło materiałów
-      </h3>
-
-      <div class="mb-8 flex p-1.5 bg-gray-100/80 rounded-2xl w-fit">
-        <button
-          type="button"
-          @click="presentationSource = 'note'"
-          :class="[
-            'inline-flex h-10 items-center gap-2 rounded-xl px-6 text-[13px] font-bold transition-all',
-            presentationSource === 'note' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
-          ]"
-        >
-          Notatki przedmiotowe
-        </button>
-        <button
-          type="button"
-          @click="presentationSource = 'lesson'"
-          :class="[
-            'inline-flex h-10 items-center gap-2 rounded-xl px-6 text-[13px] font-bold transition-all',
-            presentationSource === 'lesson' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
-          ]"
-        >
-          Lekcje na żywo
-        </button>
+    <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
+      <!-- Header -->
+      <div class="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full mb-4">
+        <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Generator prezentacji</h2>
+        <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.</p>
       </div>
+      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-2 flex items-center gap-2">Źródło materiałów
+        </h3>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div v-for="item in sourceItems" :key="item.id" class="group relative">
+        <div class="mb-8 flex p-[6px] bg-[#f2f2f2] rounded-full w-fit">
           <button
             type="button"
-            @click="selectSourceItem(item.id)"
+            @click="presentationSource = 'note'"
             :class="[
-              'flex w-full flex-col gap-1 p-5 rounded-2xl transition-all text-left border-2',
-              selectedSourceId === item.id
-                ? 'bg-[#0c3dfe] border-[#0c3dfe] text-white shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)]'
-                : 'bg-[#f8f9fb] border-transparent text-[#2a3439] hover:border-gray-300'
+              'inline-flex h-10 items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-all',
+              presentationSource === 'note' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
             ]"
           >
-            <p class="font-bold text-[15px] leading-tight mb-1 truncate">{{ item.title }}</p>
-            <div class="flex items-center gap-1.5 opacity-70">
+            Notatki przedmiotowe
+          </button>
+          <button
+            type="button"
+            @click="presentationSource = 'lesson'"
+            :class="[
+              'inline-flex h-10 items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-all',
+              presentationSource === 'lesson' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
+            ]"
+          >
+            Lekcje na żywo
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <div v-for="item in sourceItems" :key="item.id" class="group relative">
+            <button
+              type="button"
+              @click="selectSourceItem(item.id)"
+              :class="[
+                'flex w-full flex-row items-center text-left gap-4 p-5 rounded-[12px] transition-all border-2',
+                selectedSourceId === item.id
+                  ? 'bg-[#0c3dfe] border-[#0c3dfe] text-white shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)]'
+                  : 'bg-[#f8f9fb] border-transparent text-[#2a3439] hover:border-gray-300'
+              ]"
+            >
               <img 
                 :src="presentationSource === 'lesson' ? liveLessonIcon : archiveIcon" 
-                class="w-3.5 h-3.5" 
-                :class="selectedSourceId === item.id ? 'brightness-0 invert' : ''"
+                class="w-6 h-6 shrink-0" 
+                :class="selectedSourceId === item.id ? 'brightness-0 invert' : 'opacity-70'"
               />
-              <p class="font-medium text-[12px] truncate">{{ item.subtitle }}</p>
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-[15px] leading-tight truncate w-full">{{ item.title }}</p>
+                <p class="font-medium text-[12px] truncate opacity-70">{{ item.subtitle }}</p>
+              </div>
+            </button>
+            <div 
+              v-if="selectedSourceId === item.id" 
+              class="absolute -top-1.5 -right-1.5 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7"/></svg>
             </div>
-          </button>
-          <div 
-            v-if="selectedSourceId === item.id" 
-            class="absolute -top-1.5 -right-1.5 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+
+          <p v-if="!sourceItems.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
+            Brak dostępnych materiałów dla wybranego źródła.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-2 flex items-center gap-2">Ustawienia prezentacji
+        </h3>
+        <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Zakres treści</label>
+          <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+            <select
+              v-model="presentationScope"
+              :disabled="presentationSource === 'note'"
+              class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer"
+            >
+              <option value="full">Cała lekcja/notatka</option>
+              <option value="pending">Tylko nieomówione punkty</option>
+            </select>
+            <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+              <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              </svg>
+            </div>
           </div>
         </div>
-
-        <p v-if="!sourceItems.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
-          Brak dostępnych materiałów dla wybranego źródła.
-        </p>
       </div>
-    </div>
 
-    <div class="bg-white rounded-3xl border border-gray-200/60 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.04)] p-6 md:p-8 w-full relative z-10 mb-6">
-      <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[20px] leading-[28px] mb-6 flex items-center gap-2">
-        <div class="w-1.5 h-6 bg-[#0c3dfe] rounded-full"></div>
-        Ustawienia prezentacji
-      </h3>
-      <div class="max-w-none">
-        <label class="mb-3 block font-['Plus_Jakarta_Sans'] font-bold text-[#454652] text-[13px] uppercase tracking-wider">Zakres treści</label>
-        <select
-          v-model="presentationScope"
-          :disabled="presentationSource === 'note'"
-          class="bg-[#f0f2f5] hover:bg-[#e6e8eb] transition-colors h-[52px] rounded-xl w-full px-5 text-[15px] text-[#191c1e] font-bold font-['Plus_Jakarta_Sans'] outline-none border-none appearance-none"
-        >
-          <option value="full">Cała lekcja/notatka</option>
-          <option value="pending">Tylko nieomówione punkty</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-3xl border border-gray-200/60 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] p-6 md:p-8 w-full relative z-10 mb-7">
-      <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800">
-        {{ generationMessage }}
-      </div>
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-6 w-full">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
-            <svg class="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
-          </div>
-          <div>
-            <p class="font-['Plus_Jakarta_Sans'] text-[13px] font-bold text-[#454652] uppercase tracking-wider mb-0.5">Estymacja</p>
-            <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e]">
-              Liczba slajdów: <span class="font-extrabold text-[#0c3dfe]">{{ plannedSlideCount }}</span>
-            </p>
-          </div>
+      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
+        <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800">
+          {{ generationMessage }}
         </div>
-        
-        <div class="flex items-center gap-4 w-full sm:w-auto">
-        <button
-          type="button"
-          @click="$router.back()"
-          class="flex-1 sm:flex-none bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-bold text-[15px] px-8 py-3.5 rounded-2xl hover:bg-[#e5e5e5] transition-colors"
-        >
-          Anuluj
-        </button>
-        <button
-          type="button"
-          :disabled="!canGenerate || isGenerating"
-          @click="startGeneratedPresentation"
-          class="flex-1 sm:flex-none bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-bold text-[15px] px-10 py-3.5 rounded-2xl transition-all hover:bg-[#0a34d4] hover:translate-y-[-2px] shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)] disabled:opacity-50 disabled:translate-y-0"
-        >
-          {{ isGenerating ? "Generuję..." : "Wygeneruj slajdy" }}
-        </button>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 w-full">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-[12px] bg-indigo-50 flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
+            </div>
+            <div>
+              <p class="font-['Plus_Jakarta_Sans'] text-[13px] font-bold text-[#454652] uppercase tracking-wider mb-0.5">Estymacja</p>
+              <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e]">
+                Liczba slajdów: <span class="font-extrabold text-[#0c3dfe]">{{ plannedSlideCount }}</span>
+              </p>
+            </div>
+          </div>
+          
+          <div class="flex gap-[12px] items-center w-full sm:w-auto justify-end flex-col sm:flex-row">
+            <button
+              type="button"
+              @click="$router.back()"
+              class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[16px] leading-[24px]"
+            >
+              Anuluj
+            </button>
+            <button
+              type="button"
+              :disabled="!canGenerate || isGenerating"
+              @click="startGeneratedPresentation"
+              class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]"
+            >
+              {{ isGenerating ? "Generuję..." : "Wygeneruj slajdy" }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -381,7 +384,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
@@ -554,6 +557,22 @@ onMounted(async () => {
   state.lesson = initialLesson;
   loadPresentationHistory();
   tryOpenRequestedPresentation();
+
+  // Handle automatic generation and presentation requests (e.g. from Dashboard)
+  if (route.query.generate === "1") {
+    if (route.query.scope) {
+      presentationScope.value = route.query.scope;
+    }
+    
+    await nextTick();
+    if (canGenerate.value) {
+      await startGeneratedPresentation();
+      if (route.query.present === "1") {
+        isReviewing.value = false;
+        isPresenting.value = true;
+      }
+    }
+  }
 });
 
 watch(
