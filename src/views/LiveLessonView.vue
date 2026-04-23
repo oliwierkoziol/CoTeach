@@ -256,6 +256,8 @@
 
             <div class="space-y-3">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[12px] uppercase tracking-wider">Szybkie symbole</label>
+            <div v-if="activeTab === 'equation'" class="space-y-3">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Szybkie symbole</label>
               <div class="flex flex-wrap gap-2">
               <button
                 v-for="shortcut in mathShortcuts"

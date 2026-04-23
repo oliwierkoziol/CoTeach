@@ -124,7 +124,7 @@
             :disabled="summaryLoading"
             @click="handleGenerateSummary"
           >
-            {{ summaryLoading ? "Generuję..." : "Wygeneruj podsumowanie AI" }}
+            Wygeneruj prezentację AI
             <img :src="sparklesIcon" alt="" class="h-4 w-4" />
           </button>
           <p v-if="summaryError" class="text-sm font-medium text-red-600">{{ summaryError }}</p>
@@ -139,7 +139,7 @@
             class="inline-flex items-center gap-2 rounded-lg bg-primary px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-primary/90 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             disabled
           >
-          Wygeneruj podsumowanie AI
+          Wygeneruj prezentację AI
           <img :src="sparklesIcon" alt="" class="h-4 w-4" />
           </button>
         </div>
@@ -172,7 +172,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
 import iconOne from "../assets/1.svg";
@@ -182,13 +182,11 @@ import iconFour from "../assets/4.svg";
 import sparklesIcon from "../assets/sparkles.svg";
 
 const route = useRoute();
-const { state, fetchLessons, generateLiveLessonSummary } = useLessonStore();
+const router = useRouter();
+const { state, fetchLessons } = useLessonStore();
 
 const displayName = ref("użytkowniku");
-const summaryLoading = ref(false);
 const summaryError = ref("");
-const summaryModalOpen = ref(false);
-const summaryText = ref("");
 
 const userClasses = ref([]);
 const selectedClass = ref("all");
@@ -307,21 +305,16 @@ function resolveLessonTimestamp(lesson) {
   return 0;
 }
 
-async function handleGenerateSummary() {
+function handleGoToPresentation() {
   summaryError.value = "";
   if (!previousLiveLesson.value?.id) {
-    summaryError.value = "Brak lekcji do podsumowania.";
+    summaryError.value = "Brak lekcji do wygenerowania prezentacji.";
     return;
   }
-  summaryLoading.value = true;
-  try {
-    summaryText.value = await generateLiveLessonSummary({ lessonId: previousLiveLesson.value.id });
-    summaryModalOpen.value = true;
-  } catch (e) {
-    summaryError.value = e?.message || "Nie udało się wygenerować podsumowania.";
-  } finally {
-    summaryLoading.value = false;
-  }
+  router.push({
+    path: `/presentation/${previousLiveLesson.value.id}`,
+    query: { generate: "1", present: "1", scope: "full" }
+  });
 }
 
 function formatLessonDate(lesson) {

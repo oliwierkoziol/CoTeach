@@ -168,6 +168,8 @@
             <div class="flex items-center justify-between gap-3">
               <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
                 Złota notatka
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Szczegóły lekcji
               </h3>
               <button
                 class="px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-60 cursor-pointer"
@@ -243,19 +245,41 @@
             <p class="font-['Inter'] text-muted-foreground text-[15px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
           </div>
 
-          <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4 border border-border">
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
-              Szczegóły notatki
-            </h3>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Tytuł:</span> {{ selectedNote.title || "Bez tytułu" }}
-            </p>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Przedmiot:</span> {{ selectedNote.subject || "Brak" }}
-            </p>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Poziom:</span> {{ selectedNote.classLevel || "Brak" }}
-            </p>
+          <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Szczegóły notatki
+              </h3>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                @click="handleDeleteTeacherNote"
+              >
+                Usuń
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.title || "Bez tytułu" }}</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Przedmiot</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.subject || "Brak" }}</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.classLevel || "Brak" }}</div>
+              </div>
+            </div>
+
             <button
               type="button"
               class="w-full rounded-xl bg-[#142588] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0f1d66] transition-colors cursor-pointer"
@@ -273,44 +297,65 @@
             <RouterLink
               to="/notes"
               class="block w-full rounded-xl bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
+            <RouterLink
+              to="/notes"
+              class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
             >
               Przejdź do notatek
             </RouterLink>
           </div>
 
-          <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-card rounded-3xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4 border border-border">
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[18px] leading-[28px]">
-              Szczegóły prezentacji
-            </h3>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Tytuł:</span> {{ selectedPresentation.title || "Prezentacja" }}
-            </p>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Slajdy:</span> {{ selectedPresentation.slideCount || 0 }}
-            </p>
-            <p class="font-['Inter'] text-muted-foreground text-[14px]">
-              <span class="font-semibold text-foreground">Data:</span> {{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}
-            </p>
+          <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Szczegóły prezentacji
+              </h3>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                @click="handleDeletePresentation"
+              >
+                Usuń
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.title || "Prezentacja" }}</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Liczba slajdów</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.slideCount || 0 }}</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Data utworzenia</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}</div>
+              </div>
+            </div>
+
             <button
               type="button"
-              class="w-full rounded-xl bg-[#0c3dfe] py-2.5 text-center font-['Inter'] font-semibold text-white hover:bg-[#0a34d4] transition-colors cursor-pointer"
-              @click="openPresentationGenerator"
-            >
-              Otwórz generator prezentacji
-            </button>
-            <button
-              type="button"
-              class="w-full rounded-xl bg-muted py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-muted/80 transition-colors cursor-pointer"
+              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
               @click="openSelectedPresentation"
             >
               Otwórz tę prezentację
             </button>
+
             <button
               type="button"
               class="w-full rounded-xl bg-destructive/10 py-2.5 text-center font-['Inter'] font-semibold text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
               @click="handleDeletePresentation"
+              class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              @click="openPresentationGenerator"
             >
-              Usuń prezentację
+              Otwórz generator prezentacji
             </button>
           </div>
         </div>
