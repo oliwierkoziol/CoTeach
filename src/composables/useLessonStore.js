@@ -8,6 +8,69 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
+const CURRENT_LESSON_CACHE_KEY = "coteach_current_lesson_v1";
+const LESSON_CACHE_PREFIX = "coteach_lesson_cache_v1:";
+
+function readCurrentLessonCache() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CURRENT_LESSON_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id) return null;
+    if (parsed?.status === "finished") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCurrentLessonCache(lesson) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!lesson?.id || lesson?.status === "finished") {
+      window.localStorage.removeItem(CURRENT_LESSON_CACHE_KEY);
+      return;
+    }
+    window.localStorage.setItem(CURRENT_LESSON_CACHE_KEY, JSON.stringify(lesson));
+  } catch {
+    // Ignore storage errors (private mode/quota).
+  }
+}
+
+function lessonCacheKey(lessonId) {
+  return `${LESSON_CACHE_PREFIX}${String(lessonId || "").trim()}`;
+}
+
+function readLessonCache(lessonId) {
+  if (typeof window === "undefined") return null;
+  const id = String(lessonId || "").trim();
+  if (!id) return null;
+  try {
+    const raw = window.localStorage.getItem(lessonCacheKey(id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id) return null;
+    if (parsed?.status === "finished") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeLessonCache(lesson) {
+  if (typeof window === "undefined") return;
+  try {
+    const id = String(lesson?.id || "").trim();
+    if (!id || lesson?.status === "finished") {
+      if (id) window.localStorage.removeItem(lessonCacheKey(id));
+      return;
+    }
+    window.localStorage.setItem(lessonCacheKey(id), JSON.stringify(lesson));
+  } catch {
+    // Ignore storage errors (private mode/quota).
+  }
+}
 
 function upsertLessonInState(lesson) {
   if (!lesson?.id) return;
@@ -20,10 +83,12 @@ function upsertLessonInState(lesson) {
 
 function setCurrentLessonInState(lesson) {
   state.lesson = lesson || null;
+  writeCurrentLessonCache(state.lesson);
+  writeLessonCache(state.lesson);
 }
 
 const state = reactive({
-  lesson: null,
+  lesson: readCurrentLessonCache(),
   lessons: [],
   notes: [],
   error: "",
@@ -86,7 +151,11 @@ export function clearLessonStoreAuthCache() {
 
 export function useLessonStore() {
   function hydrateLessonFromCache(lessonId) {
-    return null;
+    const cachedLesson = readLessonCache(lessonId);
+    if (!cachedLesson) return null;
+    setCurrentLessonInState(cachedLesson);
+    upsertLessonInState(cachedLesson);
+    return cachedLesson;
   }
 
   async function createLesson(payload) {
@@ -242,6 +311,11 @@ export function useLessonStore() {
 
   async function fetchLesson(lessonId) {
     if (!lessonId) return null;
+    const cachedLesson = readLessonCache(lessonId);
+    if (cachedLesson) {
+      setCurrentLessonInState(cachedLesson);
+      upsertLessonInState(cachedLesson);
+    }
     const data = await api(`/api/lessons/${lessonId}`);
     if (data?.lesson) {
       setCurrentLessonInState(data.lesson);
@@ -307,20 +381,6 @@ export function useLessonStore() {
     return data.note;
   }
 
-  async function updateTeacherNote(noteId, payload) {
-    const data = await api(`/api/notes/${noteId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (data?.note) {
-      const updatedNote = data.note;
-      state.notes = state.notes.map((n) => (n.id === updatedNote.id ? updatedNote : n));
-      return updatedNote;
-    }
-    return null;
-  }
-
   async function deleteTeacherNote(noteId) {
     await api(`/api/notes/${noteId}`, { method: "DELETE" });
     state.notes = state.notes.filter((note) => note.id !== noteId);
@@ -356,7 +416,6 @@ export function useLessonStore() {
     generateLiveLessonSummary,
     askMeAI,
     saveTeacherNote,
-    updateTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes
   };
