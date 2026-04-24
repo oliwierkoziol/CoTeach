@@ -3514,7 +3514,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       language: "pl",
       response_format: "verbose_json",
       temperature: 0.0, // Lower temperature for more deterministic results
-      prompt: "To jest nagranie z lekcji online prowadzonej po polsku. Proszę ignorować ciszę i szumy. Nie dodawaj podpisów o autorach napisów, Amara, ani mediach społecznościowych." // Context prompt
+      prompt: "Oto nagranie z polskiej lekcji edukacyjnej. Nauczyciel i uczniowie omawiają materiał i wykonują zadania." // Context prompt
     }).catch(err => {
       console.error('[transcribe] Whisper API error:', err);
       throw err;
@@ -3530,7 +3530,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
     // Rozszerzone serwerowe filtrowanie halucynacji Whispera
-    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org)/i;
+    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
     const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
     const isValidTranscription = rawText &&
       rawText.length > 5 &&
