@@ -135,13 +135,13 @@
           </p>
 
           <div class="max-h-[350px] overflow-y-auto space-y-3" ref="transcriptionContainer" @scroll="handleScroll">
-            <div
+            <p
               v-for="(text, index) in transcription"
               :key="index"
-              class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px] p-2 bg-white/50 rounded"
+              class="font-['Inter'] text-[#454652] text-[18px] leading-[29.25px]"
             >
-              {{ index + 1 }}. {{ text }}
-            </div>
+              {{ text }}
+            </p>
 
             <p v-if="interimCaption" class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
               {{ interimCaption }}
@@ -1511,11 +1511,14 @@ async function beginWhisperMode() {
       const text = String(data.text || "").trim();
       console.log(`📝 Transcription: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
 
-      // Simplified filtering - only filter obvious single-word hallucinations
-      const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
-      const isValidTranscription = text &&
-                              text.length > 5 && // Only require minimum length
-                              !obviousHallucinations.test(text);
+      // Rozszerzone filtrowanie - usuwanie znanych halucynacji Whispera
+      const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org)/i;
+      const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
+      const cleanText = text.trim();
+      const isValidTranscription = cleanText &&
+                              cleanText.length > 5 &&
+                              !obviousHallucinations.test(cleanText) &&
+                              !hallucinationRegex.test(cleanText);
 
       if (isValidTranscription) {
         // Check if this text is already in the array to prevent duplicates

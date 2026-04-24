@@ -39,7 +39,7 @@ const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
 const OPENAI_BASE_URL = String(process.env.OPENAI_BASE_URL || "").trim();
-const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-1").trim() || "whisper-1";
+const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-large-v3-turbo").trim() || "whisper-large-v3-turbo";
 const OPENAI_PROVIDER_NAME = String(process.env.OPENAI_PROVIDER_NAME || "openai").trim() || "openai";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = String(process.env.BUSINESS_EMAIL_DOMAIN || "sluzbowe.coteach.local")
@@ -61,9 +61,9 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 
 const openaiClientConfig = process.env.OPENAI_API_KEY
   ? {
-      apiKey: process.env.OPENAI_API_KEY,
-      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
-    }
+    apiKey: process.env.OPENAI_API_KEY,
+    ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+  }
   : null;
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
@@ -2753,12 +2753,12 @@ app.get("/api/admin/users", async (req, res) => {
       ...user,
       license: assignedLicense
         ? {
-            id: assignedLicense.id,
-            key: assignedLicense.key,
-            expiresAt: assignedLicense.expiresAt,
-            maxActiveUsers: assignedLicense.maxActiveUsers,
-            demoMode: assignedLicense.demoMode === true
-          }
+          id: assignedLicense.id,
+          key: assignedLicense.key,
+          expiresAt: assignedLicense.expiresAt,
+          maxActiveUsers: assignedLicense.maxActiveUsers,
+          demoMode: assignedLicense.demoMode === true
+        }
         : null
     };
   });
@@ -2825,12 +2825,12 @@ app.get("/api/admin/dashboard", async (req, res) => {
         ...user,
         license: assignedLicense
           ? {
-              id: assignedLicense.id,
-              key: assignedLicense.key,
-              expiresAt: assignedLicense.expiresAt,
-              maxActiveUsers: assignedLicense.maxActiveUsers,
-              demoMode: assignedLicense.demoMode === true
-            }
+            id: assignedLicense.id,
+            key: assignedLicense.key,
+            expiresAt: assignedLicense.expiresAt,
+            maxActiveUsers: assignedLicense.maxActiveUsers,
+            demoMode: assignedLicense.demoMode === true
+          }
           : null
       };
     });
@@ -3307,8 +3307,8 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
       key: license.key,
       expiresAt: license.expiresAt,
       maxActiveUsers: license.maxActiveUsers,
-    demoMode: license.demoMode === true,
-    daysLeft: getRemainingLicenseDays(license.expiresAt)
+      demoMode: license.demoMode === true,
+      daysLeft: getRemainingLicenseDays(license.expiresAt)
     }
   });
 });
@@ -3384,18 +3384,18 @@ app.get("/api/account/license-status", async (req, res) => {
     isDemoLicense: activeLicense?.demoMode === true,
     license: activeLicense
       ? {
-          id: activeLicense.id,
-          key: activeLicense.key,
-          expiresAt: activeLicense.expiresAt,
-          maxActiveUsers: activeLicense.maxActiveUsers,
-          demoMode: activeLicense.demoMode === true,
-          daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
-        }
+        id: activeLicense.id,
+        key: activeLicense.key,
+        expiresAt: activeLicense.expiresAt,
+        maxActiveUsers: activeLicense.maxActiveUsers,
+        demoMode: activeLicense.demoMode === true,
+        daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
+      }
       : null,
     demoLimits: activeLicense?.demoMode
       ? {
-          maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
-        }
+        maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
+      }
       : null,
     uploadPolicy,
     uploadsUsed
@@ -3514,7 +3514,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       language: "pl",
       response_format: "verbose_json",
       temperature: 0.0, // Lower temperature for more deterministic results
-      prompt: "To jest nagranie z lekcji online." // Context prompt
+      prompt: "To jest nagranie z lekcji online prowadzonej po polsku. Proszę ignorować ciszę i szumy. Nie dodawaj podpisów o autorach napisów, Amara, ani mediach społecznościowych." // Context prompt
     }).catch(err => {
       console.error('[transcribe] Whisper API error:', err);
       throw err;
@@ -3529,11 +3529,13 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     const rawText = String(transcription.text || "").trim();
     console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
-    // Simplified server-side filtering - only filter obvious single-word hallucinations
-    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
+    // Rozszerzone serwerowe filtrowanie halucynacji Whispera
+    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org)/i;
+    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
     const isValidTranscription = rawText &&
-                              rawText.length > 5 &&
-                              !obviousHallucinations.test(rawText);
+      rawText.length > 5 &&
+      !obviousHallucinations.test(rawText) &&
+      !hallucinationRegex.test(rawText);
 
     // Only record cost if transcription is valid
     if (isValidTranscription) {
