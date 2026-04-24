@@ -11,6 +11,7 @@ Dane wejściowe:
 - Maksymalna liczba slajdów: [MAX_SLAJDOW]
 - Plan lekcji (JSON): [PLAN_LEKCJI_JSON]
 - Treść notatki: [TRESC_NOTATKI]
+- Tryb obrazów: [TRYB_OBRAZOW]
 
 Wymagania:
 1) Zwróć WYŁĄCZNIE poprawny JSON.
@@ -24,7 +25,8 @@ Wymagania:
       "subtitle": "Krótki podtytuł (opcjonalnie)",
       "summary": "1-3 zdania wyjaśniające sedno slajdu",
       "details": ["punkt 1", "punkt 2", "punkt 3"],
-      "visualHint": "krótka sugestia wizualna, np. diagram procesu / tabela porównawcza"
+      "visualHint": "krótka sugestia wizualna, np. diagram procesu / tabela porównawcza",
+      "imagePrompt": "krótki prompt do generatora obrazów AI (gdy tryb obrazów = TAK)"
     }
   ]
 }
@@ -37,3 +39,5 @@ Wymagania:
 10) W jednej prezentacji użyj co najmniej 3 różnych typów slajdów.
 11) Pierwszy slajd ustaw jako "title", drugi jako "agenda", ostatni jako "summary" albo "next_steps".
 12) Unikaj pustych wartości. Jeśli brakuje danych, wpisz krótką, konkretną treść zamiast pustego pola.
+13) Jeśli tryb obrazów = TAK, dodaj sensowny imagePrompt dla każdego slajdu.
+14) Jeśli tryb obrazów = NIE, zwracaj imagePrompt jako pusty string.
