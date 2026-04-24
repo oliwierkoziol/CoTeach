@@ -163,6 +163,7 @@ import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 import blockedImage from "../assets/czarek.jpg";
+import blockedSoundUrl from "../../xd.mp3";
 
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
@@ -203,6 +204,7 @@ const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_E
 const errorMessage = ref("");
 const infoMessage = ref("");
 let googleAuthSubscription = null;
+let blockedSound = null;
 const shouldShowBlockedImage = computed(() =>
   String(errorMessage.value || "").toLowerCase().includes("zablokowane")
 );
@@ -216,6 +218,25 @@ function resolvePostLoginPath() {
 
 function setBlockedError() {
   errorMessage.value = "To konto jest obecnie zablokowane.";
+  tryPlayBlockedSound();
+}
+
+function tryPlayBlockedSound() {
+  try {
+    if (!blockedSound) {
+      blockedSound = new Audio(blockedSoundUrl);
+      blockedSound.preload = "auto";
+    }
+    blockedSound.currentTime = 0;
+    const playPromise = blockedSound.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        // Browser may block autoplay without a direct user gesture.
+      });
+    }
+  } catch {
+    // Ignore audio errors; login flow should still continue.
+  }
 }
 
 function mapLoginErrorMessage(error, mode = "individual") {
