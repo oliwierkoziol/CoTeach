@@ -1806,11 +1806,14 @@ function stopMicTest() {
 async function goPresentation() {
   if (!state.lesson?.id) return;
   try {
-    await fetchLesson(state.lesson.id);
+    // Force a coverage refresh to ensure the plan status is synchronized with transcripts
+    // in the database before the presentation generator runs on the server.
+    await refreshCoverageThrottled(true);
   } catch {
-    // generator i tak spróbuje pobrać lekcję po wejściu na trasę
+    // ignore sync errors, the generator will attempt to load data anyway
   }
-  router.push(`/presentation/${state.lesson.id}`);
+  // Redirect with query parameters that trigger auto-generation in PresentationView
+  router.push({ path: `/presentation/${state.lesson.id}`, query: { generate: '1', scope: 'full' } });
 }
 
 async function finalizeNow() {

@@ -618,10 +618,6 @@ onMounted(async () => {
     await nextTick();
     if (canGenerate.value) {
       await startGeneratedPresentation();
-      if (route.query.present === "1") {
-        isReviewing.value = false;
-        isPresenting.value = true;
-      }
     }
   }
 });
@@ -710,15 +706,15 @@ function savePresentationSnapshot(currentSlides) {
   return item;
 }
 
-function startPresentation(currentSlides) {
+function startPresentation(currentSlides, skipReview = false) {
   slides.value = currentSlides;
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(
     buildPresentationTitle(),
     currentSlides
   );
-  isReviewing.value = true;
-  isPresenting.value = false;
+  isReviewing.value = !skipReview;
+  isPresenting.value = skipReview;
 }
 
 function selectSourceItem(id) {
@@ -765,11 +761,15 @@ async function startGeneratedPresentation() {
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
+<<<<<<< Updated upstream
     startPresentation(generatedSlides);
   } catch (error) {
     generationMessage.value = error?.message
       ? `Nie udało się wygenerować prezentacji: ${error.message}`
       : "Nie udało się wygenerować prezentacji.";
+=======
+    startPresentation(generatedSlides, route.query.generate === '1'); // Pass skipReview based on generate query param
+>>>>>>> Stashed changes
   } finally {
     isGenerating.value = false;
   }
