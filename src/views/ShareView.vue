@@ -20,7 +20,7 @@
         <button @click="$router.push('/')" class="bg-[#0c3dfe] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#0a34d4] transition-colors">
           Wróć do strony głównej
         </button>
-      </div>
+      </div>  
 
       <!-- Note Content -->
       <div v-else-if="note" class="space-y-8 pb-20">
@@ -86,6 +86,7 @@ function formatDate(val) {
 </script>
 
 <style scoped>
+@reference "../styles/index.css";
 .note-render-area :deep(article) { @apply max-w-none; }
 .note-render-area :deep(h1) { @apply font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[32px] mb-8 pb-4 border-b border-gray-100; }
 .note-render-area :deep(h2) { @apply font-['Manrope'] font-extrabold text-[#191c1e] text-[20px] mt-10 mb-4; }
