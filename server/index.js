@@ -3330,6 +3330,50 @@ app.get("/api/account/license-status", async (req, res) => {
   });
 });
 
+app.patch("/api/account/grant-license", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const userId = teacher.userId;
+  const days = 30;
+  const maxActiveUsers = 1;
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const fallbackLicenseId = randomUUID();
+  const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === userId) || null;
+  const licenseId = assignedLicense?.id || fallbackLicenseId;
+  const existing = db.licenses.get(licenseId) || assignedLicense;
+
+  const license = {
+    id: licenseId,
+    key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+    maxActiveUsers,
+    expiresAt,
+    demoMode: false,
+    schoolId: teacher.schoolId,
+    assignedUserId: userId
+  };
+
+  try {
+    await persistLicense(license);
+    db.licenses.set(licenseId, license);
+    await syncProfileLicenseStateSafe({ userId, activeLicense: license });
+  } catch (error) {
+    console.error("[grant-license-upsert]", { userId, error });
+    return res.status(500).json({ error: getErrorMessage(error, "Nie udało się zapisać licencji.") });
+  }
+
+  return res.json({
+    license: {
+      id: license.id,
+      key: license.key,
+      expiresAt: license.expiresAt,
+      maxActiveUsers: license.maxActiveUsers,
+      demoMode: license.demoMode === true,
+      daysLeft: getRemainingLicenseDays(license.expiresAt)
+    }
+  });
+});
+
 app.get("/api/account/billing-summary", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;

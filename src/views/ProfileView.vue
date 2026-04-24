@@ -181,6 +181,19 @@
                 Limit uploadów: {{ licenseStatus.uploadPolicy?.maxUploads ?? "—" }} ·
                 Wykorzystane: {{ licenseStatus.uploadsUsed ?? "—" }}
               </div>
+
+              <div class="mt-4">
+                <button
+                  type="button"
+                  class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                  :disabled="grantingLoading"
+                  @click="handleGrantLicense"
+                >
+                  {{ grantingLoading ? "Przetwarzanie..." : "Aktywuj 30 dni (Test)" }}
+                </button>
+                <p v-if="grantingError" class="mt-2 text-xs text-destructive font-medium">{{ grantingError }}</p>
+                <p v-if="grantingSuccess" class="mt-2 text-xs text-emerald-500 font-medium">{{ grantingSuccess }}</p>
+              </div>
             </div>
           </div>
 
@@ -560,6 +573,9 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const fileInput = ref(null);
 const licenseStatus = ref(null);
+const grantingLoading = ref(false);
+const grantingSuccess = ref("");
+const grantingError = ref("");
 const billingSummary = ref(null);
 const activeProfileSection = ref("account");
 const organizationError = ref("");
@@ -724,6 +740,41 @@ async function loadBillingSummary(token) {
     billingSummary.value = data;
   } catch {
     billingSummary.value = null;
+  }
+}
+
+async function handleGrantLicense() {
+  try {
+    grantingLoading.value = true;
+    grantingError.value = "";
+    grantingSuccess.value = "";
+    successMessage.value = "";
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+
+    if (!user || !token) throw new Error("Błąd sesji użytkownika.");
+
+    const response = await fetch(`${API_BASE}/api/account/grant-license`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Nie udało się nadać licencji.");
+
+    // Odśwież status licencji w widoku
+    await loadLicenseStatus(token);
+    grantingSuccess.value = "Sukces! Przyznano licencję na 30 dni.";
+    successMessage.value = "Sukces! Przyznano licencję na 30 dni.";
+  } catch (err) {
+    grantingError.value = err.message;
+  } finally {
+    grantingLoading.value = false;
   }
 }
 
