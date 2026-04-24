@@ -1,149 +1,168 @@
 <template>
-  <div class="grid min-h-[calc(100vh-3.5rem)] bg-[linear-gradient(160deg,#f4fcff_0%,#d9eeff_34%,#bfd8ff_70%,#ffd8b0_100%)] dark:bg-[linear-gradient(160deg,#1f2937_0%,#111827_45%,#0b1220_100%)] lg:bg-none lg:grid-cols-2">
-    <div
-      class="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-card via-sidebar to-background p-10 text-foreground lg:flex"
-    >
+  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative grid lg:grid-cols-2">
+    <!-- Background Decoration -->
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
+
+    <!-- Branding Side -->
+    <div class="relative hidden flex-col justify-between overflow-hidden bg-[#f8fafc] p-10 lg:flex z-10 border-r border-[#cfd5db]">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,oklch(0.74_0.12_195/0.15),transparent_55%)]" />
       <div class="relative">
-        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">CoTeach</p>
-        <h2 class="mt-4 max-w-sm text-3xl font-bold leading-tight">Załóż konto i od razu planuj lekcje.</h2>
+        <h2 class="font-['Plus_Jakarta_Sans'] mt-4 max-w-sm text-4xl font-extrabold leading-tight text-[#191c1e] tracking-tight">
+          Załóż konto i od razu planuj lekcje.
+        </h2>
       </div>
-      <p class="relative text-sm text-muted-foreground">Ten sam układ: panel nawigacji po lewej po zalogowaniu.</p>
+      <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-[#454652]">Ten sam układ: panel nawigacji po lewej po zalogowaniu.</p>
     </div>
 
-    <div class="flex items-center justify-center px-4 py-12 sm:px-8">
+    <div class="flex items-center justify-center px-4 py-12 sm:px-8 relative z-10">
       <div class="w-full max-w-md">
-        <div class="mb-10 text-center lg:hidden">
-          <p class="text-sm font-semibold uppercase tracking-[0.28em] text-primary">CoTeach</p>
-          <h1 class="mt-2 text-4xl font-bold text-foreground">Rejestracja</h1>
-        </div>
-        <div class="mb-8 hidden lg:block">
-          <h1 class="text-2xl font-bold text-foreground">Rejestracja</h1>
-          <p class="mt-1 text-sm text-muted-foreground">Formularz po prawej — lewa kolumna to tylko podgląd marki.</p>
-        </div>
+        <header class="mb-8 lg:text-left text-center">
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+            Rejestracja
+          </h1>
+          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+            Dołącz do CoTeach i zacznij uczyć efektywniej.
+          </p>
+        </header>
 
-        <div class="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-1">
-          <button
-            type="button"
-            class="rounded-lg px-3 py-2 text-sm font-semibold transition"
-            :class="accountMode === 'individual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-            @click="accountMode = 'individual'"
-          >
-            Konto indywidualne
-          </button>
-          <button
-            type="button"
-            class="rounded-lg px-3 py-2 text-sm font-semibold transition"
-            :class="accountMode === 'business' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-            @click="accountMode = 'business'"
-          >
-            Konto organizacji
-          </button>
-        </div>
-
-        <form v-if="accountMode === 'individual'" @submit.prevent="handleRegister" class="space-y-5">
-          <label class="block text-sm font-semibold text-foreground">
-            Imię i nazwisko
-            <input
-              v-model="name"
-              type="text"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Jan Kowalski"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            Email
-            <input
-              v-model="email"
-              type="email"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="twoj@email.com"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            Hasło
-            <input
-              v-model="password"
-              type="password"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="••••••••"
-            />
-          </label>
-          <button
-            type="submit"
-            class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-          >
-            Zarejestruj się
-          </button>
-        </form>
-
-        <form v-else @submit.prevent="handleBusinessRegister" class="space-y-5">
-          <label class="block text-sm font-semibold text-foreground">
-            Organizacja
-            <input
-              v-model="businessOrganization"
-              type="text"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="np. Szkoła Podstawowa nr 1"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            E-mail organizacyjny
-            <input
-              v-model="businessEmail"
-              type="email"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="np. biuro@twoja-firma.pl"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            Imię i nazwisko
-            <input
-              v-model="name"
-              type="text"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="Jan Kowalski"
-            />
-          </label>
-          <label class="block text-sm font-semibold text-foreground">
-            Hasło
-            <input
-              v-model="password"
-              type="password"
-              required
-              class="mt-2 w-full rounded-xl border border-border bg-input-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-              placeholder="••••••••"
-            />
-          </label>
-          <button
-            type="submit"
-            class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-          >
-            Zarejestruj konto organizacji
-          </button>
-        </form>
-
-        <template v-if="accountMode === 'individual'">
-          <div class="my-5 flex items-center gap-3">
-            <span class="h-px flex-1 bg-border"></span>
-            <span class="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">lub</span>
-            <span class="h-px flex-1 bg-border"></span>
+        <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 border border-white">
+          <div class="mb-6 grid grid-cols-2 gap-2 bg-[#f2f4f7] rounded-lg p-1">
+            <button
+              type="button"
+              class="rounded-md px-3 py-2 text-sm font-bold transition-all"
+              :class="accountMode === 'individual' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+              @click="accountMode = 'individual'"
+            >
+              Indywidualne
+            </button>
+            <button
+              type="button"
+              class="rounded-md px-3 py-2 text-sm font-bold transition-all"
+              :class="accountMode === 'business' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+              @click="accountMode = 'business'"
+            >
+              Organizacji
+            </button>
           </div>
 
-          <button
-            type="button"
-            @click="handleGoogleAuth"
-            class="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
-          >
-            Zarejestruj się przez Google
-          </button>
-        </template>
+          <form v-if="accountMode === 'individual'" @submit.prevent="handleRegister" class="space-y-5">
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Imię i nazwisko</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="name"
+                  type="text"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="Jan Kowalski"
+                />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Email</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="email"
+                  type="email"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="twoj@email.com"
+                />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Hasło</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="password"
+                  type="password"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full rounded-lg bg-[#0c3dfe] py-3.5 text-sm font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+            >
+              Zarejestruj się
+            </button>
+          </form>
+
+          <form v-else @submit.prevent="handleBusinessRegister" class="space-y-5">
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Organizacja</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="businessOrganization"
+                  type="text"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="np. Szkoła Podstawowa nr 1"
+                />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">E-mail organizacyjny</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="businessEmail"
+                  type="email"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="np. biuro@twoja-firma.pl"
+                />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Imię i nazwisko</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="name"
+                  type="text"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="Jan Kowalski"
+                />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Hasło</label>
+              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+                <input
+                  v-model="password"
+                  type="password"
+                  required
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full rounded-lg bg-[#0c3dfe] py-3.5 text-sm font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+            >
+              Zarejestruj konto organizacji
+            </button>
+          </form>
+
+          <template v-if="accountMode === 'individual'">
+            <div class="my-6 flex items-center gap-3">
+              <span class="h-px flex-1 bg-gray-100"></span>
+              <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">lub</span>
+              <span class="h-px flex-1 bg-gray-100"></span>
+            </div>
+
+            <button
+              type="button"
+              @click="handleGoogleAuth"
+              class="w-full rounded-lg border-2 border-[#e0e3e6] bg-white px-4 py-3 text-sm font-bold text-[#191c1e] transition hover:bg-[#f2f4f7]"
+            >
+              Zarejestruj się przez Google
+            </button>
+          </template>
+        </div>
 
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {{ errorMessage }}
