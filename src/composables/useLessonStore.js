@@ -183,6 +183,16 @@ export function useLessonStore() {
     return data.lesson;
   }
 
+  async function extractTextFromUpload(file) {
+    const form = new FormData();
+    form.set("file", file);
+    const data = await api("/api/files/extract-text", {
+      method: "POST",
+      body: form
+    });
+    return data.text;
+  }
+
   async function savePlan(lessonId, plan) {
     const data = await api(`/api/lessons/${lessonId}/plan`, {
       method: "PUT",
@@ -386,6 +396,7 @@ export function useLessonStore() {
     state,
     createLesson,
     uploadLessonMaterial,
+    extractTextFromUpload,
     savePlan,
     startLive,
     cancelLesson,

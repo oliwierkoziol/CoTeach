@@ -74,7 +74,7 @@
       </div>
 
       <!-- Ingestion Area -->
-      <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 xl:grid-cols-12 relative shrink-0 w-full xl:min-h-[282px]">
+      <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 xl:grid-cols-12 relative shrink-0 w-full xl:min-h-[400px]">
         
         <!-- Text Input Area -->
         <div class="xl:col-[1/span_9] content-stretch flex flex-col items-start relative shrink-0 w-full h-full">
@@ -99,7 +99,7 @@
                 </div>
               </div>
 
-              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[150px]">
+              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[250px]">
                 <textarea 
                   v-model="rawTextContent"
                   class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
@@ -111,7 +111,7 @@
         </div>
 
         <!-- Drag and Drop Zone -->
-        <div class="xl:col-[10/span_3] bg-white relative rounded-[12px] self-stretch shrink-0 w-full min-h-[250px] xl:min-h-[282px]">
+        <div class="xl:col-[10/span_3] bg-white relative rounded-[12px] self-stretch shrink-0 w-full min-h-[250px] xl:min-h-[400px]">
           <div class="overflow-hidden rounded-[12px] h-full w-full absolute inset-0">
             <div class="flex flex-col items-center justify-center p-[34px] xl:pb-[34px] xl:pt-[11px] size-full">
               <!-- Icon -->
@@ -196,7 +196,7 @@ async function getPdfMake() {
   return pdfMake;
 }
 
-const { state, generateTeacherNote, saveTeacherNote } = useLessonStore();
+const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload } = useLessonStore();
 const router = useRouter();
 const classOptions = [
   "1 Klasa Szkoły Podstawowej",
@@ -231,10 +231,24 @@ const saving = ref(false);
 const error = ref("");
 const info = ref("");
 
-function handleFileChange(event) {
+async function handleFileChange(event) {
   const file = event.target.files?.[0];
   if (file) {
     selectedFile.value = file;
+    try {
+      loading.value = true;
+      error.value = "";
+      info.value = "AI odczytuje treść pliku...";
+      const text = await extractTextFromUpload(file);
+      if (text) {
+        rawTextContent.value = text;
+        info.value = "Treść pliku została wczytana pomyślnie.";
+      }
+    } catch (e) {
+      error.value = "Błąd odczytu pliku: " + e.message;
+    } finally {
+      loading.value = false;
+    }
   }
 }
 

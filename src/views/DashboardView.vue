@@ -48,7 +48,7 @@
         <div class="space-y-1">
           <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Liczba lekcji</p>
           <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ filteredLessons.length }} lekcji</p>
-          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">+3 od ostatniego miesiąca</p>
+          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">{{ lessonsGrowthLabel }}</p>
         </div>
       </div>
 
@@ -64,8 +64,8 @@
         </div>
         <div class="space-y-1">
           <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Średni czas</p>
-          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">48 min.</p>
-          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">Czas ostatniej lekcji: 52min.</p>
+          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-8">{{ averageLessonLength }} min.</p>
+          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">Czas ostatniej lekcji: {{ lastLessonLength }}min.</p>
         </div>
       </div>
 
@@ -216,6 +216,42 @@ const filteredLessons = computed(() => {
 });
 
 const lessonsCount = computed(() => filteredLessons.value.length);
+
+const lessonsGrowthLabel = computed(() => {
+  const now = new Date();
+  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+
+  let currentCount = 0;
+  let prevCount = 0;
+
+  filteredLessons.value.forEach((lesson) => {
+    const ts = resolveLessonTimestamp(lesson);
+    if (ts === 0) return;
+    
+    if (ts >= startOfCurrentMonth) {
+      currentCount++;
+    } else if (ts >= startOfPrevMonth && ts < startOfCurrentMonth) {
+      prevCount++;
+    }
+  });
+
+  const diff = currentCount - prevCount;
+  const prefix = diff >= 0 ? "+" : "";
+  return `${prefix}${diff} od ostatniego miesiąca`;
+});
+
+const averageLessonLength = computed(() => {
+  if (!filteredLessons.value.length) return 0;
+  const totalLength = filteredLessons.value.reduce((sum, lesson) => sum + (lesson.length || 0), 0);
+  return Math.round(totalLength / filteredLessons.value.length);
+});
+
+const lastLessonLength = computed(() => {
+  if (!previousLiveLesson.value) return 0;
+  return previousLiveLesson.value.length || 0;
+});
+
 
 const previousLiveLesson = computed(() => {
   const finishedLessons = filteredLessons.value

@@ -1978,6 +1978,21 @@ app.patch("/api/account/block", async (req, res) => {
   }
 });
 
+app.post("/api/files/extract-text", upload.single("file"), async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!req.file) return res.status(400).json({ error: "Brak pliku." });
+
+    const extractedText = await extractTextFromFile(req.file, {
+      teacherId: teacher.teacherId
+    });
+    return res.json({ text: extractedText });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
