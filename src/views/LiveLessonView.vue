@@ -135,13 +135,13 @@
           </p>
 
           <div class="max-h-[350px] overflow-y-auto space-y-3" ref="transcriptionContainer" @scroll="handleScroll">
-            <div
+            <p
               v-for="(text, index) in transcription"
               :key="index"
-              class="font-['Inter'] italic text-[#454652] text-[18px] leading-[29.25px] p-2 bg-white/50 rounded"
+              class="font-['Inter'] text-[#454652] text-[18px] leading-[29.25px]"
             >
-              {{ index + 1 }}. {{ text }}
-            </div>
+              {{ text }}
+            </p>
 
             <p v-if="interimCaption" class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
               {{ interimCaption }}
@@ -1511,11 +1511,14 @@ async function beginWhisperMode() {
       const text = String(data.text || "").trim();
       console.log(`📝 Transcription: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
 
-      // Simplified filtering - only filter obvious single-word hallucinations
-      const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
-      const isValidTranscription = text &&
-                              text.length > 5 && // Only require minimum length
-                              !obviousHallucinations.test(text);
+      // Rozszerzone filtrowanie - usuwanie znanych halucynacji Whispera
+      const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
+      const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
+      const cleanText = text.trim();
+      const isValidTranscription = cleanText &&
+                              cleanText.length > 5 &&
+                              !obviousHallucinations.test(cleanText) &&
+                              !hallucinationRegex.test(cleanText);
 
       if (isValidTranscription) {
         // Check if this text is already in the array to prevent duplicates
@@ -1803,11 +1806,14 @@ function stopMicTest() {
 async function goPresentation() {
   if (!state.lesson?.id) return;
   try {
-    await fetchLesson(state.lesson.id);
+    // Force a coverage refresh to ensure the plan status is synchronized with transcripts
+    // in the database before the presentation generator runs on the server.
+    await refreshCoverageThrottled(true);
   } catch {
-    // generator i tak spróbuje pobrać lekcję po wejściu na trasę
+    // ignore sync errors, the generator will attempt to load data anyway
   }
-  router.push(`/presentation/${state.lesson.id}`);
+  // Redirect with query parameters that trigger auto-generation in PresentationView
+  router.push({ path: `/presentation/${state.lesson.id}`, query: { generate: '1', scope: 'full' } });
 }
 
 async function finalizeNow() {

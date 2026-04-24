@@ -125,21 +125,25 @@
               <div v-else-if="isPracticeLayout" :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
                 <p class="mb-2 text-sm font-semibold text-white/80">Ćwiczenie</p>
                 <p class="clamp-5 mb-3 text-sm text-white/95">{{ currentMainText }}</p>
-                <div :class="['rounded-lg p-3', activeTheme.innerPanelClass]">
+                <div v-if="resolvedCurrentImageUrl" class="mb-3 overflow-hidden rounded-lg border border-white/20">
+                  <div class="w-full bg-black/15">
+                    <img :src="resolvedCurrentImageUrl" alt="Ilustracja slajdu" class="h-[220px] w-full object-cover sm:h-[280px]" loading="lazy" @error="handleSlideImageError" />
+                  </div>
+                </div>
+                <div v-else-if="showImagePlaceholder" :class="['rounded-lg p-3', activeTheme.innerPanelClass]">
                   <p class="clamp-5 text-sm text-white/85">{{ current.visualHint || "Zadanie: podaj przykład i krótko uzasadnij odpowiedź." }}</p>
                 </div>
               </div>
 
               <div v-else :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
                 <p class="clamp-8 text-sm leading-relaxed text-white/95 sm:text-base">{{ currentMainText }}</p>
-                <div :class="['mt-3 rounded-lg p-3', activeTheme.innerPanelClass]">
-                  <template v-if="current.imageUrl">
-                    <img :src="current.imageUrl" class="w-full h-40 object-cover rounded-lg shadow-md" alt="Wizualizacja AI" />
-                  </template>
-                  <p v-else class="clamp-4 text-sm text-white/85 italic">
-                    <svg class="inline w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    {{ current.visualHint || "Sugestia wizualna: prosty schemat lub wykres." }}
-                  </p>
+                <div v-if="resolvedCurrentImageUrl" class="mt-3 overflow-hidden rounded-lg border border-white/20">
+                  <div class="w-full bg-black/15">
+                    <img :src="resolvedCurrentImageUrl" alt="Ilustracja slajdu" class="h-[240px] w-full object-cover sm:h-[320px]" loading="lazy" @error="handleSlideImageError" />
+                  </div>
+                </div>
+                <div v-else-if="showImagePlaceholder" :class="['mt-3 rounded-lg p-3', activeTheme.innerPanelClass]">
+                  <p class="clamp-4 text-sm text-white/85">{{ current.visualHint || "Wizualizacja: prosty schemat lub wykres wspierający ten slajd." }}</p>
                 </div>
               </div>
             </div>
@@ -186,64 +190,71 @@
     <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto">
       <div class="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div class="max-w-[1024px]">
-          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">Przegląd slajdów
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+            Przegląd slajdów
           </h1>
           <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
             Możesz edytować treści przed rozpoczęciem prezentacji.
           </p>
         </div>
         <div class="flex gap-4">
-          <button @click="isReviewing = false" class="px-6 py-3 rounded-xl border-2 border-gray-100 bg-white font-bold text-[#454652] hover:bg-gray-50 transition-all">Wróć</button>
-          <button @click="isPresenting = true" class="px-8 py-3 rounded-xl bg-[#0c3dfe] text-white font-bold shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] hover:-translate-y-0.5 transition-all">Rozpocznij prezentację</button>
+          <button @click="isReviewing = false" class="px-6 py-3 rounded-xl border-2 border-gray-100 bg-white font-bold text-[#454652] hover:bg-gray-50 transition-all">
+            Wróć
+          </button>
+          <button @click="isPresenting = true" class="px-8 py-3 rounded-xl bg-[#0c3dfe] text-white font-bold shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] hover:-translate-y-0.5 transition-all">
+            Rozpocznij prezentację
+          </button>
         </div>
       </div>
-    </div>
 
-    <div class="space-y-6 max-w-5xl mx-auto pb-20 relative z-10">
-      <div v-for="(slide, index) in slides" :key="index" class="bg-white rounded-[12px] p-6 sm:p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] relative group">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div class="lg:col-span-1">
-            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Typ slajdu</label>
-            <div class="inline-flex items-center px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-extrabold uppercase tracking-wide border border-indigo-100/50">
-              {{ slideTypeTranslations[slide.type] || "Slajd" }}
-            </div>
-          </div>
-          
-          <div class="lg:col-span-3 space-y-5">
-            <div>
-              <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tytuł slajdu</label>
-              <input v-model="slide.title" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-2 font-bold text-[18px] text-[#191c1e] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Główne podsumowanie</label>
-              <textarea v-model="slide.summary" rows="3" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-3 text-[15px] leading-relaxed text-[#454652] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all"></textarea>
-            </div>
-            <div class="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-              <div class="flex-1">
-                <label class="block text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-1">Sugestia dla generatora obrazów</label>
-                <input v-model="slide.visualHint" class="w-full bg-transparent border-none p-0 text-sm text-blue-900 placeholder:text-blue-300 focus:ring-0" placeholder="Opisz co ma być na obrazku..." />
-              </div>
-              <button 
-                @click="generateImageForSlide(index)" 
-                :disabled="slide.isImageLoading || !slide.visualHint"
-                class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2">
-                <span v-if="slide.isImageLoading" class="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full"></span>
-                {{ slide.imageUrl ? 'Generuj ponownie' : 'Generuj grafikę' }}
-              </button>
-            </div>
-            <div v-if="slide.imageUrl" class="mt-2 relative w-48 h-28 group overflow-hidden rounded-xl border">
-              <img :src="slide.imageUrl" class="w-full h-full object-cover" />
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <button @click="slide.imageUrl = null" class="text-white text-xs font-bold underline">Usuń</button>
+      <div class="space-y-6 max-w-5xl mx-auto pb-20">
+        <div v-for="(slide, index) in slides" :key="index" class="bg-white rounded-[12px] p-6 sm:p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] relative group">
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div class="lg:col-span-1">
+              <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Typ slajdu</label>
+              <div class="inline-flex items-center px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-extrabold uppercase tracking-wide border border-indigo-100/50">
+                {{ slideTypeTranslations[slide.type] || "Slajd" }}
               </div>
             </div>
+
+            <div class="lg:col-span-3 space-y-5">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tytuł slajdu</label>
+                <input v-model="slide.title" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-2 font-bold text-[18px] text-[#191c1e] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Główne podsumowanie</label>
+                <textarea v-model="slide.summary" rows="3" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-3 text-[15px] leading-relaxed text-[#454652] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all"></textarea>
+              </div>
+              <div class="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                <div class="flex-1">
+                  <label class="block text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-1">Sugestia dla generatora obrazów</label>
+                  <input v-model="slide.visualHint" class="w-full bg-transparent border-none p-0 text-sm text-blue-900 placeholder:text-blue-300 focus:ring-0" placeholder="Opisz co ma być na obrazku..." />
+                </div>
+                <button
+                  @click="generateImageForSlide(index)"
+                  :disabled="slide.isImageLoading || !slide.visualHint"
+                  class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                >
+                  <span v-if="slide.isImageLoading" class="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full"></span>
+                  {{ slide.imageUrl ? "Generuj ponownie" : "Generuj grafikę" }}
+                </button>
+              </div>
+              <div v-if="slide.imageUrl" class="mt-2 relative w-48 h-28 group overflow-hidden rounded-xl border">
+                <img :src="slide.imageUrl" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button @click="slide.imageUrl = null" class="text-white text-xs font-bold underline">Usuń</button>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <button @click="slides.splice(index, 1)" class="absolute top-8 right-8 p-3 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
-        
-        <button @click="slides.splice(index, 1)" class="absolute top-8 right-8 p-3 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-        </button>
       </div>
     </div>
   </div>
@@ -321,8 +332,15 @@
       </div>
 
       <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
-        <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-2 flex items-center gap-2">Ustawienia prezentacji
-        </h3>
+        <div class="mb-1 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] flex items-center gap-2">
+            Ustawienia prezentacji
+          </h3>
+          <label class="inline-flex cursor-pointer items-center gap-2 font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-[#454652]">
+            <input v-model="includeImages" type="checkbox" class="h-4 w-4 accent-[#0c3dfe]" />
+            Generuj slajdy ze zdjęciami AI
+          </label>
+        </div>
         <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
           <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Zakres treści</label>
           <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
@@ -379,7 +397,7 @@
           </div>
         </div>
       </div>
-    </div>
+  </div>
   </div>
 </template>
 
@@ -407,6 +425,7 @@ const isGenerating = ref(false);
 const isPresenting = ref(false);
 const slides = ref([]);
 const slideIndex = ref(0);
+const currentImageFailed = ref(false);
 const presentationHistory = ref([]);
 const isReviewing = ref(false);
 const isPilot = ref(false);
@@ -428,6 +447,7 @@ const slideTypeTranslations = {
 
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
+const includeImages = ref(false);
 const generationMessage = ref("");
 const presentationTheme = ref({
   wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
@@ -435,7 +455,7 @@ const presentationTheme = ref({
   innerPanelClass: "bg-black/20"
 });
 
-const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "" });
+const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "", imagePrompt: "", imageUrl: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
 const hasLessons = computed(() => availableLessons.value.length > 0);
 const availableNotes = computed(() => (Array.isArray(state.notes) ? state.notes : []));
@@ -499,6 +519,37 @@ const isAgendaLayout = computed(() => currentType.value === "agenda" || currentT
 const isPracticeLayout = computed(() => currentType.value === "practice" || currentType.value === "next_steps");
 const comparisonLeft = computed(() => currentDetailChips.value.slice(0, Math.ceil(currentDetailChips.value.length / 2)).join(" • "));
 const comparisonRight = computed(() => currentDetailChips.value.slice(Math.ceil(currentDetailChips.value.length / 2)).join(" • ") || currentMainText.value);
+const currentImageUrl = computed(() => String(current.value.imageUrl || "").trim());
+const resolvedCurrentImageUrl = computed(() => {
+  if (!includeImages.value) return "";
+  if (currentImageFailed.value) return "";
+  const backendUrl = String(currentImageUrl.value || "").trim();
+  if (backendUrl) return backendUrl;
+
+  const raw = `${current.value.title || ""} ${current.value.imagePrompt || ""} ${current.value.visualHint || ""} ${current.value.summary || ""}`.toLowerCase();
+  const tags = ["education", "school"];
+  const add = (tag) => {
+    if (!tags.includes(tag)) tags.push(tag);
+  };
+  if (/(matemat|mnożen|dzielen|algebra|geometr)/.test(raw)) {
+    add("math");
+    add("numbers");
+    add("classroom");
+  } else if (/(biolog|fotosyntez|roślin|organizm)/.test(raw)) {
+    add("biology");
+    add("nature");
+  } else if (/(histori|wojna|starożyt|średniowie)/.test(raw)) {
+    add("history");
+  } else {
+    add("learning");
+    add("students");
+  }
+  const lockSeed = Math.abs(
+    Array.from(`${current.value.id || ""}-${current.value.title || ""}`).reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+  ) % 1000;
+  return `https://loremflickr.com/1280/720/${tags.slice(0, 4).join(",")}?lock=${lockSeed}`;
+});
+const showImagePlaceholder = computed(() => includeImages.value && !resolvedCurrentImageUrl.value);
 
 onMounted(async () => {
   // Setup BroadcastChannel for cross-window slide sync
@@ -567,10 +618,6 @@ onMounted(async () => {
     await nextTick();
     if (canGenerate.value) {
       await startGeneratedPresentation();
-      if (route.query.present === "1") {
-        isReviewing.value = false;
-        isPresenting.value = true;
-      }
     }
   }
 });
@@ -598,6 +645,10 @@ watch(
 
 watch(selectedLesson, (lesson) => {
   state.lesson = lesson || null;
+});
+
+watch(slideIndex, () => {
+  currentImageFailed.value = false;
 });
 
 watch(presentationSource, (source) => {
@@ -647,6 +698,7 @@ function savePresentationSnapshot(currentSlides) {
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
     slides: currentSlides,
+    includeImages: includeImages.value,
     ownerId: String(historyOwnerId.value || "").trim() || undefined
   };
   presentationHistory.value.unshift(item);
@@ -654,15 +706,15 @@ function savePresentationSnapshot(currentSlides) {
   return item;
 }
 
-function startPresentation(currentSlides) {
+function startPresentation(currentSlides, skipReview = false) {
   slides.value = currentSlides;
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(
     buildPresentationTitle(),
     currentSlides
   );
-  isReviewing.value = true;
-  isPresenting.value = false;
+  isReviewing.value = !skipReview;
+  isPresenting.value = skipReview;
 }
 
 function selectSourceItem(id) {
@@ -684,6 +736,7 @@ async function startGeneratedPresentation() {
       noteId: presentationSource.value === "note" ? selectedNote.value?.id || "" : "",
       classLevel: selectedClassLevel.value || "",
       scope: effectivePresentationScope.value,
+      includeImages: includeImages.value,
       maxSlides: 12
     });
     const generatedSlides = (generated?.slides || [])
@@ -695,8 +748,8 @@ async function startGeneratedPresentation() {
         summary: String(slide.summary || "").trim(),
         details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : [],
         visualHint: String(slide.visualHint || "").trim(),
-        imageUrl: null,
-        isImageLoading: false
+        imagePrompt: String(slide.imagePrompt || "").trim(),
+        imageUrl: String(slide.imageUrl || "").trim()
       }))
       .filter((slide) => slide.title || slide.summary || slide.details.length);
 
@@ -708,7 +761,15 @@ async function startGeneratedPresentation() {
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
+<<<<<<< Updated upstream
     startPresentation(generatedSlides);
+  } catch (error) {
+    generationMessage.value = error?.message
+      ? `Nie udało się wygenerować prezentacji: ${error.message}`
+      : "Nie udało się wygenerować prezentacji.";
+=======
+    startPresentation(generatedSlides, route.query.generate === '1'); // Pass skipReview based on generate query param
+>>>>>>> Stashed changes
   } finally {
     isGenerating.value = false;
   }
@@ -746,7 +807,13 @@ async function generateImageForSlide(index) {
 function openSavedPresentation(item) {
   const storedSlides = Array.isArray(item?.slides) ? item.slides : [];
   if (!storedSlides.length) return;
+  includeImages.value = Boolean(item?.includeImages || storedSlides.some((slide) => String(slide?.imageUrl || "").trim()));
+  currentImageFailed.value = false;
   startPresentation(storedSlides);
+}
+
+function handleSlideImageError() {
+  currentImageFailed.value = true;
 }
 
 function tryOpenRequestedPresentation() {
