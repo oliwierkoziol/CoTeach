@@ -231,8 +231,10 @@ async function handleGenerate() {
     }
 
     const normalizedDate = new Date().toISOString().split("T")[0];
-    const lessonMonth = new Date().toLocaleString("pl-PL", { month: "long" });
-    const generatedSubject = selectedNote.value?.subject || "Ogólny";
+    const fullSubject = selectedNote.value?.subject || "Ogólny";
+    const subjectParts = fullSubject.split(" — ");
+    const generatedSubject = subjectParts[0];
+    const sectionName = subjectParts.length > 1 ? subjectParts[1] : "Brak działu";
     const extractedRawText = selectedNote.value?.content || "";
     const parsedLessonMinutes = Number(lessonTime.value);
     const lessonLengthMinutes = Number.isFinite(parsedLessonMinutes) && parsedLessonMinutes > 0
@@ -242,7 +244,7 @@ async function handleGenerate() {
     const created = await createLesson({
       subject: generatedSubject,
       title: title.value,
-      month: lessonMonth,
+      month: sectionName,
       date: normalizedDate,
       length: lessonLengthMinutes,
       rawText: ""

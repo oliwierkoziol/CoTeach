@@ -83,59 +83,98 @@
             <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zarchiwizowanych lekcji.</p>
           </div>
 
-          <div
-            v-if="activeTab === 'lessons'"
-            v-for="lesson in filteredLessons"
-            :key="lesson.id"
-            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
-            @click="selectLesson(lesson)"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0 flex w-full items-center gap-4">
-                <img :src="liveLessonIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
-                <div class="min-w-0">
-                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
-                    {{ lesson.finalNote?.title || lesson.title }}
-                  </h3>
-                  <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
-                    {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
-                    <span class="font-semibold text-[#0053db]">
-                      Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
-                    </span>
-                  </p>
+          <template v-if="activeTab === 'lessons'">
+            <div v-for="(group, sectionName) in groupedLessons" :key="sectionName" class="mb-6">
+              <div 
+                class="flex items-center gap-2 cursor-pointer mb-4 select-none hover:opacity-80 transition-opacity w-max" 
+                @click="toggleSection(sectionName)"
+              >
+                <svg :class="collapsedSections[sectionName] ? '-rotate-90' : 'rotate-0'" class="w-5 h-5 transition-transform duration-200 text-[#0c3dfe]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
+                  Dział: {{ sectionName }}
+                </h3>
+              </div>
+              <div 
+                class="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                :style="{ gridTemplateRows: collapsedSections[sectionName] ? '0fr' : '1fr' }"
+              >
+                <div class="overflow-hidden">
+                  <div class="space-y-4 pl-7 pr-2 border-l-2 border-gray-100 ml-2.5 pt-2 pb-3">
+                    <div
+                      v-for="lesson in group"
+                      :key="lesson.id"
+                      class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+                      :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+                      @click="selectLesson(lesson)"
+                    >
+                      <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0 flex w-full items-center gap-4">
+                          <img :src="liveLessonIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+                          <div class="min-w-0">
+                            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                              {{ lesson.finalNote?.title || lesson.title }}
+                            </h3>
+                            <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                              {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
+                              <span class="font-semibold text-[#0053db]">
+                                Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <span class="shrink-0 rounded-lg bg-[#e8eefb] px-3 py-1.5 font-['Inter'] font-semibold text-[12px] text-[#142588]">
-                {{ lesson.month || "Brak miesiąca" }}
-              </span>
             </div>
-          </div>
+          </template>
 
           <div v-if="activeTab === 'notes' && !filteredNotes.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
             <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych notatek.</p>
           </div>
 
-          <div
-            v-if="activeTab === 'notes'"
-            v-for="note in filteredNotes"
-            :key="note.id"
-            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
-            @click="selectedNote = note"
-          >
-            <div class="flex w-full items-center gap-4">
-              <img :src="archiveIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
-              <div class="min-w-0">
-                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
-                  {{ note.title || "Bez tytułu" }}
+          <template v-if="activeTab === 'notes'">
+            <div v-for="(group, sectionName) in groupedNotes" :key="sectionName" class="mb-6">
+              <div 
+                class="flex items-center gap-2 cursor-pointer mb-4 select-none hover:opacity-80 transition-opacity w-max" 
+                @click="toggleSection(sectionName)"
+              >
+                <svg :class="collapsedSections[sectionName] ? '-rotate-90' : 'rotate-0'" class="w-5 h-5 transition-transform duration-200 text-[#0c3dfe]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">
+                  Dział: {{ sectionName }}
                 </h3>
-                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
-                  {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
-                </p>
+              </div>
+              <div 
+                class="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                :style="{ gridTemplateRows: collapsedSections[sectionName] ? '0fr' : '1fr' }"
+              >
+                <div class="overflow-hidden">
+                  <div class="space-y-4 pl-7 pr-2 border-l-2 border-gray-100 ml-2.5 pt-2 pb-3">
+                    <div
+                      v-for="note in group"
+                      :key="note.id"
+                      class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+                      :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+                      @click="selectedNote = note"
+                    >
+                      <div class="flex w-full items-center gap-4">
+                        <img :src="archiveIcon" alt="" class="h-6 w-6 shrink-0 opacity-85" />
+                        <div class="min-w-0">
+                          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                            {{ note.title || "Bez tytułu" }}
+                          </h3>
+                          <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                            {{ (note.subject || "").split(" — ")[0] || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
 
           <div v-if="activeTab === 'presentations' && !filteredPresentations.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
             <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych prezentacji.</p>
@@ -196,6 +235,19 @@
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Data</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
                 <input v-model="editDate" type="date" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] [color-scheme:light]" />
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Klasa</label>
+              <div class="bg-[#e0e3e6] rounded-lg relative flex items-center">
+                <select v-model="editClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] px-4 py-2.5 appearance-none cursor-pointer">
+                  <option value="">Brak klasy</option>
+                  <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
+                </select>
+                <div class="absolute right-[12px] pointer-events-none opacity-40 text-[#222E75]">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
               </div>
             </div>
 
@@ -260,23 +312,44 @@
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.title || "Bez tytułu" }}</div>
+                <input v-model="editTeacherNoteTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
               </div>
             </div>
 
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Przedmiot</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.subject || "Brak" }}</div>
+                <input v-model="editTeacherNoteSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom</label>
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Dział</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.classLevel || "Brak" }}</div>
+                <input v-model="editTeacherNoteSection" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Dział" />
               </div>
             </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Klasa</label>
+              <div class="bg-[#e0e3e6] rounded-lg relative flex items-center">
+                <select v-model="editTeacherNoteClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] px-4 py-2.5 appearance-none cursor-pointer">
+                  <option value="">Brak klasy</option>
+                  <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
+                </select>
+                <div class="absolute right-[12px] pointer-events-none opacity-40 text-[#222E75]">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <button
+              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              :disabled="saving"
+              @click="handleSaveTeacherNote"
+            >
+              {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
+            </button>
 
             <button
               type="button"
@@ -368,17 +441,39 @@
         class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4"
         @click.self="textPreviewOpen = false"
       >
-        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" @click.stop>
-          <div class="mb-4 flex justify-end">
-            <button
-              type="button"
-              class="rounded-lg bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#454652] hover:bg-[#e5e5e5]"
-              @click="textPreviewOpen = false"
-            >
-              Zamknij
-            </button>
+        <div class="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl" @click.stop>
+          <div class="flex items-center justify-between border-b border-gray-100 p-4">
+            <h3 class="font-bold text-gray-800">Podgląd / Edycja</h3>
+            <div class="flex gap-2">
+              <button
+                v-if="activeTab === 'notes'"
+                type="button"
+                class="rounded-lg bg-[#0c3dfe] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#0a34d4] disabled:opacity-50"
+                :disabled="saving"
+                @click="savePreviewContent"
+              >
+                {{ saving ? 'Zapisywanie...' : 'Zapisz treść' }}
+              </button>
+              <button
+                type="button"
+                class="rounded-lg bg-[#f2f2f2] px-3 py-1.5 text-sm font-semibold text-[#454652] hover:bg-[#e5e5e5]"
+                @click="textPreviewOpen = false"
+              >
+                Zamknij
+              </button>
+            </div>
           </div>
-          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ textPreviewBody }}</pre>
+          
+          <div class="flex-1 overflow-y-auto p-6" v-if="activeTab === 'notes'">
+            <textarea
+              v-model="editTeacherNoteContent"
+              class="w-full h-full min-h-[50vh] resize-none outline-none font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e] bg-gray-50 p-4 rounded-xl border border-gray-100"
+              placeholder="Treść notatki..."
+            ></textarea>
+          </div>
+          <div class="flex-1 overflow-y-auto p-6" v-else>
+            <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ textPreviewBody }}</pre>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -396,7 +491,7 @@ import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
-const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote, deleteTeacherNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote, deleteTeacherNote, updateTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
@@ -411,9 +506,20 @@ const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
+const editClassLevel = ref("");
+const collapsedSections = ref({});
+const editTeacherNoteTitle = ref("");
+const editTeacherNoteSubject = ref("");
+const editTeacherNoteSection = ref("");
+const editTeacherNoteClassLevel = ref("");
+const editTeacherNoteContent = ref("");
 const isQrModalOpen = ref(false);
 const userClasses = ref([]);
 const selectedClass = ref("all");
+
+function toggleSection(sectionName) {
+  collapsedSections.value[sectionName] = !collapsedSections.value[sectionName];
+}
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
@@ -446,6 +552,16 @@ const filteredLessons = computed(() => {
   });
 });
 
+const groupedLessons = computed(() => {
+  const groups = {};
+  filteredLessons.value.forEach(lesson => {
+    const section = lesson.month || "Brak działu";
+    if (!groups[section]) groups[section] = [];
+    groups[section].push(lesson);
+  });
+  return groups;
+});
+
 const filteredNotes = computed(() => {
   let notes = Array.isArray(state.notes) ? state.notes : [];
 
@@ -458,6 +574,17 @@ const filteredNotes = computed(() => {
   return notes.filter((note) => {
     return `${note.title || ""} ${note.subject || ""} ${note.classLevel || ""}`.toLowerCase().includes(q);
   });
+});
+
+const groupedNotes = computed(() => {
+  const groups = {};
+  filteredNotes.value.forEach(note => {
+    const parts = (note.subject || "").split(" — ");
+    const section = parts.length > 1 ? parts[1] : "Brak działu";
+    if (!groups[section]) groups[section] = [];
+    groups[section].push(note);
+  });
+  return groups;
 });
 
 const filteredPresentations = computed(() => {
@@ -502,6 +629,7 @@ function selectLesson(lesson) {
   editTitle.value = String(lesson?.finalNote?.title || "");
   editSubject.value = String(lesson?.finalNote?.subject || "");
   editDate.value = String(lesson?.finalNote?.date || "");
+  editClassLevel.value = String(lesson?.classLevel || "");
 }
 
 async function handleSaveFinalNote() {
@@ -511,7 +639,8 @@ async function handleSaveFinalNote() {
     const lesson = await updateFinalNote(selected.value.id, {
       title: editTitle.value,
       subject: editSubject.value,
-      date: editDate.value
+      date: editDate.value,
+      classLevel: editClassLevel.value
     });
     selectLesson(lesson);
   } finally {
@@ -582,7 +711,35 @@ function openGoldenNotePreview() {
 function openTeacherNotePreview() {
   const raw = String(selectedNote.value?.content || "").trim();
   textPreviewBody.value = raw || "Brak treści notatki.";
+  editTeacherNoteContent.value = raw;
   textPreviewOpen.value = true;
+}
+
+async function handleSaveTeacherNote() {
+  if (!selectedNote.value?.id) return;
+  saving.value = true;
+  try {
+    const combinedSubject = editTeacherNoteSection.value 
+      ? `${editTeacherNoteSubject.value} — ${editTeacherNoteSection.value}` 
+      : editTeacherNoteSubject.value;
+
+    const updated = await updateTeacherNote(selectedNote.value.id, {
+      title: editTeacherNoteTitle.value,
+      subject: combinedSubject,
+      classLevel: editTeacherNoteClassLevel.value,
+      content: editTeacherNoteContent.value || selectedNote.value.content
+    });
+    selectedNote.value = updated;
+  } catch (e) {
+    window.alert(e?.message || "Nie udało się zapisać notatki.");
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function savePreviewContent() {
+  await handleSaveTeacherNote();
+  textPreviewOpen.value = false;
 }
 
 async function handleDeleteTeacherNote() {
@@ -638,6 +795,17 @@ watch(activeTab, async (tab) => {
     selectedPresentation.value = next || filteredPresentations.value[0] || null;
   }
 });
+
+watch(selectedNote, (note) => {
+  if (note) {
+    const parts = (note.subject || "").split(" — ");
+    editTeacherNoteTitle.value = note.title || "";
+    editTeacherNoteSubject.value = parts[0] || "";
+    editTeacherNoteSection.value = parts.length > 1 ? parts[1] : "";
+    editTeacherNoteClassLevel.value = note.classLevel || "";
+    editTeacherNoteContent.value = note.content || "";
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>

@@ -3,6 +3,7 @@ Rola: Jesteś Zaawansowanym Asystentem Akademickim. Twoim zadaniem jest wygenero
 DANE WEJŚCIOWE:
 Temat: [TUTAJ WPISZ TEMAT]
 Przedmiot: [TUTAJ WPISZ PRZEDMIOT]
+Dział: [TUTAJ WPISZ DZIAŁ]
 Klasa/Poziom: [TUTAJ WPISZ KLASĘ]
 
 ZASADY ZAPISU (BARDZO WAŻNE):
