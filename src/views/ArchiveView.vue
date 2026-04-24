@@ -260,23 +260,31 @@
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.title || "Bez tytułu" }}</div>
+                <input v-model="editNoteTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
               </div>
             </div>
 
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Przedmiot</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.subject || "Brak" }}</div>
+                <input v-model="editNoteSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
               </div>
             </div>
 
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.classLevel || "Brak" }}</div>
+                <input v-model="editNoteLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Poziom" />
               </div>
             </div>
+
+            <button
+              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              :disabled="saving"
+              @click="handleSaveTeacherNote"
+            >
+              {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
+            </button>
 
             <button
               type="button"
@@ -310,7 +318,7 @@
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.title || "Prezentacja" }}</div>
+                <input v-model="editPresTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł prezentacji" />
               </div>
             </div>
 
@@ -327,6 +335,14 @@
                 <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}</div>
               </div>
             </div>
+
+            <button
+              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              :disabled="saving"
+              @click="handleSavePresentation"
+            >
+              {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
+            </button>
 
             <button
               type="button"
@@ -396,7 +412,7 @@ import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
-const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote, deleteTeacherNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteFinalNote, deleteTeacherNote, updateTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
@@ -411,6 +427,10 @@ const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
+const editNoteTitle = ref("");
+const editNoteSubject = ref("");
+const editNoteLevel = ref("");
+const editPresTitle = ref("");
 const isQrModalOpen = ref(false);
 const userClasses = ref([]);
 const selectedClass = ref("all");
@@ -513,7 +533,12 @@ async function handleSaveFinalNote() {
       subject: editSubject.value,
       date: editDate.value
     });
-    selectLesson(lesson);
+    if (lesson) {
+      selectLesson(lesson);
+      window.alert("Zmiany w lekcji zostały zapisane.");
+    }
+  } catch (e) {
+    window.alert(e?.message || "Nie udało się zapisać zmian w lekcji.");
   } finally {
     saving.value = false;
   }
@@ -592,8 +617,30 @@ async function handleDeleteTeacherNote() {
   try {
     await deleteTeacherNote(selectedNote.value.id);
     selectedNote.value = filteredNotes.value[0] || null;
+    window.alert("Notatka została usunięta.");
   } catch (e) {
     window.alert(e?.message || "Nie udało się usunąć notatki.");
+  }
+}
+
+async function handleSavePresentation() {
+  if (!selectedPresentation.value?.id) return;
+  try {
+    saving.value = true;
+    const id = selectedPresentation.value.id;
+    const idx = presentationHistory.value.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      // Update object to ensure reactivity
+      presentationHistory.value[idx] = { ...presentationHistory.value[idx], title: editPresTitle.value };
+      savePresentationHistoryRaw(historyOwnerId.value, presentationHistory.value);
+      // Update reference to sync UI
+      selectedPresentation.value = { ...presentationHistory.value[idx] };
+      window.alert("Tytuł prezentacji został zaktualizowany.");
+    }
+  } catch (e) {
+    window.alert("Błąd zapisu: " + e.message);
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -625,11 +672,13 @@ function openSelectedPresentation() {
 
 watch(activeTab, async (tab) => {
   searchQuery.value = "";
-  if (tab === "lessons" && filteredLessons.value.length && !selected.value) {
-    selectLesson(filteredLessons.value[0]);
+  if (tab === "lessons") {
+    await fetchLessons();
+    if (filteredLessons.value.length && !selected.value) selectLesson(filteredLessons.value[0]);
   }
-  if (tab === "notes" && filteredNotes.value.length && !selectedNote.value) {
-    selectedNote.value = filteredNotes.value[0];
+  if (tab === "notes") {
+    await fetchTeacherNotes();
+    if (filteredNotes.value.length && !selectedNote.value) selectedNote.value = filteredNotes.value[0];
   }
   if (tab === "presentations") {
     const prevId = selectedPresentation.value?.id;
@@ -638,6 +687,20 @@ watch(activeTab, async (tab) => {
     selectedPresentation.value = next || filteredPresentations.value[0] || null;
   }
 });
+
+watch(selectedNote, (note) => {
+  if (note) {
+    editNoteTitle.value = note.title || "";
+    editNoteSubject.value = note.subject || "";
+    editNoteLevel.value = note.classLevel || "";
+  }
+}, { immediate: true });
+
+watch(selectedPresentation, (pres) => {
+  if (pres) {
+    editPresTitle.value = pres.title || "";
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>

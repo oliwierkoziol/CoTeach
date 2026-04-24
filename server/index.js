@@ -825,6 +825,10 @@ async function persistFinalNoteSafe(finalNote, teacherId) {
 
 async function persistSavedNote(note, teacherId) {
   if (!supabase || !note) return;
+  if (!supabase) {
+    console.warn(`[Supabase] Not configured (supabase is null). Skipping persistence for note ID: ${note.id}`);
+    return;
+  }
   const { error } = await supabase
     .from("saved_notes")
     .upsert(savedNoteToRow(note, teacherId), { onConflict: "id" });
@@ -986,6 +990,30 @@ async function refreshTeacherLessonsFromSupabaseSafe(teacherId, schoolId) {
     }
   } catch (error) {
     console.error(`Supabase teacher lessons refresh failed: ${error.message}`);
+  }
+}
+
+async function refreshTeacherNotesFromSupabaseSafe(teacherId, schoolId) {
+  if (!supabase) return;
+  try {
+    const teacherIdValue = String(teacherId || "");
+    const schoolIdValue = String(schoolId || "");
+    const { data: noteRows, error } = await supabase
+      .from("saved_notes")
+      .select("*")
+      .eq("teacher_id", teacherIdValue)
+      .eq("school_id", schoolIdValue)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      throw new Error(`Supabase scoped notes load failed: ${error.message}`);
+    }
+
+    for (const row of noteRows || []) {
+      db.notes.set(row.id, rowToSavedNote(row));
+    }
+  } catch (error) {
+    console.error(`Supabase teacher notes refresh failed: ${error.message}`);
   }
 }
 
@@ -2045,6 +2073,49 @@ app.post("/api/lessons", async (req, res) => {
   return res.status(201).json({ lesson });
 });
 
+app.put("/api/notes/:noteId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+
+  const noteId = req.params.noteId;
+  let note = db.notes.get(noteId);
+
+  // If not in memory, attempt to load from Supabase to ensure we can update it
+  if (!note && supabase) {
+    const { data, error } = await supabase
+      .from("saved_notes")
+      .select("*")
+      .eq("id", noteId)
+      .maybeSingle();
+    
+    if (data && !error) {
+      note = rowToSavedNote(data);
+      db.notes.set(note.id, note);
+    }
+  }
+
+  if (!note) return res.status(404).json({ error: "Note not found" });
+  
+  // Ownership check based on teacherId
+  if (String(note.teacherId) !== String(teacher.teacherId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const { title, subject, classLevel } = req.body || {};
+  if (title !== undefined) note.title = String(title).trim();
+  if (subject !== undefined) note.subject = String(subject).trim();
+  if (classLevel !== undefined) note.classLevel = String(classLevel).trim();
+  
+  // Explicitly ensure schoolId is carried over if teacher context provides it
+  if (!note.schoolId) note.schoolId = teacher.schoolId;
+
+  note.updatedAt = new Date().toISOString();
+  db.notes.set(note.id, note);
+  console.log(`[API] Persisting modified note: ${note.id} (${note.title})`);
+  await persistSavedNoteSafe(note, teacher.teacherId);
+  return res.json({ note });
+});
+
 app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
@@ -2348,6 +2419,7 @@ ${finalNoteSnippet || "(brak notatki końcowej)"}`;
 app.get("/api/notes", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await refreshTeacherNotesFromSupabaseSafe(teacher.teacherId, teacher.schoolId);
   const notes = [...db.notes.values()]
     .filter((note) => String(note.teacherId) === String(teacher.teacherId) && String(note.schoolId || "") === String(teacher.schoolId || ""))
     .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
