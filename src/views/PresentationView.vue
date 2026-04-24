@@ -761,15 +761,11 @@ async function startGeneratedPresentation() {
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
-<<<<<<< Updated upstream
-    startPresentation(generatedSlides);
+    startPresentation(generatedSlides, route.query.generate === "1");
   } catch (error) {
     generationMessage.value = error?.message
       ? `Nie udało się wygenerować prezentacji: ${error.message}`
       : "Nie udało się wygenerować prezentacji.";
-=======
-    startPresentation(generatedSlides, route.query.generate === '1'); // Pass skipReview based on generate query param
->>>>>>> Stashed changes
   } finally {
     isGenerating.value = false;
   }
