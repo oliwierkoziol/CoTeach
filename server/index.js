@@ -2873,6 +2873,35 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   return res.json({ lesson });
 });
 
+app.delete("/api/lessons/:lessonId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  if (!lesson) return;
+
+  try {
+    if (supabase) {
+      // Delete associated data first to maintain referential integrity
+      await supabase.from("openrouter_usage_events").delete().eq("lesson_id", lesson.id);
+      await supabase.from("final_notes").delete().eq("lesson_id", lesson.id);
+      
+      // Delete the lesson itself
+      const { error } = await supabase.from("lessons").delete().eq("id", lesson.id);
+      if (error) throw error;
+    }
+
+    db.lessons.delete(lesson.id);
+    db.costs.delete(lesson.id);
+    db.costEvents = db.costEvents.filter(e => e.lessonId !== lesson.id);
+
+    return res.json({ ok: true, lessonId: lesson.id });
+  } catch (error) {
+    console.error(`[DeleteLesson] Error: ${error.message}`);
+    return res.status(500).json({ error: error.message || "Failed to delete lesson." });
+  }
+});
+
 app.get("/api/lessons/:lessonId/costs", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;

@@ -282,6 +282,14 @@ export function useLessonStore() {
     return data.lesson;
   }
 
+  async function deleteLesson(lessonId) {
+    await api(`/api/lessons/${lessonId}`, { method: "DELETE" });
+    state.lessons = state.lessons.filter((l) => l.id !== lessonId);
+    if (state.lesson?.id === lessonId) {
+      setCurrentLessonInState(null);
+    }
+  }
+
   async function deleteFinalNote(lessonId) {
     const data = await api(`/api/lessons/${lessonId}/final-note`, { method: "DELETE" });
     setCurrentLessonInState(data.lesson);
@@ -386,6 +394,18 @@ export function useLessonStore() {
     state.notes = state.notes.filter((note) => note.id !== noteId);
   }
 
+  async function updateTeacherNote(noteId, payload) {
+    const data = await api(`/api/notes/${noteId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (data?.note) {
+      state.notes = state.notes.map((n) => (n.id === noteId ? data.note : n));
+    }
+    return data.note;
+  }
+
   async function fetchTeacherNotes() {
     const data = await api("/api/notes");
     state.notes = data.notes || [];
@@ -400,6 +420,7 @@ export function useLessonStore() {
     savePlan,
     startLive,
     cancelLesson,
+    deleteLesson,
     sendTranscript,
     refreshCoverage,
     setManualPointApproval,
@@ -416,6 +437,7 @@ export function useLessonStore() {
     generateLiveLessonSummary,
     askMeAI,
     saveTeacherNote,
+    updateTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes
   };

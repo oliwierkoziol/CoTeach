@@ -60,7 +60,7 @@
       <RouterLink
         v-if="route.path === '/login'"
         to="/register"
-        class="rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground transition hover:opacity-90"
+        class="rounded-lg bg-[#0c3dfe] px-3 py-2 font-semibold text-primary-foreground transition hover:opacity-90"
       >
         Rejestracja
       </RouterLink>
