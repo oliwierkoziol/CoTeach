@@ -36,3 +36,17 @@ Dzienniczek - Oliwier Kozioł
 - dodałem możliwość wracania do aktualnie prowadzonej lekcji na żywo
 - zaktualizowałem stronę główną aplikacji
 
+20 Kwietnia
+- dodałem podział archiwum na lekcje, notatki i prezentacje i filtrowanie
+- polepszyłem funkcję wykrywania słów kluczowych
+- uaktualniłem wygląd profilu do nowego designu
+
+21 Kwietnia
+- naprawiłem funkcję generowania notatek AI
+- dodałem możliwość usuwania notatek, lekcji i prezentacji
+- zacząłem implementować funkcję wybierania klasy przez nauczyciela
+
+23 Kwietnia
+- zaktualizowałem wygląd stron logowania i rejestracji
+- usprawniłem funkcję generowania prezentacji
+- ulepszyłem wygląd dark mode'u
