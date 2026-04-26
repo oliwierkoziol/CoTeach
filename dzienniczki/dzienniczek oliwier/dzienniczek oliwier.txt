@@ -50,3 +50,8 @@ Dzienniczek - Oliwier Kozioł
 - zaktualizowałem wygląd stron logowania i rejestracji
 - usprawniłem funkcję generowania prezentacji
 - ulepszyłem wygląd dark mode'u
+
+24 Kwietnia
+- zmieniłem stronę główną, aby wyświetlała poprawne informacje o koncie nauczyciela
+- dodałem możliwośc zczytywania plików do notatki
+- modyfikowanie notatki
