@@ -9,7 +9,7 @@
           Nowa lekcja
         </h2>
         <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px] font-normal">
-          Dodaj materiały przy użyciu tekstu lub zdjęcia. Materiały te będą wykorzystane podczas prowadzenia lekcji na żywo.
+          Wybierz temat i notatkę bazową, aby przygotować plan zajęć. AI ułoży listę zagadnień do zrealizowania podczas lekcji na żywo.
         </p>
       </header>
   
@@ -183,6 +183,7 @@ const title = ref("");
 const lessonTime = ref(45);
 const selectedNoteId = ref("");
 const isGenerating = ref(false);
+const lastAutoTitle = ref("");
 const isSaving = ref(false);
 
 const error = ref("");
@@ -204,11 +205,17 @@ watch(selectedNoteId, (noteId) => {
   if (!noteId) return;
   const note = state.notes.find((item) => item.id === noteId);
   if (!note) return;
-  title.value = String(note.title || title.value || "");
+  // Update title if it's empty or matches the last one set automatically
+  if (!title.value || title.value === lastAutoTitle.value) {
+    const newTitle = String(note.title || "");
+    title.value = newTitle;
+    lastAutoTitle.value = newTitle;
+  }
 });
 
 function resetForm() {
   title.value = "";
+  lastAutoTitle.value = "";
   selectedNoteId.value = "";
   lessonTime.value = 45;
   error.value = "";

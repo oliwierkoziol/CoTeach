@@ -281,7 +281,7 @@
               presentationSource === 'note' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
             ]"
           >
-            Notatki przedmiotowe
+            Notatki
           </button>
           <button
             type="button"

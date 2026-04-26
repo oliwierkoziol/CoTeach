@@ -6,10 +6,10 @@
       <div class="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div class="max-w-[1024px]">
           <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-            Archiwum lekcji
+            Archiwum
           </h1>
           <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
-            Archiwizacja i dystrybucja notatek końcowych.
+            Przeglądaj i edytuj przeprowadzone lekcje, utworzone prezentacje i notatki końcowe.
           </p>
         </div>
 
@@ -168,14 +168,14 @@
 
             <template v-if="selected?.finalNote">
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Nazwa notatki</label>
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Temat</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
                 <input v-model="editTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Temat</label>
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Przedmiot</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
                 <input v-model="editSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
               </div>
@@ -195,6 +195,10 @@
             >
               {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
             </button>
+
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] mt-4">
+                Złota Notatka
+            </h3>
 
             <button
               type="button"
@@ -224,12 +228,7 @@
               <p class="font-['Inter'] text-[#454652] text-[14px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
             </div>
 
-            <RouterLink
-              to="/notes"
-              class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
-            >
-              Wróć do notatek
-            </RouterLink>
+           
           </div>
 
           <div v-else-if="activeTab === 'notes' && selectedNote" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
@@ -274,12 +273,12 @@
             >
               Pokaż treść notatki
             </button>
-            <RouterLink
+            <!-- <RouterLink
               to="/notes"
               class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
             >
               Przejdź do notatek
-            </RouterLink>
+            </RouterLink> -->
           </div>
 
           <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
@@ -325,13 +324,13 @@
               Otwórz tę prezentację
             </button>
 
-            <button
+            <!-- <button
               type="button"
               class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
               @click="openPresentationGenerator"
             >
               Otwórz generator prezentacji
-            </button>
+            </button> -->
           </div>
         </div>
       </div>

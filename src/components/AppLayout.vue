@@ -88,7 +88,7 @@
 
     <aside
       :class="[
-        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/15 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
         open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -128,7 +128,7 @@
         </RouterLink>
 
         <!-- Divider + nav links -->
-        <div class="flex-1 space-y-1 border-t border-black/30 pt-4">
+        <div class="flex-1 space-y-1 border-t border-black/15 pt-4">
 
           <!-- Panel startowy -->
           <RouterLink to="/dashboard" custom v-slot="{ href, navigate, isExactActive }">
@@ -368,7 +368,7 @@ function navRowClass(item, isActive, isExactActive) {
   return [
     "flex w-full min-w-0 items-center gap-3 rounded-xl py-1.5 pl-1 pr-2 text-left transition-colors",
       on ? "bg-muted/80" : "hover:bg-muted/50",
-  ];
+  ];  
 }
 
 function navIconBoxClass(item, isActive, isExactActive) {
