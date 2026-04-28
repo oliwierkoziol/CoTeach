@@ -180,8 +180,7 @@
           <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
             <select
               v-model="selectedMicId"
-              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              :disabled="isRecording"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
               <option value="">Domyślny mikrofon systemowy</option>
               <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId">
@@ -197,6 +196,27 @@
           </div>
         </div>
 
+        <!-- Metoda transkrypcji -->
+        <div class="space-y-2">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
+            Metoda transkrypcji
+          </label>
+          <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
+            <select
+              v-model="transcriptionMethod"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            >
+              <option value="webspeech">Web Speech API (Domyślne)</option>
+              <option value="whisper">Whisper AI (Zalecane dla jakości)</option>
+            </select>
+            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
+              {{ transcriptionMethod === 'whisper' ? 'Whisper AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
+            </span>
+            <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
+              <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
 
         <!-- Poziom mikrofonu -->
         <div class="space-y-2">
@@ -651,6 +671,8 @@ const activeModalInput = ref('numerator');
 const isRecording = ref(false);
 const micDevices = ref([]);
 const selectedMicId = ref("");
+const transcriptionMethod = ref("webspeech");
+const recognition = ref(null);
 const micLevel = ref(0);
 const interimCaption = ref("");
 const sttStatus = ref("idle");
@@ -970,6 +992,17 @@ watch(transcription, () => {
   autoScrollToBottom();
 }, { deep: true });
 
+// Restart session automatically when settings change
+watch([selectedMicId, transcriptionMethod], () => {
+  if (isRecording.value) {
+    console.log("[LiveLesson] Setting changed, restarting session...");
+    stopSession();
+    // Small delay to allow resources to release before restarting
+    setTimeout(() => {
+      startSession();
+    }, 400);
+  }
+});
 
 // Sync transcription with existing data from database when returning to a lesson
 watch(
@@ -1323,16 +1356,25 @@ async function startSession() {
       }
     }, 1000);
 
-    info.value = "Uruchamiam mikrofon i transkrypcję Whisper...";
+    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Whisper' : 'Web Speech'})...`;
     isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
+
     try {
-      await beginMic();
-      info.value = "Whisper aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
-    } catch (micError) {
-      console.error('[startSession] Microphone error:', micError);
-      error.value = `Nie udało się uruchomić mikrofonu: ${micError.message}`;
+      sttStatus.value = "starting";
+      await startMicMeter();
+
+      if (transcriptionMethod.value === 'whisper') {
+        await beginWhisperMode();
+        info.value = "Whisper aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+      } else {
+        await beginWebSpeechMode();
+      }
+    } catch (err) {
+      console.error('[startSession] Error starting transcription:', err);
+      error.value = `Nie udało się uruchomić transkrypcji: ${err.message}`;
       sttStatus.value = "error";
       isRecording.value = false;
+      if (timer.value) clearInterval(timer.value);
     }
   } catch (e) {
     console.error('[startSession] Error:', e);
@@ -1342,6 +1384,12 @@ async function startSession() {
 }
 
 function stopSession() {
+  if (recognition.value) {
+    recognition.value.onend = null; // Prevent auto-restart
+    recognition.value.stop();
+    recognition.value = null;
+  }
+
   // Call cleanup function if it exists
   if (window.__whisperCleanup) {
     window.__whisperCleanup();
@@ -1370,19 +1418,104 @@ function stopSession() {
   void refreshCoverageThrottled(true);
 }
 
-async function beginMic() {
-  sttStatus.value = "starting";
-
-  try {
-    await startMicMeter();
-  } catch (err) {
-    sttStatus.value = "error";
-    throw new Error(`Nie udało się uruchomić mikrofonu: ${err.message}`);
+async function beginWebSpeechMode() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Whisper AI.");
   }
 
-  await beginWhisperMode();
-}
+  recognition.value = new SpeechRecognition();
+  recognition.value.lang = 'pl-PL';
+  recognition.value.continuous = true;
+  recognition.value.interimResults = true;
 
+  recognition.value.onstart = () => {
+    sttStatus.value = "listening";
+    info.value = "Web Speech API aktywne. Transkrypcja odbywa się lokalnie w przeglądarce.";
+  };
+
+  recognition.value.onresult = async (event) => {
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        const text = event.results[i][0].transcript.trim();
+        if (text) {
+          transcription.value.push(text);
+          isUserScrolling.value = false;
+          autoScrollToBottom();
+          await sendTranscript(state.lesson.id, text);
+          scheduleCoverageRefresh(true);
+        }
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    interimCaption.value = interim;
+  };
+
+  recognition.value.onerror = (event) => {
+    if (event.error !== 'no-speech') {
+      console.error("WebSpeech Error:", event.error);
+      const errorMap = {
+        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Whisper AI.',
+        'not-allowed': 'Brak uprawnień do mikrofonu dla Web Speech API.',
+        'no-speech': 'Nie wykryto mowy.'
+      };
+      error.value = errorMap[event.error] || `Błąd transkrypcji lokalnej: ${event.error}`;
+    }
+  };
+
+  recognition.value.onend = () => {
+    // Auto-restart if we are still recording
+    if (isRecording.value && transcriptionMethod.value === 'webspeech') {
+      try {
+        setTimeout(() => {
+          if (isRecording.value && transcriptionMethod.value === 'webspeech' && recognition.value) recognition.value.start();
+        }, 500);
+      } catch (e) {
+        console.warn("Could not restart Web Speech recognition:", e);
+      }
+    }
+  };
+
+  recognition.value.start();
+
+  // Start level monitoring for Web Speech
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const webSpeechAudioContext = new AudioContextClass();
+  if (webSpeechAudioContext.state === 'suspended') {
+    await webSpeechAudioContext.resume();
+  }
+
+  const source = webSpeechAudioContext.createMediaStreamSource(micStream.value);
+  const analyser = webSpeechAudioContext.createAnalyser();
+  analyser.fftSize = 256;
+  source.connect(analyser);
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  // Register cleanup to close the context when the session stops
+  window.__whisperCleanup = () => {
+    webSpeechAudioContext.close();
+  };
+
+  const monitorLevel = () => {
+    if (!isRecording.value || transcriptionMethod.value !== 'webspeech') {
+      return;
+    }
+
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+    const average = sum / dataArray.length;
+    // Update the global micLevel ref for the UI
+    micLevel.value = Math.min(100, average);
+
+    requestAnimationFrame(monitorLevel);
+  };
+  monitorLevel();
+}
 
 async function beginWhisperMode() {
   console.log("[WhisperMode] Starting beginWhisperMode function");
