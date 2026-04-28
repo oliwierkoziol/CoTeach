@@ -238,19 +238,6 @@
               </div>
             </div>
 
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Klasa</label>
-              <div class="bg-[#e0e3e6] rounded-lg relative flex items-center">
-                <select v-model="editClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] px-4 py-2.5 appearance-none cursor-pointer">
-                  <option value="">Brak klasy</option>
-                  <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
-                </select>
-                <div class="absolute right-[12px] pointer-events-none opacity-40 text-[#222E75]">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-              </div>
-            </div>
-
             <button
               class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
               :disabled="saving"
@@ -331,15 +318,9 @@
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Klasa</label>
-              <div class="bg-[#e0e3e6] rounded-lg relative flex items-center">
-                <select v-model="editTeacherNoteClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] px-4 py-2.5 appearance-none cursor-pointer">
-                  <option value="">Brak klasy</option>
-                  <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
-                </select>
-                <div class="absolute right-[12px] pointer-events-none opacity-40 text-[#222E75]">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <input v-model="editTeacherNoteClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Klasa" />
               </div>
             </div>
 
@@ -506,7 +487,6 @@ const saving = ref(false);
 const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
-const editClassLevel = ref("");
 const collapsedSections = ref({});
 const editTeacherNoteTitle = ref("");
 const editTeacherNoteSubject = ref("");
@@ -629,7 +609,6 @@ function selectLesson(lesson) {
   editTitle.value = String(lesson?.finalNote?.title || "");
   editSubject.value = String(lesson?.finalNote?.subject || "");
   editDate.value = String(lesson?.finalNote?.date || "");
-  editClassLevel.value = String(lesson?.classLevel || "");
 }
 
 async function handleSaveFinalNote() {
@@ -639,8 +618,7 @@ async function handleSaveFinalNote() {
     const lesson = await updateFinalNote(selected.value.id, {
       title: editTitle.value,
       subject: editSubject.value,
-      date: editDate.value,
-      classLevel: editClassLevel.value
+      date: editDate.value
     });
     selectLesson(lesson);
   } finally {

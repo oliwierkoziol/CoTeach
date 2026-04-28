@@ -1,20 +1,13 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden p-8 md:p-12 pb-14 w-full">
-    <!-- Background Decoration -->
-    <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
-
-    <div class="mx-auto max-w-full relative z-10">
-      <header class="mb-8 text-left">
-        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-          Mój profil
-        </h1>
-          <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Zarządzaj swoimi danymi, ustawieniami bezpieczeństwa i billingiem w jednym miejscu.</p>
-        </div>
+  <div class="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-10">
+    <div class="mx-auto max-w-6xl">
+      <header class="mb-8">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Konto</p>
+        <h1 class="text-3xl font-bold text-foreground">Mój profil</h1>
       </header>
 
-      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 sm:p-8">
-        <div class="mb-10 flex justify-center">
+      <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <div class="mb-8 flex justify-center">
           <div class="group relative">
             <div
               class="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary/50 shadow-lg"
@@ -43,82 +36,71 @@
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <aside class="rounded-xl bg-[#f2f4f7] p-3 self-start">
-            <p class="px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-[#767683]">Ustawienia</p>
+          <aside class="rounded-2xl border border-border bg-background/50 p-3">
+            <p class="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Ustawienia</p>
             <div class="space-y-1">
               <button
                 type="button"
-                class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-all"
-                :class="activeProfileSection === 'account' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'account' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
                 @click="activeProfileSection = 'account'"
               >
                 Informacje o koncie
               </button>
               <button
                 type="button"
-                class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-all"
-                :class="activeProfileSection === 'billing' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'billing' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
                 @click="activeProfileSection = 'billing'"
               >
                 Billing
               </button>
               <button
                 type="button"
-                class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-all"
-                :class="activeProfileSection === 'security' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+                class="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition"
+                :class="activeProfileSection === 'security' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
                 @click="activeProfileSection = 'security'"
               >
                 Bezpieczeństwo
               </button>
-              <button
-                v-if="userProfile.admin"
-                type="button"
-                class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-all"
-                :class="activeProfileSection === 'organization' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
-                @click="openOrganizationPanel"
-              >
-                Organizacja
-              </button>
             </div>
           </aside>
 
-          <div class="space-y-6">
-          <section v-show="activeProfileSection === 'account'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Informacje o koncie</h2>
-            <p class="mt-1 text-sm text-[#454652]">Dane profilu i podstawowe informacje.</p>
+          <div class="space-y-8">
+          <section v-show="activeProfileSection === 'account'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Informacje o koncie</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Dane profilu i bezpieczeństwo konta.</p>
             <div class="mt-5 space-y-6">
           <div>
-            <label class="mb-2 block text-sm font-semibold text-[#454652]">Imię i nazwisko</label>
+            <label class="mb-2 block text-sm font-semibold text-foreground">Imię i nazwisko</label>
             <div class="flex flex-col gap-2 sm:flex-row">
-              <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg flex-1 flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                <input
-                  v-model.trim="userProfile.full_name"
-                  type="text"
-                  autocomplete="name"
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans']"
-                  placeholder="Jan Kowalski"
-                />
-              </div>
+              <input
+                v-model.trim="userProfile.full_name"
+                type="text"
+                autocomplete="name"
+                class="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Jan Kowalski"
+              />
               <button
                 type="button"
-                class="w-full shrink-0 rounded-lg bg-[#0c3dfe] px-6 h-[48px] font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 sm:w-auto"
+                class="w-full shrink-0 rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50 sm:w-auto"
                 :disabled="isSavingName"
                 @click.prevent="saveFullName"
               >
-                {{ isSavingName ? "Zapisywanie…" : "Zapisz zmiany" }}
+                {{ isSavingName ? "Zapisywanie…" : "Zapisz" }}
               </button>
             </div>
           </div>
 
           <div>
-            <label class="mb-2 block text-sm font-semibold text-[#454652]">Adres e-mail</label>
-            <div class="flex items-center justify-between gap-3 border-b border-[#e0e3e6] pb-1 text-lg text-[#191c1e] font-['Plus_Jakarta_Sans']">
+            <label class="mb-2 block text-sm font-semibold text-foreground">Adres e-mail</label>
+            <div class="flex items-center justify-between gap-3 border-b border-border pb-1 text-lg text-foreground">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="truncate">{{ displayEmail }}</span>
                 <button
                   v-if="userProfile.email"
                   type="button"
-                  class="text-xs font-bold text-[#0c3dfe] hover:underline"
+                  class="text-sm font-semibold text-indigo-600 hover:underline"
                   @click="showEmailValue = !showEmailValue"
                 >
                   {{ showEmailValue ? "Ukryj" : "Pokaż" }}
@@ -126,7 +108,7 @@
               </div>
               <button
                 type="button"
-                class="shrink-0 rounded-lg border-2 border-[#e0e3e6] px-4 py-1.5 text-xs font-bold text-[#454652] transition hover:bg-gray-50"
+                class="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
                 :disabled="isSavingEmail"
                 @click="toggleEmailEdit"
               >
@@ -134,22 +116,20 @@
               </button>
             </div>
             <div v-if="showEmailEditor" class="mt-3">
-              <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                <input
-                  v-model.trim="newEmail"
-                  type="email"
-                  autocomplete="email"
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans']"
-                  placeholder="Nowy adres e-mail"
-                />
-              </div>
+              <input
+                v-model.trim="newEmail"
+                type="email"
+                autocomplete="email"
+                class="w-full rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Nowy adres e-mail"
+              />
               <button
                 type="button"
-                class="mt-3 w-full sm:w-auto rounded-lg bg-[#0c3dfe] px-6 h-[48px] font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
+                class="mt-3 w-full sm:w-auto rounded-2xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 :disabled="isSavingEmail"
                 @click.prevent="saveEmail"
               >
-                Potwierdź zmianę e-mail
+                {{ isSavingEmail ? "Zapisywanie..." : "Zapisz nowy e-mail" }}
               </button>
             </div>
           </div>
@@ -159,7 +139,7 @@
             <div class="flex items-center justify-between gap-3 border-b border-border pb-1 text-lg text-foreground">
               <span class="select-none tracking-widest text-muted-foreground">••••••••••</span>
               <button
-                type="button" 
+                type="button"
                 class="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/50"
                 @click="showPasswordModal = true"
               >
@@ -177,11 +157,11 @@
             </div>
           </section>
 
-          <section v-show="activeProfileSection === 'billing'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Billing</h2>
-            <p class="mt-1 text-sm text-[#454652]">Licencja, płatności i wykorzystanie kosztów.</p>
+          <section v-show="activeProfileSection === 'billing'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Billing</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Licencja, płatności i wykorzystanie kosztów.</p>
 
-            <div class="mt-6 space-y-6">
+            <div class="mt-5 space-y-6">
           <div>
             <label class="mb-2 block text-sm font-semibold text-foreground">Licencja</label>
             <div class="border-b border-border pb-2 text-lg text-foreground">
@@ -237,10 +217,10 @@
             </div>
           </section>
 
-          <section v-show="activeProfileSection === 'security'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Bezpieczeństwo</h2>
-            <p class="mt-1 text-sm text-[#454652]">Ustawienia krytyczne konta.</p>
-            <div class="mt-6 space-y-6">
+          <section v-show="activeProfileSection === 'security'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Bezpieczeństwo</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Ustawienia krytyczne konta.</p>
+            <div class="mt-5 space-y-6">
               <div class="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4">
                 <label class="block text-sm font-semibold text-amber-900 mb-2">Zablokuj moje konto</label>
                 <p class="text-sm text-amber-800">
@@ -304,9 +284,9 @@
             </div>
           </section>
 
-          <section v-show="activeProfileSection === 'organization'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Organizacja</h2>
-            <p class="mt-1 text-sm text-[#454652]">Ustawienia szkoły, konta służbowe i koszty AI.</p>
+          <section v-show="activeProfileSection === 'organization'" class="rounded-2xl border border-border bg-background/60 p-5">
+            <h2 class="text-lg font-bold text-foreground">Organizacja</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Ustawienia szkoły, konta służbowe i koszty AI.</p>
 
             <div v-if="organizationError" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {{ organizationError }}

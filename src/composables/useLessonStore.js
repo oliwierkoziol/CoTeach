@@ -360,7 +360,7 @@ export function useLessonStore() {
     return String(data.summary || "");
   }
 
-  async function askMeAI(question, lessonId = null, classLevel = null) {
+  async function askMeAI(question, lessonId = null, classLevel  = null) {
     const data = await api("/api/ask-me", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

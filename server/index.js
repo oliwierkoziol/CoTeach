@@ -31,8 +31,7 @@ const port = Number(process.env.PORT || 3001);
 const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma-4-31b";
 const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemma-4-31b";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
-const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemini-2.5-flash";
-const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
+const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemma-4-31b";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
 const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
@@ -40,7 +39,7 @@ const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
 const OPENAI_BASE_URL = String(process.env.OPENAI_BASE_URL || "").trim();
-const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-large-v3-turbo").trim() || "whisper-large-v3-turbo";
+const OPENAI_WHISPER_MODEL = String(process.env.OPENAI_WHISPER_MODEL || "whisper-1").trim() || "whisper-1";
 const OPENAI_PROVIDER_NAME = String(process.env.OPENAI_PROVIDER_NAME || "openai").trim() || "openai";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_BUSINESS_EMAIL_DOMAIN = String(process.env.BUSINESS_EMAIL_DOMAIN || "sluzbowe.coteach.local")
@@ -62,9 +61,9 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 
 const openaiClientConfig = process.env.OPENAI_API_KEY
   ? {
-    apiKey: process.env.OPENAI_API_KEY,
-    ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
-  }
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    }
   : null;
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
@@ -581,7 +580,6 @@ function rowToLesson(row) {
     plan: parseJsonArray(row.plan),
     transcripts: parseJsonArray(row.transcripts),
     finalNote: row.final_note || null,
-    classLevel: row.class_level || "",
     startedAt: row.started_at || null,
     finishedAt: row.finished_at || null,
     updatedAt: row.updated_at || null
@@ -636,7 +634,6 @@ function lessonToRow(lesson) {
     plan: lesson.plan || [],
     transcripts: lesson.transcripts || [],
     final_note: lesson.finalNote || null,
-    class_level: lesson.classLevel || "",
     started_at: lesson.startedAt || null,
     finished_at: lesson.finishedAt || null,
     updated_at: new Date().toISOString()
@@ -1363,8 +1360,6 @@ function normalizePresentationSlide(rawSlide, index) {
     .filter(Boolean)
     .slice(0, 6);
   const visualHint = String(rawSlide?.visualHint || rawSlide?.wskazowkaWizualna || "").trim();
-  const imagePrompt = String(rawSlide?.imagePrompt || rawSlide?.promptObrazka || "").trim();
-  const imageUrl = String(rawSlide?.imageUrl || rawSlide?.obrazUrl || "").trim();
 
   return {
     id: rawSlide?.id || randomUUID(),
@@ -1373,9 +1368,7 @@ function normalizePresentationSlide(rawSlide, index) {
     subtitle: subtitle.slice(0, 180),
     summary: summary.slice(0, 500),
     details,
-    visualHint: visualHint.slice(0, 220),
-    imagePrompt: imagePrompt.slice(0, 320),
-    imageUrl: imageUrl.slice(0, 1200)
+    visualHint: visualHint.slice(0, 220)
   };
 }
 
@@ -1390,8 +1383,7 @@ function fallbackPresentationSlides({ lessonTitle, scope, plan, noteContent, max
       subtitle: index === 0 ? `${lessonTitle || "Prezentacja"} • ${scope === "full" ? "cała lekcja" : "nieomówione punkty"}` : "",
       summary: String(point?.description || "").slice(0, 450),
       details: Array.isArray(point?.keywords) ? point.keywords.slice(0, 5) : [],
-      visualHint: index % 2 === 0 ? "diagram procesu" : "lista punktów",
-      imagePrompt: ""
+      visualHint: index % 2 === 0 ? "diagram procesu" : "lista punktów"
     }));
   }
 
@@ -1408,189 +1400,8 @@ function fallbackPresentationSlides({ lessonTitle, scope, plan, noteContent, max
     subtitle: "",
     summary: line.slice(0, 450),
     details: [],
-    visualHint: "lista punktów",
-    imagePrompt: ""
+    visualHint: "lista punktów"
   }));
-}
-
-function buildTagBasedImageUrl({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "" }) {
-  const raw = `${subject} ${title} ${imagePrompt} ${visualHint} ${summary}`.toLowerCase();
-  const tags = [];
-  const push = (tag) => {
-    if (!tags.includes(tag)) tags.push(tag);
-  };
-
-  // base education tags
-  push("education");
-  push("school");
-
-  if (/(matemat|mnożen|dzielen|algebra|geometr)/.test(raw)) {
-    push("math");
-    push("numbers");
-    push("classroom");
-  } else if (/(biolog|fotosyntez|roślin|organizm)/.test(raw)) {
-    push("biology");
-    push("nature");
-    push("plants");
-  } else if (/(histori|wojna|starożyt|średniowie)/.test(raw)) {
-    push("history");
-    push("museum");
-  } else if (/(fizy|chem)/.test(raw)) {
-    push("science");
-    push("laboratory");
-  } else {
-    push("learning");
-    push("students");
-  }
-
-  return `https://loremflickr.com/1280/720/${tags.slice(0, 4).join(",")}?lock=1`;
-}
-
-function buildSlideImageUrl({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "", classLevel = "" }) {
-  const baseIdea = String(imagePrompt || "").trim() || `${title}. ${summary}. ${visualHint}`;
-  const prompt = `Ilustracja edukacyjna dokładnie do tematu: ${baseIdea}. Przedmiot: ${subject}. Poziom: ${classLevel}. Pokaż to, o czym jest slajd, bez losowych scen. Bez tekstu na obrazie, bez znaków wodnych, bez logotypów. Kompozycja 16:9, wysoka czytelność, styl nowoczesny.`
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 550);
-  if (!prompt) return "";
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&height=720&nologo=true&model=flux`;
-}
-
-function hashString(value) {
-  const text = String(value || "");
-  let hash = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = ((hash << 5) - hash) + text.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function buildUnsplashUrl({ query, slideKey }) {
-  const q = encodeURIComponent(String(query || "").trim().slice(0, 180));
-  if (!q) return "";
-  const sig = hashString(slideKey) % 1000;
-  return `https://source.unsplash.com/1280x720/?${q}&sig=${sig}`;
-}
-
-async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "", classLevel = "", slideKey = "", usedImageSignatures = new Set() }) {
-  const baseIdea = String(imagePrompt || "").trim() || `${title}. ${summary}. ${visualHint}`;
-  const prompt = `Stwórz ilustrację edukacyjną do slajdu: ${baseIdea}. Przedmiot: ${subject}. Poziom: ${classLevel}. Bez tekstu na obrazie, bez znaków wodnych, bez logotypów, format poziomy.`
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 900);
-  if (!prompt) return "";
-
-  const wikiQuery = [title, subject, imagePrompt, visualHint]
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .slice(0, 140);
-  const candidateUrls = [];
-
-  const wikiImage = await resolveWikipediaImage(wikiQuery);
-  if (wikiImage) candidateUrls.push(wikiImage);
-
-  const unsplashPrimary = buildUnsplashUrl({
-    query: [subject, title, imagePrompt, visualHint].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-primary`
-  });
-  if (unsplashPrimary) candidateUrls.push(unsplashPrimary);
-
-  const unsplashSecondary = buildUnsplashUrl({
-    query: [subject, summary, classLevel].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-secondary`
-  });
-  if (unsplashSecondary) candidateUrls.push(unsplashSecondary);
-
-  if (openai && String(process.env.OPENAI_API_KEY || "").trim()) {
-    try {
-      const imageRes = await openai.images.generate({
-        model: OPENAI_IMAGE_MODEL,
-        prompt,
-        size: "1536x1024"
-      });
-      const first = imageRes?.data?.[0];
-      if (first?.url) return String(first.url);
-      if (first?.b64_json) return `data:image/png;base64,${String(first.b64_json)}`;
-    } catch {
-      // fallback below
-    }
-  }
-
-  const pollinationsUrl =
-    typeof buildSlideImageUrl === "function"
-      ? buildSlideImageUrl({ imagePrompt, title, summary, visualHint, subject, classLevel })
-      : "";
-  if (pollinationsUrl) {
-    const asDataUrl = await fetchImageAsDataUrl(pollinationsUrl);
-    if (asDataUrl) return asDataUrl;
-  }
-
-  const tagUrl = buildTagBasedImageUrl({ imagePrompt, title, summary, visualHint, subject });
-  if (tagUrl) candidateUrls.push(tagUrl);
-
-  for (const url of candidateUrls) {
-    const asDataUrl = await fetchImageAsDataUrl(url);
-    if (!asDataUrl) continue;
-    const signature = asDataUrl.slice(0, 180);
-    if (usedImageSignatures.has(signature)) continue;
-    usedImageSignatures.add(signature);
-    return asDataUrl;
-  }
-
-  return "";
-}
-
-async function resolveWikipediaImage(query) {
-  const q = String(query || "").trim();
-  if (!q) return "";
-  const encoded = encodeURIComponent(q);
-  const variants = [
-    `https://pl.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encoded}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=1280&format=json&origin=*`,
-    `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encoded}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=1280&format=json&origin=*`
-  ];
-
-  for (const url of variants) {
-    try {
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const pages = Object.values(data?.query?.pages || {});
-      const first = pages.find((page) => typeof page?.thumbnail?.source === "string");
-      const src = String(first?.thumbnail?.source || "").trim();
-      if (src) return src;
-    } catch {
-      // try next variant
-    }
-  }
-  return "";
-}
-
-async function fetchImageAsDataUrl(url) {
-  const target = String(url || "").trim();
-  if (!target) return "";
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch(target, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        Accept: "image/*"
-      }
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) return "";
-    const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-    if (!contentType.startsWith("image/")) return "";
-    const arrayBuffer = await res.arrayBuffer();
-    if (!arrayBuffer.byteLength) return "";
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
-  } catch {
-    return "";
-  }
 }
 
 async function generatePresentationWithLLM({
@@ -1600,7 +1411,6 @@ async function generatePresentationWithLLM({
   classLevel,
   scope,
   plan,
-  includeImages = false,
   maxSlides = 12,
   context = {}
 }) {
@@ -1617,8 +1427,7 @@ async function generatePresentationWithLLM({
     .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
     .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
     .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
-    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000))
-    .replace("[TRYB_OBRAZOW]", includeImages ? "TAK - dodaj imagePrompt dla każdego slajdu." : "NIE - nie dodawaj imagePrompt i nie projektuj slajdu pod obraz.");
+    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
 
   try {
     const out = await callOpenRouter({
@@ -1632,38 +1441,6 @@ async function generatePresentationWithLLM({
     const slides = slidesRaw.slice(0, safeMaxSlides).map((slide, index) => normalizePresentationSlide(slide, index));
     if (!slides.length) {
       throw new Error("Empty slides");
-    }
-    if (includeImages) {
-      const usedImageSignatures = new Set();
-      const maxImageSlides = Math.min(slides.length, 5);
-      const slidesWithImages = await Promise.all(
-        slides.map(async (slide, index) => {
-          const normalizedPrompt = String(slide.imagePrompt || slide.visualHint || slide.summary || "").slice(0, 320);
-          if (index >= maxImageSlides) {
-            return {
-              ...slide,
-              imagePrompt: normalizedPrompt,
-              imageUrl: ""
-            };
-          }
-          const imageUrl = await generateSlideImageWithAI({
-            imagePrompt: normalizedPrompt,
-            title: slide.title,
-            summary: slide.summary,
-            visualHint: slide.visualHint,
-            subject: lessonSubject,
-            classLevel,
-            slideKey: `${index}-${slide.title}-${slide.summary}`,
-            usedImageSignatures
-          });
-          return {
-            ...slide,
-            imagePrompt: normalizedPrompt,
-            imageUrl: String(imageUrl || "").trim()
-          };
-        })
-      );
-      return slidesWithImages;
     }
 
     recordCostFromBase({
@@ -1684,37 +1461,15 @@ async function generatePresentationWithLLM({
       latencyMs: out.latencyMs
     });
 
-    return slides.map((slide) => ({
-      ...slide,
-      imagePrompt: "",
-      imageUrl: ""
-    }));
+    return slides;
   } catch {
-    const fallbackSlides = fallbackPresentationSlides({
+    return fallbackPresentationSlides({
       lessonTitle,
       scope: safeScope,
       plan: safePlan,
       noteContent: safeNote,
       maxSlides: safeMaxSlides
     });
-    if (!includeImages) {
-      return fallbackSlides.map((slide) => ({ ...slide, imagePrompt: "", imageUrl: "" }));
-    }
-    return fallbackSlides.map((slide) => ({
-      ...slide,
-      imagePrompt: String(slide.visualHint || slide.summary || "").slice(0, 320),
-      imageUrl:
-        typeof buildSlideImageUrl === "function"
-          ? buildSlideImageUrl({
-              imagePrompt: slide.imagePrompt,
-              title: slide.title,
-              summary: slide.summary,
-              visualHint: slide.visualHint,
-              subject: lessonSubject,
-              classLevel
-            })
-          : ""
-    }));
   }
 }
 
@@ -2455,7 +2210,6 @@ app.post("/api/presentations/generate", async (req, res) => {
     const classLevel = String(req.body?.classLevel || "").trim();
     const scope = String(req.body?.scope || "pending").trim() === "full" ? "full" : "pending";
     const maxSlides = Number(req.body?.maxSlides || 12);
-    const includeImages = Boolean(req.body?.includeImages);
 
     let lesson = null;
     if (lessonId) {
@@ -2494,7 +2248,6 @@ app.post("/api/presentations/generate", async (req, res) => {
       classLevel: classLevel || note?.classLevel || "",
       scope,
       plan: scopedPlan,
-      includeImages,
       maxSlides,
       context: {
         lessonId: lesson?.id || null,
@@ -2512,7 +2265,6 @@ app.post("/api/presentations/generate", async (req, res) => {
       title: `${lesson?.title || note?.title || "Prezentacja"} (${new Date().toLocaleDateString("pl-PL")})`,
       subject: lesson?.subject || note?.subject || "",
       slideCount: slides.length,
-      includeImages,
       slides,
       createdAt: new Date().toISOString()
     };
@@ -2880,13 +2632,10 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
   const title = String(req.body?.title || "").trim();
   const subject = String(req.body?.subject || "").trim();
   const date = String(req.body?.date || "").trim();
-  const classLevel = String(req.body?.classLevel || "").trim();
-
   if (!title || !subject || !date) {
     return res.status(400).json({ error: "Title, subject, and date are required" });
   }
 
-  lesson.classLevel = classLevel;
   lesson.finalNote = {
     ...lesson.finalNote,
     title,
@@ -2968,12 +2717,12 @@ app.get("/api/admin/users", async (req, res) => {
       ...user,
       license: assignedLicense
         ? {
-          id: assignedLicense.id,
-          key: assignedLicense.key,
-          expiresAt: assignedLicense.expiresAt,
-          maxActiveUsers: assignedLicense.maxActiveUsers,
-          demoMode: assignedLicense.demoMode === true
-        }
+            id: assignedLicense.id,
+            key: assignedLicense.key,
+            expiresAt: assignedLicense.expiresAt,
+            maxActiveUsers: assignedLicense.maxActiveUsers,
+            demoMode: assignedLicense.demoMode === true
+          }
         : null
     };
   });
@@ -3040,12 +2789,12 @@ app.get("/api/admin/dashboard", async (req, res) => {
         ...user,
         license: assignedLicense
           ? {
-            id: assignedLicense.id,
-            key: assignedLicense.key,
-            expiresAt: assignedLicense.expiresAt,
-            maxActiveUsers: assignedLicense.maxActiveUsers,
-            demoMode: assignedLicense.demoMode === true
-          }
+              id: assignedLicense.id,
+              key: assignedLicense.key,
+              expiresAt: assignedLicense.expiresAt,
+              maxActiveUsers: assignedLicense.maxActiveUsers,
+              demoMode: assignedLicense.demoMode === true
+            }
           : null
       };
     });
@@ -3522,8 +3271,8 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
       key: license.key,
       expiresAt: license.expiresAt,
       maxActiveUsers: license.maxActiveUsers,
-      demoMode: license.demoMode === true,
-      daysLeft: getRemainingLicenseDays(license.expiresAt)
+    demoMode: license.demoMode === true,
+    daysLeft: getRemainingLicenseDays(license.expiresAt)
     }
   });
 });
@@ -3599,18 +3348,18 @@ app.get("/api/account/license-status", async (req, res) => {
     isDemoLicense: activeLicense?.demoMode === true,
     license: activeLicense
       ? {
-        id: activeLicense.id,
-        key: activeLicense.key,
-        expiresAt: activeLicense.expiresAt,
-        maxActiveUsers: activeLicense.maxActiveUsers,
-        demoMode: activeLicense.demoMode === true,
-        daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
-      }
+          id: activeLicense.id,
+          key: activeLicense.key,
+          expiresAt: activeLicense.expiresAt,
+          maxActiveUsers: activeLicense.maxActiveUsers,
+          demoMode: activeLicense.demoMode === true,
+          daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
+        }
       : null,
     demoLimits: activeLicense?.demoMode
       ? {
-        maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
-      }
+          maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
+        }
       : null,
     uploadPolicy,
     uploadsUsed
@@ -3729,7 +3478,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       language: "pl",
       response_format: "verbose_json",
       temperature: 0.0, // Lower temperature for more deterministic results
-      prompt: "Oto nagranie z polskiej lekcji edukacyjnej. Nauczyciel i uczniowie omawiają materiał i wykonują zadania." // Context prompt
+      prompt: "To jest nagranie z lekcji online." // Context prompt
     }).catch(err => {
       console.error('[transcribe] Whisper API error:', err);
       throw err;
@@ -3744,13 +3493,11 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     const rawText = String(transcription.text || "").trim();
     console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
-    // Rozszerzone serwerowe filtrowanie halucynacji Whispera
-    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
-    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
+    // Simplified server-side filtering - only filter obvious single-word hallucinations
+    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please)$/i;
     const isValidTranscription = rawText &&
-      rawText.length > 5 &&
-      !obviousHallucinations.test(rawText) &&
-      !hallucinationRegex.test(rawText);
+                              rawText.length > 5 &&
+                              !obviousHallucinations.test(rawText);
 
     // Only record cost if transcription is valid
     if (isValidTranscription) {

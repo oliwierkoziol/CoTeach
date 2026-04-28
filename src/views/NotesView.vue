@@ -43,7 +43,7 @@
           </div>
 
           <!-- Temat -->
-          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Temat</label>
             <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
               <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
@@ -54,7 +54,7 @@
           </div>
 
           <!-- Dział -->
-          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Dział</label>
             <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
               <input v-model="section" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="np. Optyka, Genetyka..." />
@@ -64,12 +64,12 @@
             </div>
           </div>
 
-          <!-- Szkoła -->
-          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Szkoła</label>
+          <!-- Klasa -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Szkoły</label>
             <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <select v-model="schoolType" @change="classLevel = classOptions[0]" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
-                <option v-for="type in schoolTypeOptions" :key="type" :value="type">{{ type }}</option>
+              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
+                <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
               <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
@@ -81,76 +81,7 @@
               </div>
             </div>
           </div>
-
-          <!-- Klasa -->
-          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-            <div class="flex items-center justify-between w-full">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Klasa</label>
-              <button type="button" @click="isManagingClasses = !isManagingClasses" class="text-[#0c3dfe] text-[12px] font-bold hover:underline transition-all">
-                {{ isManagingClasses ? '✕ Zamknij zarządzanie' : '+ Zarządzaj klasami' }}
-              </button>
-            </div>
-            <div class="flex gap-2 w-full h-[48px]">
-              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
-                  <option value="" disabled>Wybierz...</option>
-                  <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
-                </select>
-                <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
-                  <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
-                    <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <!-- Inline Class Management Block -->
-        <Transition name="fade-slide">
-          <div v-if="isManagingClasses" class="w-full bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 mt-4 border border-[#0c3dfe]/10 overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px]">Zarządzanie własnymi klasami</h3>
-              <button @click="isManagingClasses = false" class="text-[#767683] hover:text-[#191c1e] transition-colors">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div class="flex gap-2 mb-4">
-              <input
-                v-model.trim="newClassName"
-                type="text"
-                class="flex-1 rounded-xl border border-[#e0e3e6] bg-white px-4 py-2 text-[16px] text-[#191c1e] outline-none focus:border-[#0c3dfe] focus:ring-2 focus:ring-[#0c3dfe]/20"
-                placeholder="Nazwa nowej klasy..."
-                @keyup.enter="addClass"
-              />
-              <button
-                @click="addClass"
-                :disabled="isSavingClasses || !newClassName.trim()"
-                class="bg-[#0c3dfe] text-white px-6 py-2 rounded-xl font-semibold hover:bg-[#0a34d4] transition-colors disabled:opacity-50"
-              >
-                Dodaj
-              </button>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              <div 
-                v-for="(className, index) in userClasses" 
-                :key="index"
-                class="flex items-center justify-between bg-[#f7f9fc] px-3 py-2 rounded-lg border border-[#e0e3e6] group"
-              >
-                <span class="text-sm font-medium text-[#191c1e] truncate mr-2">{{ className }}</span>
-                <button @click="removeClass(index)" class="text-[#9e3f4e] opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </Transition>
       </div>
 
       <!-- Ingestion Area -->
@@ -244,10 +175,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
-import { supabase } from "../supabase";
 import cloudIcon from "../assets/cloud.svg";
 
 let pdfMakeInstance = null;
@@ -279,24 +209,32 @@ async function getPdfMake() {
 
 const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload } = useLessonStore();
 const router = useRouter();
-
-const schoolTypeOptions = [
-  "Szkoła Podstawowa",
-  "Szkoła Ponadpodstawowa",
-  "Inne"
+const classOptions = [
+  "1 Klasa Szkoły Podstawowej",
+  "2 Klasa Szkoły Podstawowej",
+  "3 Klasa Szkoły Podstawowej",
+  "4 Szkoła Podstawowa",
+  "5 Szkoła Podstawowa",
+  "6 Szkoła Podstawowa",
+  "7 Szkoła Podstawowa",
+  "8 Szkoła Podstawowa",
+  "1 Szkoła Średnia",
+  "2 Szkoła Średnia",
+  "3 Szkoła Średnia",
+  "4 Szkoła Średnia",
+  "5 Szkoła Średnia",
+  "Szkolenie firmowe",
+  "Szkolenie wewnętrzne",
+  "Warsztat",
+  "Konsultacje",
+  "Inny typ notatki"
 ];
-const schoolType = ref("Szkoła Podstawowa");
-const userClasses = ref([]);
-const classLevel = ref("");
-const customClass = ref("");
-const isManagingClasses = ref(false);
-const newClassName = ref("");
-const isSavingClasses = ref(false);
 
 const subject = ref("");
 const title = ref("");
 const section = ref("");
 const lessonDate = ref(new Date().toISOString().split("T")[0]);
+const classLevel = ref("1 Klasa Szkoły Podstawowej");
 const rawTextContent = ref("");
 const selectedFile = ref(null);
 
@@ -304,70 +242,6 @@ const loading = ref(false);
 const saving = ref(false);
 const error = ref("");
 const info = ref("");
-
-onMounted(async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
-    if (profile?.classes) {
-      userClasses.value = profile.classes.filter(c => c && c !== "+ dodaj własną" && c !== "+ dodaj klasę" && c !== "+ zarządzaj klasami");
-    }
-  }
-});
-
-const classOptions = computed(() => {
-  let base = [];
-  if (schoolType.value === "Inne") {
-    base = ["Szkolenie firmowe", "Szkolenie wewnętrzne", "Warsztat", "Konsultacje", "Inny typ notatki"];
-  }
-  return [...base, ...userClasses.value].filter(c => c && c !== "+ dodaj własną" && c !== "+ dodaj klasę" && c !== "+ zarządzaj klasami");
-});
-
-// watch(classLevel, (val) => {
-//   if (val === "+ dodaj własną") {
-//     isManagingClasses.value = true;
-//     classLevel.value = "";
-//   }
-// });
-
-async function addClass() {
-  if (!newClassName.value.trim()) return;
-  if (userClasses.value.includes(newClassName.value.trim())) {
-    error.value = "Ta klasa już istnieje.";
-    return;
-  }
-  userClasses.value.push(newClassName.value.trim());
-  newClassName.value = "";
-  await saveClasses();
-}
-
-async function removeClass(index) {
-  userClasses.value.splice(index, 1);
-  await saveClasses();
-}
-
-async function saveClasses() {
-  try {
-    isSavingClasses.value = true;
-    error.value = "";
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error: err } = await supabase.from("profiles").upsert({
-      id: user.id,
-      classes: userClasses.value,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "id" });
-    if (err) throw err;
-  } catch (err) {
-    error.value = "Błąd zapisywania klas: " + err.message;
-  } finally {
-    isSavingClasses.value = false;
-  }
-}
-
-const finalClassLevel = computed(() => {
-  return classLevel.value || "";
-});
 
 async function handleFileChange(event) {
   const file = event.target.files?.[0];
@@ -393,9 +267,7 @@ async function handleFileChange(event) {
 function resetForm() {
   subject.value = "";
   lessonDate.value = new Date().toISOString().split("T")[0];
-  schoolType.value = "Szkoła Podstawowa";
-  classLevel.value = "1";
-  customClass.value = "";
+  classLevel.value = "1 Klasa Szkoły Podstawowej";
   title.value = "";
   section.value = "";
   rawTextContent.value = "";
@@ -417,7 +289,7 @@ async function handleGenerate() {
       subject: subject.value,
       topic: title.value,
       section: section.value,
-      classLevel: finalClassLevel.value,
+      classLevel: classLevel.value,
       rawText: rawTextContent.value
     });
     rawTextContent.value = result || "";
@@ -442,7 +314,7 @@ async function handleSave() {
     await saveTeacherNote({
       title: title.value,
       subject: combinedSubject,
-      classLevel: finalClassLevel.value,
+      classLevel: classLevel.value,
       content: rawTextContent.value,
       source: "ai"
     });
@@ -574,18 +446,3 @@ async function downloadNotePdf() {
   }
 }
 </script>
-
-<style scoped>
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.3s ease;
-  max-height: 500px;
-}
-
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-  transform: translateY(-10px);
-}
-</style>
