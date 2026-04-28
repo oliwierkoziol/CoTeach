@@ -140,27 +140,47 @@
           </div>
         </div>
 
-        <div class="space-y-4 rounded-xl bg-white shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+        <div class="space-y-12 rounded-xl bg-white shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
           <div v-if="sourceNote" class="rounded-xl border border-[#e0e3e6] bg-[#f7f9fc] p-4">
             <h3 class="font-['Plus_Jakarta_Sans'] mb-2 text-[14px] font-bold text-[#191c1e]">Notatka źródłowa</h3>
             <textarea :value="sourceNote" readonly class="font-['Plus_Jakarta_Sans'] min-h-[120px] w-full rounded-lg border-none bg-transparent p-0 text-[14px] text-[#454652] outline-none resize-none" />
           </div>
           
-          <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-[#e0e3e6] p-5 bg-[#fbfcfd]">
-            <div class="mb-4 flex items-center gap-3">
-              <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0c3dfe]/10 text-sm font-bold text-[#0c3dfe]">{{ idx + 1 }}</span>
-              <input v-model="point.title" class="font-['Plus_Jakarta_Sans'] flex-1 rounded-lg border border-[#e0e3e6] bg-white px-4 py-2.5 text-[#191c1e] text-[16px] font-semibold outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors" placeholder="Tytuł punktu" />
-            </div>
-            <input
-              :value="point.keywords.join(', ')"
-              class="font-['Plus_Jakarta_Sans'] mb-3 w-full rounded-lg border border-[#e0e3e6] bg-white px-4 py-2 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors"
-              placeholder="Słowa kluczowe (po przecinku)"
-              @input="setKeywords(idx, $event.target.value)"
-            />
-            <textarea v-model="point.description" class="font-['Plus_Jakarta_Sans'] min-h-[80px] w-full rounded-lg border border-[#e0e3e6] bg-white p-4 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors resize-y" placeholder="Opis punktu do poruszenia na żywo..." />
+          <div class="space-y-4">
+            <h3 class="font-['Plus_Jakarta_Sans'] text-[18px] font-extrabold text-[#191c1e]">Punkty lekcji</h3>
             
-            <div class="mt-2 flex justify-end">
-              <button type="button" class="font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-red-500 hover:text-red-700 transition-colors" @click="removePoint(point.id)">Usuń punkt</button>
+            <div class="space-y-12">
+              <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-[#e0e3e6] p-6 bg-[#fbfcfd] space-y-6">
+                <!-- Title Field -->
+                <div class="flex flex-col gap-2">
+                  <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Tytuł punktu</label>
+                  <div class="flex items-center gap-3">
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0c3dfe]/10 text-sm font-bold text-[#0c3dfe]">{{ idx + 1 }}</span>
+                    <input v-model="point.title" class="font-['Plus_Jakarta_Sans'] flex-1 rounded-lg border border-[#e0e3e6] bg-white px-4 py-2.5 text-[#191c1e] text-[16px] font-semibold outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors" placeholder="Wpisz tytuł punktu..." />
+                  </div>
+                </div>
+
+                <!-- Keywords Field -->
+                <div class="flex flex-col gap-2">
+                  <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Słowa kluczowe (po przecinku)</label>
+                  <input
+                    :value="point.keywords.join(', ')"
+                    class="font-['Plus_Jakarta_Sans'] w-full rounded-lg border border-[#e0e3e6] bg-white px-4 py-2.5 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors"
+                    placeholder="np. fotosynteza, chlorofil, światło"
+                    @input="setKeywords(idx, $event.target.value)"
+                  />
+                </div>
+
+                <!-- Content Field -->
+                <div class="flex flex-col gap-2">
+                  <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Treść punktu</label>
+                  <textarea v-model="point.description" class="font-['Plus_Jakarta_Sans'] min-h-[100px] w-full rounded-lg border border-[#e0e3e6] bg-white p-4 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors resize-y" placeholder="Opisz co chcesz omówić w tym punkcie..." />
+                </div>
+                
+                <div class="mt-2 flex justify-end">
+                  <button type="button" class="font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-red-500 hover:text-red-700 transition-colors" @click="removePoint(point.id)">Usuń punkt</button>
+                </div>
+              </div>
             </div>
           </div>
           
