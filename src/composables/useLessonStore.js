@@ -219,6 +219,17 @@ export function useLessonStore() {
     });
   }
 
+  async function transcribeAudioFile(lessonId, file) {
+    const form = new FormData();
+    form.set("lessonId", lessonId);
+    form.set("file", file);
+    const data = await api("/api/transcribe", {
+      method: "POST",
+      body: form
+    });
+    return data.text;
+  }
+
   async function refreshCoverage(lessonId) {
     const coverage = await api(`/api/lessons/${lessonId}/coverage`);
     state.missing = coverage.missing || [];
@@ -407,6 +418,7 @@ export function useLessonStore() {
     savePlan,
     startLive,
     deleteLesson,
+    transcribeAudioFile,
     sendTranscript,
     refreshCoverage,
     setManualPointApproval,

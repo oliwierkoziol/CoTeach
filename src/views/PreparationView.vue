@@ -102,6 +102,10 @@
           {{ error }}
         </div>
         <div class="flex w-full flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
+          <input type="file" ref="audioFileInput" class="hidden" accept="audio/*" @change="handleAudioLesson" />
+          <button type="button" :disabled="!selectedNoteId || isGenerating" @click="triggerAudioUpload" class="bg-white border-2 border-dashed border-[#0c3dfe] text-[#0c3dfe] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#f0f4ff] transition-colors w-full sm:w-auto sm:mr-auto disabled:opacity-50">
+            {{ isGenerating ? "Przetwarzam..." : "Stwórz lekcję z pliku audio" }}
+          </button>
           <!-- Button Anuluj -->
           <button type="button" @click="resetForm" class="bg-muted border border-border text-muted-foreground font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-background/70 transition-colors w-full sm:w-auto">
             Anuluj
@@ -176,7 +180,7 @@ import { useLessonStore } from "../composables/useLessonStore";
 import archiveIcon from "../assets/archive.svg";
 
 const router = useRouter();
-const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes } = useLessonStore();
+const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes, transcribeAudioFile, sendTranscript, refreshCoverage } = useLessonStore();
 const lesson = computed(() => state.lesson);
 
 const title = ref("");
@@ -185,6 +189,7 @@ const selectedNoteId = ref("");
 const isGenerating = ref(false);
 const lastAutoTitle = ref("");
 const isSaving = ref(false);
+const audioFileInput = ref(null);
 
 const error = ref("");
 const info = ref("");
@@ -265,6 +270,64 @@ async function handleGenerate() {
     error.value = e.message;
   } finally {
     isGenerating.value = false;
+  }
+}
+
+function triggerAudioUpload() {
+  if (!selectedNoteId.value) {
+    error.value = "Wybierz najpierw notatkę.";
+    return;
+  }
+  audioFileInput.value?.click();
+}
+
+async function handleAudioLesson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    isGenerating.value = true;
+    error.value = "";
+    info.value = "Przygotowuję lekcję i transkrybuję plik...";
+
+    if (!title.value) {
+      error.value = "Wypełnij temat lekcji.";
+      return;
+    }
+
+    const normalizedDate = new Date().toISOString().split("T")[0];
+    const lessonMonth = new Date().toLocaleString("pl-PL", { month: "long" });
+    const generatedSubject = selectedNote.value?.subject || "Ogólny";
+    const extractedRawText = selectedNote.value?.content || "";
+    const parsedLessonMinutes = Number(lessonTime.value) || 45;
+
+    const created = await createLesson({
+      subject: generatedSubject,
+      title: title.value,
+      month: lessonMonth,
+      date: normalizedDate,
+      length: Math.round(parsedLessonMinutes),
+      rawText: ""
+    });
+
+    await uploadLessonMaterial(created.id, { rawText: extractedRawText, file: null });
+    await startLive(created.id);
+
+    info.value = "Transkrybuję plik audio (Whisper AI)...";
+    const transcriptText = await transcribeAudioFile(created.id, file);
+
+    if (transcriptText) {
+      await sendTranscript(created.id, transcriptText);
+      await refreshCoverage(created.id);
+    }
+
+    info.value = "Lekcja gotowa. Przekierowuję...";
+    await router.push(`/live-lesson/${created.id}`);
+  } catch (e) {
+    error.value = "Błąd: " + e.message;
+  } finally {
+    isGenerating.value = false;
+    if (audioFileInput.value) audioFileInput.value.value = "";
   }
 }
 
