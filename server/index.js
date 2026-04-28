@@ -3622,6 +3622,7 @@ app.patch("/api/account/grant-license", async (req, res) => {
   if (!teacher) return;
 
   const userId = teacher.userId;
+  const schoolId = String(teacher.schoolId || defaultSchoolId).trim() || defaultSchoolId;
   const days = 30;
   const maxActiveUsers = 1;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -3636,11 +3637,17 @@ app.patch("/api/account/grant-license", async (req, res) => {
     maxActiveUsers,
     expiresAt,
     demoMode: false,
-    schoolId: teacher.schoolId,
+    schoolId,
     assignedUserId: userId
   };
 
   try {
+    const schoolSettings = getSchoolSettings(schoolId);
+    await ensureSupabaseSchoolRow({
+      schoolId,
+      schoolName: schoolSettings.schoolName,
+      businessEmailDomain: schoolSettings.businessEmailDomain
+    });
     await persistLicense(license);
     db.licenses.set(licenseId, license);
     await syncProfileLicenseStateSafe({ userId, activeLicense: license });
