@@ -2716,35 +2716,6 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   });
 });
 
-app.put("/api/lessons/:lessonId/cancel", async (req, res) => {
-  const teacher = await resolveTeacherContext(req, res);
-  if (!teacher) return;
-  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Anulowanie lekcji");
-  if (!activeLicense) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
-  if (!lesson) return;
-
-  lesson.status = "draft";
-  lesson.startedAt = null;
-  lesson.finishedAt = null;
-  lesson.transcripts = [];
-  lesson.finalNote = null;
-
-  db.lessons.set(lesson.id, lesson);
-  db.costs.delete(lesson.id); // Clear in-memory costs
-  await persistLessonSafe(lesson);
-  await removeFinalNoteSafe(lesson.id); // Remove final note from DB
-  await removeCostEventsForLessonSafe(lesson.id); // Remove cost events from DB
-
-  return res.json({
-    lesson,
-    demo: {
-      isDemo: activeLicense.demoMode === true,
-      maxLiveMinutes: activeLicense.demoMode ? DEMO_POLICY.maxLiveMinutes : null
-    }
-  });
-});
-
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;

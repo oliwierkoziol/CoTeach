@@ -633,14 +633,14 @@ const router = useRouter();
 const {
   state,
   startLive,
-  cancelLesson,
+  deleteLesson, // Changed from cancelLesson to deleteLesson
   sendTranscript,
   refreshCoverage,
   setManualPointApproval,
   finalizeLesson,
   fetchLessons,
   fetchLesson,
-  hydrateLessonFromCache,
+  hydrateLessonFromCache, 
   askMeAI
 } = useLessonStore();
 
@@ -1843,12 +1843,12 @@ async function cancelLessonAndRedirect() {
   try {
     error.value = "";
     stopSession(); // Stop recording and timers
-    await cancelLesson(state.lesson.id);
-    info.value = "Lekcja została anulowana i przywrócona do wersji roboczej.";
+    await deleteLesson(state.lesson.id); // Call deleteLesson instead of cancelLesson
+    info.value = "Lekcja została anulowana i usunięta."; // Updated message
     router.push("/preparation"); // Redirect to preparation view
   } catch (e) {
     error.value = e.message || "Nie udało się anulować lekcji.";
-    console.error("Cancel lesson error:", e);
+    console.error("Delete lesson error:", e); // Updated error message
   }
 }
 
