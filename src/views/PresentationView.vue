@@ -268,17 +268,19 @@
         <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Generator prezentacji</h2>
         <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Twórz prezentacje z wybranej lekcji i notatki, dopasowane do poziomu klasy.</p>
       </div>
-      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
-        <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-2 flex items-center gap-2">Źródło materiałów
+      <div class="bg-card border border-border content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] mb-2 flex items-center gap-2">Źródło materiałów
         </h3>
 
-        <div class="mb-8 flex p-[6px] bg-[#f2f2f2] rounded-full w-fit">
+        <div class="mb-8 flex rounded-full border border-border bg-muted p-[6px] w-fit">
           <button
             type="button"
             @click="presentationSource = 'note'"
             :class="[
               'inline-flex h-10 items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-all',
-              presentationSource === 'note' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
+              presentationSource === 'note'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
             ]"
           >
             Notatki przedmiotowe
@@ -288,7 +290,9 @@
             @click="presentationSource = 'lesson'"
             :class="[
               'inline-flex h-10 items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-all',
-              presentationSource === 'lesson' ? 'bg-[#0c3dfe] text-white shadow-sm' : 'text-[#454652] hover:text-[#0c3dfe]'
+              presentationSource === 'lesson'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
             ]"
           >
             Lekcje na żywo
@@ -303,8 +307,8 @@
               :class="[
                 'flex w-full flex-row items-center text-left gap-4 p-5 rounded-[12px] transition-all border-2',
                 selectedSourceId === item.id
-                  ? 'bg-[#0c3dfe] border-[#0c3dfe] text-white shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)]'
-                  : 'bg-[#f8f9fb] border-transparent text-[#2a3439] hover:border-gray-300'
+                  ? 'bg-primary border-primary text-primary-foreground shadow-[0px_12px_24px_-4px_rgba(12,61,254,0.3)]'
+                  : 'bg-background border-border text-foreground hover:border-primary/30'
               ]"
             >
               <img 
@@ -331,28 +335,28 @@
         </div>
       </div>
 
-      <div class="bg-white content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+      <div class="bg-card border border-border content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
         <div class="mb-1 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] flex items-center gap-2">
+          <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
             Ustawienia prezentacji
           </h3>
-          <label class="inline-flex cursor-pointer items-center gap-2 font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-[#454652]">
-            <input v-model="includeImages" type="checkbox" class="h-4 w-4 accent-[#0c3dfe]" />
+          <label class="inline-flex cursor-pointer items-center gap-2 font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-muted-foreground">
+            <input v-model="includeImages" type="checkbox" class="h-4 w-4 rounded border-border bg-input-background text-primary accent-primary" />
             Generuj slajdy ze zdjęciami AI
           </label>
         </div>
         <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Zakres treści</label>
-          <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Zakres treści</label>
+          <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
             <select
               v-model="presentationScope"
               :disabled="presentationSource === 'note'"
-              class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer"
+              class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
             >
               <option value="full">Cała lekcja/notatka</option>
               <option value="pending">Tylko nieomówione punkty</option>
             </select>
-            <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+            <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
               <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
                 <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
               </svg>
@@ -361,19 +365,19 @@
         </div>
       </div>
 
-      <div class="bg-white content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
+      <div class="bg-card border border-border content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
         <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800">
           {{ generationMessage }}
         </div>
         <div class="flex flex-col sm:flex-row items-center justify-between gap-6 w-full">
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-[12px] bg-indigo-50 flex items-center justify-center">
-              <svg class="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
+            <div class="w-12 h-12 rounded-[12px] bg-primary/10 flex items-center justify-center">
+              <svg class="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
             </div>
             <div>
-              <p class="font-['Plus_Jakarta_Sans'] text-[13px] font-bold text-[#454652] uppercase tracking-wider mb-0.5">Estymacja</p>
-              <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#191c1e]">
-                Liczba slajdów: <span class="font-extrabold text-[#0c3dfe]">{{ plannedSlideCount }}</span>
+              <p class="font-['Plus_Jakarta_Sans'] text-[13px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Estymacja</p>
+              <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-foreground">
+                Liczba slajdów: <span class="font-extrabold text-primary">{{ plannedSlideCount }}</span>
               </p>
             </div>
           </div>
@@ -382,7 +386,7 @@
             <button
               type="button"
               @click="$router.back()"
-              class="bg-[#f2f2f2] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[16px] leading-[24px]"
+              class="bg-muted border border-border content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-background/70 transition-colors w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[16px] leading-[24px]"
             >
               Anuluj
             </button>
@@ -390,7 +394,7 @@
               type="button"
               :disabled="!canGenerate || isGenerating"
               @click="startGeneratedPresentation"
-              class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]"
+              class="bg-primary content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:opacity-90 transition-colors disabled:opacity-50 w-full sm:w-auto font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-primary-foreground leading-[24px]"
             >
               {{ isGenerating ? "Generuję..." : "Wygeneruj slajdy" }}
             </button>

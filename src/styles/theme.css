@@ -52,27 +52,27 @@
 }
 
 .dark {
-  --background: oklch(0.21 0.028 265);
+  --background: oklch(0.18 0.026 265);
   --foreground: oklch(0.93 0.02 95);
-  --card: oklch(0.25 0.03 265);
+  --card: oklch(0.22 0.028 265);
   --card-foreground: oklch(0.93 0.02 95);
-  --popover: oklch(0.27 0.03 265);
+  --popover: oklch(0.2 0.028 265);
   --popover-foreground: oklch(0.93 0.02 95);
-  --primary: oklch(0.74 0.12 195);
-  --primary-foreground: oklch(0.14 0.03 265);
-  --secondary: oklch(0.3 0.03 265);
+  --primary: oklch(0.68 0.11 235);
+  --primary-foreground: oklch(0.97 0.01 95);
+  --secondary: oklch(0.28 0.028 265);
   --secondary-foreground: oklch(0.92 0.02 95);
-  --muted: oklch(0.3 0.025 265);
-  --muted-foreground: oklch(0.66 0.02 95);
-  --accent: oklch(0.32 0.05 300);
+  --muted: oklch(0.26 0.024 265);
+  --muted-foreground: oklch(0.72 0.018 95);
+  --accent: oklch(0.3 0.03 280);
   --accent-foreground: oklch(0.93 0.02 95);
   --destructive: oklch(0.58 0.2 25);
   --destructive-foreground: oklch(0.98 0.01 95);
-  --border: oklch(0.34 0.03 265);
-  --input: oklch(0.34 0.03 265);
-  --input-background: oklch(0.19 0.03 265);
-  --switch-background: oklch(0.4 0.03 265);
-  --ring: oklch(0.74 0.12 195);
+  --border: oklch(0.31 0.028 265);
+  --input: oklch(0.31 0.028 265);
+  --input-background: oklch(0.16 0.022 265);
+  --switch-background: oklch(0.38 0.03 265);
+  --ring: oklch(0.68 0.11 235);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: oklch(0.488 0.243 264.376);
@@ -80,14 +80,14 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.14 0.035 265);
+  --sidebar: oklch(0.13 0.03 265);
   --sidebar-foreground: oklch(0.88 0.02 95);
-  --sidebar-primary: oklch(0.74 0.12 195);
-  --sidebar-primary-foreground: oklch(0.14 0.03 265);
-  --sidebar-accent: oklch(0.22 0.04 265);
+  --sidebar-primary: oklch(0.68 0.11 235);
+  --sidebar-primary-foreground: oklch(0.97 0.01 95);
+  --sidebar-accent: oklch(0.2 0.03 265);
   --sidebar-accent-foreground: oklch(0.95 0.02 95);
-  --sidebar-border: oklch(0.24 0.035 265);
-  --sidebar-ring: oklch(0.74 0.12 195);
+  --sidebar-border: oklch(0.22 0.03 265);
+  --sidebar-ring: oklch(0.68 0.11 235);
   --brand-logo-filter: brightness(0) saturate(100%) invert(77%) sepia(21%) saturate(2113%) hue-rotate(191deg) brightness(102%) contrast(98%);
 }
 
@@ -219,7 +219,8 @@
 /* Legacy view palette overrides so header dark-mode affects all app pages.
    Colors are mapped to the same semantic dark tokens used by LoginView. */
 .dark .app-shell .bg-\[\#f7f9fc\],
-.dark .app-shell .bg-\[\#f8fafc\] {
+.dark .app-shell .bg-\[\#f8fafc\],
+.dark .app-shell .bg-\[\#fbfcfd\] {
   background-color: var(--background) !important;
 }
 
@@ -229,7 +230,8 @@
 
 .dark .app-shell .bg-\[\#e0e3e6\],
 .dark .app-shell .bg-\[\#e6e8eb\],
-.dark .app-shell .bg-\[\#f2f4f7\] {
+.dark .app-shell .bg-\[\#f2f4f7\],
+.dark .app-shell .bg-\[\#e7e8ee\] {
   background-color: var(--input-background) !important;
 }
 
@@ -252,6 +254,14 @@
   border-color: var(--border) !important;
 }
 
+.dark .app-shell .border-white,
+.dark .app-shell .border-\[\#cfd5db\],
+.dark .app-shell .border-\[\#e0e3e6\],
+.dark .app-shell .border-\[\#e7e8ee\],
+.dark .app-shell .border-\[\#e0e3e6\]\/60 {
+  border-color: var(--border) !important;
+}
+
 .dark .app-shell .hover\:bg-black\/5:hover {
   background-color: var(--muted) !important;
 }
@@ -262,35 +272,35 @@
 
 /* Increase contrast for legacy dark-blue accents on dark backgrounds. */
 .dark .app-shell .bg-\[\#0c3dfe\] {
-  background-color: #60a5fa !important;
+  background-color: var(--primary) !important;
 }
 
 .dark .app-shell .hover\:bg-\[\#0a34d4\]:hover {
-  background-color: #3b82f6 !important;
+  background-color: color-mix(in oklab, var(--primary) 88%, black) !important;
 }
 
 .dark .app-shell .bg-\[\#0053db\] {
-  background-color: #60a5fa !important;
+  background-color: var(--primary) !important;
 }
 
 .dark .app-shell .hover\:bg-\[\#0043b2\]:hover {
-  background-color: #3b82f6 !important;
+  background-color: color-mix(in oklab, var(--primary) 88%, black) !important;
 }
 
 .dark .app-shell .text-\[\#0c3dfe\],
 .dark .app-shell .text-\[\#0053db\],
 .dark .app-shell .text-\[\#142588\] {
-  color: #93c5fd !important;
+  color: color-mix(in oklab, var(--primary) 82%, white) !important;
 }
 
 .dark .app-shell .bg-\[\#e8eefb\] {
-  background-color: rgba(96, 165, 250, 0.2) !important;
+  background-color: color-mix(in oklab, var(--primary) 18%, transparent) !important;
 }
 
 .dark .app-shell .bg-\[rgba\(12\,61\,254\,0\.08\)\] {
-  background-color: rgba(96, 165, 250, 0.18) !important;
+  background-color: color-mix(in oklab, var(--primary) 18%, transparent) !important;
 }
 
 .dark .app-shell .hover\:bg-\[rgba\(12\,61\,254\,0\.14\)\]:hover {
-  background-color: rgba(96, 165, 250, 0.28) !important;
+  background-color: color-mix(in oklab, var(--primary) 26%, transparent) !important;
 }
