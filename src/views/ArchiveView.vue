@@ -324,6 +324,14 @@
               Otwórz tę prezentację
             </button>
 
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              @click="editSelectedPresentation"
+            >
+              Edytuj prezentację
+            </button>
+
             <!-- <button
               type="button"
               class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
@@ -384,6 +392,7 @@ import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
+const SKIP_REVIEW_KEY = "coteach:skip-review";
 const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
@@ -605,6 +614,14 @@ function openPresentationGenerator() {
 function openSelectedPresentation() {
   if (!selectedPresentation.value?.id) return;
   localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, String(selectedPresentation.value.id));
+  localStorage.setItem(SKIP_REVIEW_KEY, 'true');
+  router.push("/presentation");
+}
+
+function editSelectedPresentation() {
+  if (!selectedPresentation.value?.id) return;
+  localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, String(selectedPresentation.value.id));
+  localStorage.setItem(SKIP_REVIEW_KEY, 'false');
   router.push("/presentation");
 }
 

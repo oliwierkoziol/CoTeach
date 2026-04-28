@@ -451,7 +451,7 @@ const slideTypeTranslations = {
 
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
-const includeImages = ref(false);
+const includeImages = ref(true);
 const generationMessage = ref("");
 const presentationTheme = ref({
   wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
