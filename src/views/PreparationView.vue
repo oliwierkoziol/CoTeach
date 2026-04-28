@@ -103,7 +103,7 @@
         </div>
         <div class="flex w-full flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
           <!-- Button Anuluj -->
-          <button type="button" @click="resetForm" class="bg-[#f2f2f2] text-[#454652] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors w-full sm:w-auto">
+          <button type="button" @click="resetForm" class="bg-muted border border-border text-muted-foreground font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-background/70 transition-colors w-full sm:w-auto">
             Anuluj
           </button>
           <!-- Button Rozpocznij lekcję -->
