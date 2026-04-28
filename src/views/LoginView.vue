@@ -1,37 +1,37 @@
 <template>
-  <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative grid lg:grid-cols-2">
+  <div class="min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative grid lg:grid-cols-2 bg-gradient-to-br from-sidebar via-background to-card">
     <!-- Background Decoration -->
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
 
     <!-- Branding Side -->
-    <div class="relative hidden flex-col justify-between overflow-hidden bg-[#f8fafc] p-10 lg:flex z-10 border-r border-[#cfd5db]">
+    <div class="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-card/70 p-10 lg:flex z-10">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,oklch(0.74_0.12_195/0.15),transparent_55%)]" />
       <div class="relative">
-        <h2 class="font-['Plus_Jakarta_Sans'] mt-4 max-w-sm text-4xl font-extrabold leading-tight text-[#191c1e] tracking-tight">
+        <h2 class="font-['Plus_Jakarta_Sans'] mt-4 max-w-sm text-4xl font-extrabold leading-tight text-foreground tracking-tight">
           Lekcje, plan i archiwum w jednym panelu.
         </h2>
       </div>
-      <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-[#454652]">Zaloguj się, żeby wrócić do pracy.</p>
+      <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-muted-foreground">Zaloguj się, żeby wrócić do pracy.</p>
     </div>
 
     <!-- Login Side -->
     <div class="flex items-center justify-center px-4 py-12 sm:px-8 relative z-10">
       <div class="w-full max-w-md">
         <header class="mb-8 lg:text-left text-center">
-          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+          <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
             Logowanie
           </h1>
-          <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+          <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[18px] leading-[28px]">
             Wprowadź dane, aby uzyskać dostęp do konta.
           </p>
         </header>
 
-        <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 border border-white">
-          <div class="mb-6 grid grid-cols-2 gap-2 bg-[#f2f4f7] rounded-lg p-1">
+        <div class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
+          <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
             <button
               type="button"
               class="rounded-md px-3 py-2 text-sm font-bold transition-all"
-              :class="accountMode === 'individual' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+              :class="accountMode === 'individual' ? 'bg-card text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:bg-background/70'"
               @click="accountMode = 'individual'"
             >
               Indywidualne
@@ -39,7 +39,7 @@
             <button
               type="button"
               class="rounded-md px-3 py-2 text-sm font-bold transition-all"
-              :class="accountMode === 'business' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
+              :class="accountMode === 'business' ? 'bg-card text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:bg-background/70'"
               @click="accountMode = 'business'"
             >
               Służbowe
@@ -48,38 +48,38 @@
 
           <form v-if="accountMode === 'individual'" @submit.prevent="handleLogin" class="space-y-5">
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Email</label>
-              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Email</label>
+              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
                 <input
                   v-model="email"
                   type="email"
                   required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
                   placeholder="twoj@email.com"
                 />
               </div>
             </div>
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Hasło</label>
-              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Hasło</label>
+              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
                 <input
                   v-model="password"
                   type="password"
                   required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
                   placeholder="••••••••"
                 />
               </div>
             </div>
             <button
               type="submit"
-              class="w-full rounded-lg bg-[#0c3dfe] py-3.5 text-sm font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
             >
               Zaloguj się
             </button>
             <button
               type="button"
-              class="w-full text-sm font-bold text-[#0c3dfe] hover:underline transition"
+              class="w-full text-sm font-bold text-primary hover:underline transition"
               @click="handlePasswordReset"
             >
               Nie pamiętasz hasła?
@@ -88,15 +88,15 @@
 
           <template v-if="accountMode === 'individual'">
             <div class="my-6 flex items-center gap-3">
-              <span class="h-px flex-1 bg-gray-100"></span>
-              <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">lub</span>
-              <span class="h-px flex-1 bg-gray-100"></span>
+              <span class="h-px flex-1 bg-border"></span>
+              <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">lub</span>
+              <span class="h-px flex-1 bg-border"></span>
             </div>
 
             <button
               type="button"
               @click="handleGoogleAuth"
-              class="w-full rounded-lg border-2 border-[#e0e3e6] bg-white px-4 py-3 text-sm font-bold text-[#191c1e] transition hover:bg-[#f2f4f7]"
+              class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition hover:bg-muted"
             >
               Kontynuuj przez Google
             </button>
@@ -104,32 +104,32 @@
 
           <form v-else @submit.prevent="handleBusinessLogin" class="space-y-5">
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Login służbowy</label>
-              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Login służbowy</label>
+              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
                 <input
                   v-model="businessLogin"
                   type="text"
                   required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
                   placeholder="np. jan.kowalski"
                 />
               </div>
             </div>
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Hasło</label>
-              <div class="bg-[#e0e3e6] h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Hasło</label>
+              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
                 <input
                   v-model="businessPassword"
                   type="password"
                   required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']"
+                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
                   placeholder="••••••••"
                 />
               </div>
             </div>
             <button
               type="submit"
-              class="w-full rounded-lg bg-[#0c3dfe] py-3.5 text-sm font-bold text-white transition hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
             >
               Zaloguj konto służbowe
             </button>

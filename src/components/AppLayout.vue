@@ -88,7 +88,7 @@
 
     <aside
       :class="[
-        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-black/30 bg-[#f8fafc] transition-transform duration-200 ease-out md:translate-x-0',
+        'fixed left-0 top-[64px] z-[55] flex h-[calc(100vh-64px)] w-[256px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out md:translate-x-0',
         open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translate-x-0',
       ]"
     >
@@ -103,16 +103,16 @@
           <a
             :href="href"
             :class="[
-              'mb-4 flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors',
+              'mb-4 flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-colors',
               startLessonCta.isLive
-                ? 'bg-[rgba(12,61,254,0.08)] hover:bg-[rgba(12,61,254,0.14)]'
-                : 'justify-center bg-[#0c3dfe] hover:bg-[#0a34d4]'
+                ? 'bg-primary/10 text-primary hover:bg-primary/15'
+                : 'justify-center bg-primary text-primary-foreground hover:opacity-90'
             ]"
             @click="navigate(); open = false;"
           >
             <template v-if="startLessonCta.isLive">
               <img :src="screenIcon" alt="" class="h-[18px] w-[20px] shrink-0" />
-              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-[#0c3dfe]">
+              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-primary">
                 {{ startLessonCta.label }}
               </span>
             </template>
@@ -120,7 +120,7 @@
               <svg class="h-[10px] w-[10px]" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-white">
+              <span class="font-['Plus_Jakarta_Sans'] text-sm font-semibold leading-5 text-primary-foreground">
                 Rozpocznij lekcję
               </span>
             </template>
@@ -128,25 +128,25 @@
         </RouterLink>
 
         <!-- Divider + nav links -->
-        <div class="flex-1 space-y-1 border-t border-black/30 pt-4">
+        <div class="flex-1 space-y-1 border-t border-sidebar-border pt-4">
 
           <!-- Panel startowy -->
           <RouterLink to="/dashboard" custom v-slot="{ href, navigate, isExactActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isExactActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isExactActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 18 18">
-                <path d="M10 6V0H18V6H10ZM0 10V0H8V10H0ZM10 18V8H18V18H10ZM0 18V12H8V18H0ZM2 8H6V2H2V8ZM12 16H16V10H12V16ZM12 4H16V2H12V4ZM2 16H6V14H2V16Z" fill="#566166"/>
+                <path d="M10 6V0H18V6H10ZM0 10V0H8V10H0ZM10 18V8H18V18H10ZM0 18V12H8V18H0ZM2 8H6V2H2V8ZM12 16H16V10H12V16ZM12 4H16V2H12V4ZM2 16H6V14H2V16Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isExactActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
+              <p :class="['text-[14px] font-semibold', isExactActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel startowy</p>
             </a>
           </RouterLink>
 
           <!-- Dodaj materiały -->
           <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-5 w-4 shrink-0" fill="none" viewBox="0 0 16 20">
-                <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="#566166"/>
+                <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Dodaj materiały</p>
             </a>
           </RouterLink>
 
@@ -162,37 +162,37 @@
 
           <!-- Prezentacja -->
           <RouterLink :to="presentationHref" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-4 w-5 shrink-0" fill="none" viewBox="0 0 20 16">
-                <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="#566166"/>
+                <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
             </a>
           </RouterLink>
 
           <!-- Archiwum -->
           <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
-                <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="#566166"/>
+                <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="currentColor"/>
               </svg>
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Archiwum</p>
             </a>
           </RouterLink>
           
           <!-- Organizacja -->
           <RouterLink v-if="isAdmin" to="/organization" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
             </a>
           
           </RouterLink>
           <!-- Panel admina -->
           <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors', isActive ? 'bg-[rgba(12,61,254,0.08)]' : 'hover:bg-black/5']" @click="navigate(); open = false;">
+            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <img :src="adminIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
-              <p :class="['text-[14px] font-semibold', isActive ? 'text-[#0c3dfe]' : 'text-[#475569]']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
+              <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Panel admina</p>
             </a>
           </RouterLink>
 
