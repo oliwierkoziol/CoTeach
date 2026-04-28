@@ -211,19 +211,6 @@ export function useLessonStore() {
     return data.lesson;
   }
 
-  async function cancelLesson(lessonId) {
-    const data = await api(`/api/lessons/${lessonId}/cancel`, { method: "PUT" });
-    if (state.lesson?.id === lessonId) {
-      const cancelledLesson = { ...state.lesson, status: "draft", startedAt: null, finishedAt: null, transcripts: [], finalNote: null };
-      setCurrentLessonInState(cancelledLesson);
-      upsertLessonInState(cancelledLesson);
-    } else {
-      // If not the current lesson, just update it in the lessons array
-      state.lessons = state.lessons.map((lesson) => (lesson.id === lessonId ? data.lesson : lesson));
-    }
-    return data.lesson;
-  }
-
   async function sendTranscript(lessonId, text) {
     await api(`/api/lessons/${lessonId}/transcript`, {
       method: "POST",
@@ -280,6 +267,14 @@ export function useLessonStore() {
     setCurrentLessonInState(data.lesson);
     state.lessons = state.lessons.map((lesson) => (lesson.id === data.lesson.id ? data.lesson : lesson));
     return data.lesson;
+  }
+
+  async function deleteLesson(lessonId) {
+    await api(`/api/lessons/${lessonId}`, { method: "DELETE" });
+    state.lessons = state.lessons.filter((l) => l.id !== lessonId);
+    if (state.lesson?.id === lessonId) {
+      setCurrentLessonInState(null);
+    }
   }
 
   async function deleteFinalNote(lessonId) {
@@ -386,6 +381,18 @@ export function useLessonStore() {
     state.notes = state.notes.filter((note) => note.id !== noteId);
   }
 
+  async function updateTeacherNote(noteId, payload) {
+    const data = await api(`/api/notes/${noteId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (data?.note) {
+      state.notes = state.notes.map((n) => (n.id === noteId ? data.note : n));
+    }
+    return data.note;
+  }
+
   async function fetchTeacherNotes() {
     const data = await api("/api/notes");
     state.notes = data.notes || [];
@@ -399,7 +406,7 @@ export function useLessonStore() {
     extractTextFromUpload,
     savePlan,
     startLive,
-    cancelLesson,
+    deleteLesson,
     sendTranscript,
     refreshCoverage,
     setManualPointApproval,

@@ -103,7 +103,7 @@
                 <textarea 
                   v-model="rawTextContent"
                   class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
-                  placeholder="Paste lecture notes, book transcripts, or structured syllabi here for deep analysis..."
+                  placeholder="Wklej tu notatki z lekcji, fragmenty książek lub struktury sylabusów do analizy AI..."
                 ></textarea>
               </div>
             </div>

@@ -289,7 +289,9 @@ function normalizePlanPoint(point, index = 0) {
     description: String(point?.description || "").trim(),
     keywords: Array.isArray(point?.keywords) ? point.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean) : [],
     status: normalizedStatus,
-    manualApproved: Boolean(point?.manualApproved) || normalizedStatus === "discussed-manual"
+    manualApproved: Boolean(point?.manualApproved) || normalizedStatus === "discussed-manual",
+    foundKeywords: Array.isArray(point?.foundKeywords) ? point.foundKeywords : [],
+    coverage: typeof point?.coverage === "number" ? point.coverage : 0
   };
 }
 
@@ -1824,34 +1826,24 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       return { ...item, status: "discussed" };
     }
 
-    // PRESERVE: If already discussed, keep it discussed
-    if (item.status === "discussed") {
-      console.log(`[Coverage] Point "${item.title}" already discussed - keeping status`);
-      return { ...item, status: "discussed" };
-    }
-
     // Check each keyword individually with fuzzy matching
     const keywords = item.keywords || [];
     if (keywords.length === 0) {
       return item; // No keywords, can't determine coverage
     }
 
+    const previouslyFound = new Set(item.foundKeywords || []);
     // Split transcript into words for better matching
     const words = normalizedTranscript.split(/\s+/);
-
     const foundKeywords = keywords.filter(keyword => {
-      // First try exact match
-      if (normalizedTranscript.includes(normalize(keyword))) {
-        return true;
-      }
-
-      // Then try fuzzy matching with each word
+      if (previouslyFound.has(keyword)) return true;
+      if (normalizedTranscript.includes(normalize(keyword))) return true;
       return words.some(word => polishFuzzyMatch(word, keyword));
     });
 
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
     const MIN_KEYWORDS_REQUIRED = 3;
-    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED) {
+    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED || item.status === "discussed") {
       console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords:`, foundKeywords);
       return {
         ...item,
@@ -2716,35 +2708,6 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   });
 });
 
-app.put("/api/lessons/:lessonId/cancel", async (req, res) => {
-  const teacher = await resolveTeacherContext(req, res);
-  if (!teacher) return;
-  const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Anulowanie lekcji");
-  if (!activeLicense) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
-  if (!lesson) return;
-
-  lesson.status = "draft";
-  lesson.startedAt = null;
-  lesson.finishedAt = null;
-  lesson.transcripts = [];
-  lesson.finalNote = null;
-
-  db.lessons.set(lesson.id, lesson);
-  db.costs.delete(lesson.id); // Clear in-memory costs
-  await persistLessonSafe(lesson);
-  await removeFinalNoteSafe(lesson.id); // Remove final note from DB
-  await removeCostEventsForLessonSafe(lesson.id); // Remove cost events from DB
-
-  return res.json({
-    lesson,
-    demo: {
-      isDemo: activeLicense.demoMode === true,
-      maxLiveMinutes: activeLicense.demoMode ? DEMO_POLICY.maxLiveMinutes : null
-    }
-  });
-});
-
 app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
@@ -2871,6 +2834,35 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   await persistLessonSafe(lesson);
   await removeFinalNoteSafe(lesson.id);
   return res.json({ lesson });
+});
+
+app.delete("/api/lessons/:lessonId", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  if (!lesson) return;
+
+  try {
+    if (supabase) {
+      // Delete associated data first to maintain referential integrity
+      await supabase.from("openrouter_usage_events").delete().eq("lesson_id", lesson.id);
+      await supabase.from("final_notes").delete().eq("lesson_id", lesson.id);
+      
+      // Delete the lesson itself
+      const { error } = await supabase.from("lessons").delete().eq("id", lesson.id);
+      if (error) throw error;
+    }
+
+    db.lessons.delete(lesson.id);
+    db.costs.delete(lesson.id);
+    db.costEvents = db.costEvents.filter(e => e.lessonId !== lesson.id);
+
+    return res.json({ ok: true, lessonId: lesson.id });
+  } catch (error) {
+    console.error(`[DeleteLesson] Error: ${error.message}`);
+    return res.status(500).json({ error: error.message || "Failed to delete lesson." });
+  }
 });
 
 app.get("/api/lessons/:lessonId/costs", async (req, res) => {

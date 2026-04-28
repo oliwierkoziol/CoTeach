@@ -68,7 +68,7 @@
                     v-for="(tag, i) in point.keywords"
                     :key="i"
                     class="px-2 py-0.5 rounded text-[12px] font-['Inter'] font-bold transition"
-                    :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
+                  :class="(point.foundKeywords && point.foundKeywords.includes(tag)) || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
                   >
                     {{ tag }}
                   </span>
@@ -633,14 +633,14 @@ const router = useRouter();
 const {
   state,
   startLive,
-  cancelLesson,
+  deleteLesson, // Changed from cancelLesson to deleteLesson
   sendTranscript,
   refreshCoverage,
   setManualPointApproval,
   finalizeLesson,
   fetchLessons,
   fetchLesson,
-  hydrateLessonFromCache,
+  hydrateLessonFromCache, 
   askMeAI
 } = useLessonStore();
 
@@ -969,6 +969,19 @@ const isDemoLicense = computed(() => Number.isFinite(Number(demoMaxLiveMinutes.v
 watch(transcription, () => {
   autoScrollToBottom();
 }, { deep: true });
+
+
+// Sync transcription with existing data from database when returning to a lesson
+watch(
+  () => state.lesson?.transcripts,
+  (newVal) => {
+    if (newVal && Array.isArray(newVal) && transcription.value.length === 0) {
+      transcription.value = newVal.map((t) => (typeof t === "string" ? t : t.text)).filter(Boolean);
+      nextTick(() => autoScrollToBottom());
+    }
+  },
+  { immediate: true }
+);
 
 // Watch interim caption for auto-scroll during processing (with throttling)
 watch(interimCaption, () => {
@@ -1463,7 +1476,7 @@ async function beginWhisperMode() {
       console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${audioChunks.value.length} chunks`);
 
       // More reasonable filtering - balance between filtering noise and capturing speech
-      const minSize = 5000; // Minimum 5KB of audio
+      const minSize = 2000; // Minimum 5KB of audio
       const estimatedDurationMs = audioChunks.value.length * 1000; // ~1 second per chunk
       const minDuration = 1500; // Require at least 1.5 seconds of audio
 
@@ -1843,12 +1856,12 @@ async function cancelLessonAndRedirect() {
   try {
     error.value = "";
     stopSession(); // Stop recording and timers
-    await cancelLesson(state.lesson.id);
-    info.value = "Lekcja została anulowana i przywrócona do wersji roboczej.";
+    await deleteLesson(state.lesson.id); // Call deleteLesson instead of cancelLesson
+    info.value = "Lekcja została anulowana i usunięta."; // Updated message
     router.push("/preparation"); // Redirect to preparation view
   } catch (e) {
     error.value = e.message || "Nie udało się anulować lekcji.";
-    console.error("Cancel lesson error:", e);
+    console.error("Delete lesson error:", e); // Updated error message
   }
 }
 

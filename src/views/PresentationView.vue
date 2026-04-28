@@ -283,7 +283,7 @@
                 : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
             ]"
           >
-            Notatki przedmiotowe
+            Notatki
           </button>
           <button
             type="button"

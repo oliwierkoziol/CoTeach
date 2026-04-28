@@ -17,19 +17,7 @@
         </div>
 
         <!-- Class Selector -->
-        <div class="w-full md:w-64 space-y-2">
-          <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Filtruj według klasy</label>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-2 relative">
-            <select v-model="selectedClass" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-              <option value="all">Wszystkie klasy</option>
-              <option v-for="c in userClasses" :key="c" :value="c">{{ c }}</option>
-            </select>
-            <div class="flex items-center justify-between pointer-events-none">
-              <span class="font-bold text-[#191c1e] text-sm">{{ selectedClass === 'all' ? 'Wszystkie klasy' : selectedClass }}</span>
-              <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </header>
 
