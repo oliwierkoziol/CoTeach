@@ -273,7 +273,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <!-- Left: Controls -->
           <div class="lg:col-span-1 space-y-6">
-            <div class="space-y-2">
+            <!-- <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Poziom klasy</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5 relative">
                 <select v-model="selectedClassLevel" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
@@ -283,7 +283,7 @@
                   {{ selectedClassLevel }}
                 </span>
               </div>
-            </div>
+            </div> -->
 
             <div v-if="activeTab === 'equation'" class="space-y-3">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Szybkie symbole</label>

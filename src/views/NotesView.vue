@@ -170,30 +170,56 @@ import { useLessonStore } from "../composables/useLessonStore";
 import cloudIcon from "../assets/cloud.svg";
 
 let pdfMakeInstance = null;
+let pdfMakeLoadingPromise = null;
 
 async function getPdfMake() {
   if (pdfMakeInstance) return pdfMakeInstance;
-  const [pdfMakeModule, pdfFontsModule] = await Promise.all([
-    import("pdfmake/build/pdfmake"),
-    import("pdfmake/build/vfs_fonts"),
-  ]);
-  const pdfMake = pdfMakeModule.default || pdfMakeModule;
-  const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+  if (pdfMakeLoadingPromise) return pdfMakeLoadingPromise;
 
-  const resolvedVfs =
-    pdfFonts?.vfs ||
-    pdfFonts?.pdfMake?.vfs ||
-    pdfFonts?.default?.vfs ||
-    pdfFonts?.default?.pdfMake?.vfs;
+  pdfMakeLoadingPromise = (async () => {
+    try {
+      const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+        import("pdfmake/build/pdfmake"),
+        import("pdfmake/build/vfs_fonts"),
+      ]);
+      const pdfMake = pdfMakeModule.default || pdfMakeModule;
+      const pdfFonts = pdfFontsModule.default || pdfFontsModule;
 
-  if (typeof pdfMake.addVirtualFileSystem === "function" && resolvedVfs) {
-    pdfMake.addVirtualFileSystem(resolvedVfs);
-  } else if (resolvedVfs) {
-    pdfMake.vfs = resolvedVfs;
-  }
+      const resolvedVfs =
+        pdfFonts?.vfs ||
+        pdfFonts?.pdfMake?.vfs ||
+        pdfFonts?.default?.vfs ||
+        pdfFonts?.default?.pdfMake?.vfs ||
+        (typeof window !== "undefined" && window.pdfMake?.vfs);
 
-  pdfMakeInstance = pdfMake;
-  return pdfMake;
+      if (resolvedVfs) {
+        if (typeof pdfMake.addVirtualFileSystem === "function") {
+          pdfMake.addVirtualFileSystem(resolvedVfs);
+        } else {
+          pdfMake.vfs = resolvedVfs;
+        }
+
+        // Explicit font configuration with fallbacks to avoid 'File not found' errors.
+        // pdfmake defaults to Roboto-Medium.ttf for bold style if not configured.
+        pdfMake.fonts = {
+          Roboto: {
+            normal: "Roboto-Regular.ttf",
+            bold: resolvedVfs["Roboto-Medium.ttf"] ? "Roboto-Medium.ttf" : "Roboto-Regular.ttf",
+            italics: resolvedVfs["Roboto-Italic.ttf"] ? "Roboto-Italic.ttf" : "Roboto-Regular.ttf",
+            bolditalics: resolvedVfs["Roboto-MediumItalic.ttf"] ? "Roboto-MediumItalic.ttf" : "Roboto-Regular.ttf",
+          },
+        };
+      }
+
+      pdfMakeInstance = pdfMake;
+      return pdfMake;
+    } catch (err) {
+      pdfMakeLoadingPromise = null;
+      throw err;
+    }
+  })();
+
+  return pdfMakeLoadingPromise;
 }
 
 const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload } = useLessonStore();
