@@ -386,18 +386,6 @@ export function useLessonStore() {
     state.notes = state.notes.filter((note) => note.id !== noteId);
   }
 
-  async function updateTeacherNote(noteId, payload) {
-    const data = await api(`/api/notes/${noteId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (data?.note) {
-      state.notes = state.notes.map((n) => (n.id === noteId ? data.note : n));
-    }
-    return data.note;
-  }
-
   async function fetchTeacherNotes() {
     const data = await api("/api/notes");
     state.notes = data.notes || [];
@@ -428,7 +416,6 @@ export function useLessonStore() {
     generateLiveLessonSummary,
     askMeAI,
     saveTeacherNote,
-    updateTeacherNote,
     deleteTeacherNote,
     fetchTeacherNotes
   };
