@@ -173,14 +173,21 @@
   </div>
 
   <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#f7f9fc]/95 px-6">
-    <div class="w-full max-w-xl rounded-2xl bg-white p-8 text-center shadow-[0px_12px_32px_0px_rgba(25,28,30,0.08)]">
-      <div class="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-[#d8e0ff] border-t-[#0c3dfe]" />
-      <h2 class="mb-2 font-['Plus_Jakarta_Sans'] text-[30px] font-extrabold leading-[36px] tracking-[-0.6px] text-[#191c1e]">
-        Generuję prezentację...
-      </h2>
-      <p class="font-['Plus_Jakarta_Sans'] text-[16px] leading-[26px] text-[#454652]">
-        Tworzę slajdy na podstawie notatki, planu i poziomu grupy.
-      </p>
+    <div class="relative w-full max-w-lg overflow-hidden rounded-[32px] bg-white p-10 shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.1)]">
+      <div class="relative flex flex-col items-center text-center">
+        <!-- Reverted to Old Throbber -->
+        <div class="mx-auto mb-8 h-12 w-12 animate-spin rounded-full border-4 border-[#d8e0ff] border-t-[#0c3dfe]" />
+
+        <h2 class="mb-3 font-['Plus_Jakarta_Sans'] text-[32px] font-extrabold leading-tight tracking-tight text-[#191c1e]">
+          Generuję prezentację...
+        </h2>
+        
+        <div class="max-w-sm">
+          <p class="font-['Plus_Jakarta_Sans'] text-[17px] leading-relaxed text-[#454652]">
+            Tworzę inteligentne slajdy na podstawie Twoich materiałów. To zajmie tylko chwilę.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 

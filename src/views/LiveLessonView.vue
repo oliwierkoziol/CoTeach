@@ -272,7 +272,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <!-- Left: Controls -->
-          <div class="lg:col-span-1 space-y-6">
+          <div v-if="activeTab === 'equation'" class="lg:col-span-1 space-y-6">
             <!-- <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Poziom klasy</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5 relative">
@@ -285,7 +285,7 @@
               </div>
             </div> -->
 
-            <div v-if="activeTab === 'equation'" class="space-y-3">
+            <div class="space-y-3">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[12px] uppercase">Szybkie symbole</label>
               <div class="flex flex-wrap gap-2">
               <button
@@ -309,7 +309,7 @@
           </div>
 
           <!-- Right: Input & Response -->
-          <div class="lg:col-span-3 space-y-4">
+          <div :class="[activeTab === 'equation' ? 'lg:col-span-3' : 'lg:col-span-4', 'space-y-4']">
             <div class="relative">
               <textarea
                 ref="aiQueryTextarea"
