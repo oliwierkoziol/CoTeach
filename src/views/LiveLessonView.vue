@@ -970,6 +970,19 @@ watch(transcription, () => {
   autoScrollToBottom();
 }, { deep: true });
 
+
+// Sync transcription with existing data from database when returning to a lesson
+watch(
+  () => state.lesson?.transcripts,
+  (newVal) => {
+    if (newVal && Array.isArray(newVal) && transcription.value.length === 0) {
+      transcription.value = newVal.map((t) => (typeof t === "string" ? t : t.text)).filter(Boolean);
+      nextTick(() => autoScrollToBottom());
+    }
+  },
+  { immediate: true }
+);
+
 // Watch interim caption for auto-scroll during processing (with throttling)
 watch(interimCaption, () => {
   if (interimCaption.value) {
