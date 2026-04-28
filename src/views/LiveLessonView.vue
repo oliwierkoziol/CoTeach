@@ -68,7 +68,7 @@
                     v-for="(tag, i) in point.keywords"
                     :key="i"
                     class="px-2 py-0.5 rounded text-[12px] font-['Inter'] font-bold transition"
-                    :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
+                  :class="(point.foundKeywords && point.foundKeywords.includes(tag)) || point.manualApproved ? 'bg-[#68a962] text-white' : 'bg-[#e0e3e6] text-[#454652]'"
                   >
                     {{ tag }}
                   </span>
@@ -1476,7 +1476,7 @@ async function beginWhisperMode() {
       console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${audioChunks.value.length} chunks`);
 
       // More reasonable filtering - balance between filtering noise and capturing speech
-      const minSize = 5000; // Minimum 5KB of audio
+      const minSize = 2000; // Minimum 5KB of audio
       const estimatedDurationMs = audioChunks.value.length * 1000; // ~1 second per chunk
       const minDuration = 1500; // Require at least 1.5 seconds of audio
 

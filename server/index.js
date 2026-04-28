@@ -289,7 +289,9 @@ function normalizePlanPoint(point, index = 0) {
     description: String(point?.description || "").trim(),
     keywords: Array.isArray(point?.keywords) ? point.keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean) : [],
     status: normalizedStatus,
-    manualApproved: Boolean(point?.manualApproved) || normalizedStatus === "discussed-manual"
+    manualApproved: Boolean(point?.manualApproved) || normalizedStatus === "discussed-manual",
+    foundKeywords: Array.isArray(point?.foundKeywords) ? point.foundKeywords : [],
+    coverage: typeof point?.coverage === "number" ? point.coverage : 0
   };
 }
 
@@ -1824,34 +1826,24 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       return { ...item, status: "discussed" };
     }
 
-    // PRESERVE: If already discussed, keep it discussed
-    if (item.status === "discussed") {
-      console.log(`[Coverage] Point "${item.title}" already discussed - keeping status`);
-      return { ...item, status: "discussed" };
-    }
-
     // Check each keyword individually with fuzzy matching
     const keywords = item.keywords || [];
     if (keywords.length === 0) {
       return item; // No keywords, can't determine coverage
     }
 
+    const previouslyFound = new Set(item.foundKeywords || []);
     // Split transcript into words for better matching
     const words = normalizedTranscript.split(/\s+/);
-
     const foundKeywords = keywords.filter(keyword => {
-      // First try exact match
-      if (normalizedTranscript.includes(normalize(keyword))) {
-        return true;
-      }
-
-      // Then try fuzzy matching with each word
+      if (previouslyFound.has(keyword)) return true;
+      if (normalizedTranscript.includes(normalize(keyword))) return true;
       return words.some(word => polishFuzzyMatch(word, keyword));
     });
 
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
     const MIN_KEYWORDS_REQUIRED = 3;
-    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED) {
+    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED || item.status === "discussed") {
       console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords:`, foundKeywords);
       return {
         ...item,
