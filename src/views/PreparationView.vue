@@ -79,7 +79,7 @@
             <img
               :src="archiveIcon"
               alt="Archive icon"
-              :class="[ 
+              :class="[
                 'h-[20px] w-[20px] shrink-0 opacity-90 transition-all',
                 selectedNoteId === note.id ? 'brightness-0 invert' : ''
               ]"
@@ -119,89 +119,54 @@
     </template>
 
     <template v-else>
-      <div class="w-full relative z-10 mx-auto max-w-[1568px]">
-        <!-- Header -->
-        <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="w-full relative z-10 space-y-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">Edytor planu lekcji</h2>
-            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">Sprawdź i dostosuj plan zajęć przed startem lekcji na żywo. AI przygotowało dla Ciebie optymalną strukturę.</p>
+            <h2 class="font-['Plus_Jakarta_Sans'] text-3xl font-extrabold text-[#191c1e] tracking-[-0.9px]">Edytor planu lekcji</h2>
+            <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#454652] mt-1">Korekta przed startem lekcji na żywo</p>
           </div>
-          <div class="flex flex-wrap gap-4 items-center">
-            <button type="button" class="bg-white border border-border px-6 py-2.5 rounded-lg font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] hover:bg-[#f2f2f2] transition-colors shadow-sm" @click="resetPlan">
-              Wróć do wyboru
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="font-['Plus_Jakarta_Sans'] rounded-xl border border-transparent bg-white px-6 py-2.5 text-[16px] font-semibold text-[#454652] hover:bg-[#f2f2f2] transition-colors shadow-sm" @click="resetPlan">
+              Wróć
             </button>
             <button
               type="button"
-              class="bg-[#0c3dfe] px-8 py-2.5 rounded-lg font-['Plus_Jakarta_Sans'] font-semibold text-white transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
+              class="font-['Plus_Jakarta_Sans'] rounded-xl bg-[#0c3dfe] px-6 py-2.5 text-[16px] font-semibold text-white transition hover:bg-[#0a34d4] disabled:opacity-50 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
               :disabled="isSaving"
               @click="saveAndStart"
             >
               {{ isSaving ? "Zapisywanie..." : "Zapisz i rozpocznij lekcję" }}
             </button>
           </div>
-        </header>
+        </div>
 
-        <!-- Main Card -->
-        <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 sm:p-8 space-y-8">
-          <!-- Source Note Context -->
-          <div v-if="sourceNote" class="rounded-xl border border-[#e0e3e6] bg-[#f7f9fc] p-6">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="h-8 w-8 rounded-lg flex items-center justify-center bg-[rgba(20,37,136,0.1)] text-[#142588]">
-                <img :src="archiveIcon" alt="" class="h-4 w-4" />
-              </div>
-              <h3 class="font-['Plus_Jakarta_Sans'] text-[15px] font-bold text-[#191c1e]">Notatka źródłowa</h3>
+        <div class="space-y-4 rounded-xl bg-white shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+          <div v-if="sourceNote" class="rounded-xl border border-[#e0e3e6] bg-[#f7f9fc] p-4">
+            <h3 class="font-['Plus_Jakarta_Sans'] mb-2 text-[14px] font-bold text-[#191c1e]">Notatka źródłowa</h3>
+            <textarea :value="sourceNote" readonly class="font-['Plus_Jakarta_Sans'] min-h-[120px] w-full rounded-lg border-none bg-transparent p-0 text-[14px] text-[#454652] outline-none resize-none" />
+          </div>
+          
+          <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-[#e0e3e6] p-5 bg-[#fbfcfd]">
+            <div class="mb-4 flex items-center gap-3">
+              <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0c3dfe]/10 text-sm font-bold text-[#0c3dfe]">{{ idx + 1 }}</span>
+              <input v-model="point.title" class="font-['Plus_Jakarta_Sans'] flex-1 rounded-lg border border-[#e0e3e6] bg-white px-4 py-2.5 text-[#191c1e] text-[16px] font-semibold outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors" placeholder="Tytuł punktu" />
             </div>
-            <div class="bg-white/50 rounded-lg p-4 border border-[#e0e3e6]/50">
-              <textarea :value="sourceNote" readonly class="font-['Plus_Jakarta_Sans'] min-h-[100px] w-full rounded-lg border-none bg-transparent p-0 text-[14px] text-[#454652] outline-none resize-none leading-relaxed" />
+            <input
+              :value="point.keywords.join(', ')"
+              class="font-['Plus_Jakarta_Sans'] mb-3 w-full rounded-lg border border-[#e0e3e6] bg-white px-4 py-2 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors"
+              placeholder="Słowa kluczowe (po przecinku)"
+              @input="setKeywords(idx, $event.target.value)"
+            />
+            <textarea v-model="point.description" class="font-['Plus_Jakarta_Sans'] min-h-[80px] w-full rounded-lg border border-[#e0e3e6] bg-white p-4 text-[14px] text-[#454652] outline-none focus:border-[#0c3dfe] focus:ring-1 focus:ring-[#0c3dfe] transition-colors resize-y" placeholder="Opis punktu do poruszenia na żywo..." />
+            
+            <div class="mt-2 flex justify-end">
+              <button type="button" class="font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-red-500 hover:text-red-700 transition-colors" @click="removePoint(point.id)">Usuń punkt</button>
             </div>
           </div>
           
-          <!-- Plan Points List -->
-          <div class="space-y-6">
-            <div v-for="(point, idx) in lesson.plan" :key="point.id" class="rounded-xl border border-[#e0e3e6] p-6 bg-[#fbfcfd] hover:border-[#0c3dfe]/30 transition-colors shadow-sm">
-              <div class="mb-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(20,37,136,0.1)] text-[#142588] font-bold text-[16px]">{{ idx + 1 }}</div>
-                <div class="bg-[#e0e3e6] h-[48px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                  <input v-model="point.title" class="bg-transparent border-none outline-none w-full h-full text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] font-bold placeholder-[#767683]" placeholder="Tytuł punktu planu..." />
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 gap-5">
-                <div class="flex flex-col gap-2">
-                  <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[13px] ml-1 uppercase tracking-wider">Słowa kluczowe (po przecinku)</label>
-                  <div class="bg-[#e0e3e6] h-[42px] relative rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                    <input
-                      :value="point.keywords.join(', ')"
-                      class="bg-transparent border-none outline-none w-full h-full text-[14px] text-[#454652] font-['Plus_Jakarta_Sans'] placeholder-[#767683]"
-                      placeholder="np. mianownik, liczebnik, zasady..."
-                      @input="setKeywords(idx, $event.target.value)"
-                    />
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[13px] ml-1 uppercase tracking-wider">Szczegółowy opis punktu</label>
-                  <div class="bg-[#e0e3e6] relative rounded-lg w-full flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-                    <textarea v-model="point.description" class="font-['Plus_Jakarta_Sans'] min-h-[90px] w-full rounded-lg border-none bg-transparent p-4 text-[14px] text-[#454652] outline-none resize-y leading-relaxed" placeholder="Opisz co dokładnie chcesz omówić w tym punkcie..." />
-                  </div>
-                </div>
-              </div>
-              
-              <div class="mt-4 flex justify-end">
-                <button type="button" class="flex items-center gap-1.5 font-['Plus_Jakarta_Sans'] text-[13px] font-bold text-red-500 hover:text-red-700 transition-colors uppercase tracking-tight" @click="removePoint(point.id)">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Usuń punkt
-                </button>
-              </div>
-            </div>
-            
-            <button type="button" class="group w-full rounded-xl border-2 border-dashed border-[#0c3dfe]/30 bg-[#0c3dfe]/[0.02] py-6 flex flex-col items-center justify-center gap-2 transition-all hover:bg-[#0c3dfe]/[0.05] hover:border-[#0c3dfe]/50" @click="addPoint">
-              <div class="h-8 w-8 rounded-full bg-[#0c3dfe]/10 flex items-center justify-center text-[#0c3dfe] group-hover:scale-110 transition-transform">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-              </div>
-              <span class="font-['Plus_Jakarta_Sans'] text-[15px] font-bold text-[#0c3dfe]">Dodaj nowy punkt do planu</span>
-            </button>
-          </div>
+          <button type="button" class="font-['Plus_Jakarta_Sans'] w-full rounded-xl border-2 border-dashed border-[#0c3dfe]/40 bg-[#0c3dfe]/5 py-4 text-[14px] font-bold text-[#0c3dfe] transition-colors hover:bg-[#0c3dfe]/10" @click="addPoint">
+            + Dodaj punkt do planu
+          </button>
         </div>
       </div>
     </template>
