@@ -149,11 +149,14 @@
           <button type="button" @click="downloadNotePdf()" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors w-full md:w-auto disabled:opacity-50" :disabled="!rawTextContent">
             <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">Pobierz notatkę jako PDF</span>
           </button>
-          <div class="flex gap-[12px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end flex-col sm:flex-row">
+          <div class="flex gap-[20px] items-center w-full md:w-auto mt-4 md:mt-0 justify-end flex-col sm:flex-row">
             <button type="button" @click="resetForm" class="bg-muted border border-border content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-background/70 transition-colors w-full sm:w-auto">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[16px] leading-[24px]">Anuluj</span>
             </button>
-            <button type="button" :disabled="saving" @click="handleSave" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto">
+            <button type="button" :disabled="saving" @click="handleSave" :class="[
+              'bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto',
+              (!state.notes || state.notes.length === 0) && subject && title && rawTextContent ? 'sound-wave-btn' : ''
+            ]">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
             </button>
           </div>
@@ -164,7 +167,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import cloudIcon from "../assets/cloud.svg";
@@ -222,7 +225,11 @@ async function getPdfMake() {
   return pdfMakeLoadingPromise;
 }
 
-const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload } = useLessonStore();
+const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes } = useLessonStore();
+
+onMounted(async () => {
+  await fetchTeacherNotes();
+});
 const router = useRouter();
 const classOptions = [
   "1 Klasa Szkoły Podstawowej",
@@ -248,7 +255,7 @@ const classOptions = [
 const subject = ref("");
 const title = ref("");
 const lessonDate = ref(new Date().toISOString().split("T")[0]);
-const classLevel = ref("1 Klasa Szkoły Podstawowej");
+const classLevel = ref("4 Szkoła Średnia");
 const rawTextContent = ref("");
 const selectedFile = ref(null);
 

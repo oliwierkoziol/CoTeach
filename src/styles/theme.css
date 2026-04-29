@@ -310,6 +310,35 @@
 .sound-wave-btn {
   position: relative;
   isolation: isolate;
+  animation: button-shake 4s infinite ease-in-out;
+}
+
+@keyframes button-shake {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  2% {
+    transform: rotate(1.5deg);
+  }
+
+  4% {
+    transform: rotate(-1.5deg);
+  }
+
+  6% {
+    transform: rotate(1.5deg);
+  }
+
+  8% {
+    transform: rotate(-1.5deg);
+  }
+
+  10% {
+    transform: rotate(0deg);
+  }
 }
 
 .sound-wave-btn::before,

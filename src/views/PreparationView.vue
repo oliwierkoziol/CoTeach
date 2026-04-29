@@ -209,7 +209,7 @@ import { useLessonStore } from "../composables/useLessonStore";
 import archiveIcon from "../assets/archive.svg";
 
 const router = useRouter();
-const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes, transcribeAudioFile, sendTranscript, refreshCoverage } = useLessonStore();
+const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes, transcribeAudioFile, sendTranscript, refreshCoverage, deleteLesson } = useLessonStore();
 const lesson = computed(() => state.lesson);
 
 const title = ref("");
@@ -378,7 +378,14 @@ function removePoint(id) {
   state.lesson.plan = state.lesson.plan.filter((p) => p.id !== id);
 }
 
-function resetPlan() {
+async function resetPlan() {
+  if (state.lesson?.id) {
+    try {
+      await deleteLesson(state.lesson.id);
+    } catch (err) {
+      console.error("Błąd podczas usuwania draftu lekcji:", err);
+    }
+  }
   state.lesson = null;
 }
 
