@@ -13,8 +13,8 @@
           <div class="flex items-start justify-between mb-6">
             <div class="flex items-start gap-4">
               <div class="flex-shrink-0 mt-1">
-                <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-[rgba(0,83,219,0.1)] text-[#0053db]">
-                  <span class="text-xl">🎓</span>
+                <div class="flex items-center justify-center h-10 w-10 rounded-lg  text-[#0053db]">
+                  <img src="/sygnet.svg" alt="Tutorial" class="w-8 h-8 object-contain" />
                 </div>
               </div>
               <div>
@@ -39,9 +39,9 @@
             <div class="bg-[#f7f9fc] rounded-lg p-4 border border-[rgba(0,83,219,0.1)]">
               <div class="flex items-center gap-3 mb-2">
                 <span class="flex items-center justify-center w-7 h-7 rounded-full bg-[rgba(0,83,219,0.1)] font-['Inter'] font-semibold text-sm text-[#0053db]">1</span>
-                <h4 class="font-['Inter'] font-semibold text-sm text-[#191c1e]">Dodaj materiały</h4>
+                <h4 class="font-['Inter'] font-semibold text-md text-[#191c1e]">Dodaj materiały</h4>
               </div>
-              <p class="font-['Inter'] text-xs text-[#454652]">
+              <p class="font-['Inter'] text-sm text-[#454652]">
                 Aby dodać materiały, naciśnij przycisk "Dodaj materiały" w lewym panelu.
               </p>
             </div>
@@ -50,9 +50,9 @@
             <div class="bg-[#f7f9fc] rounded-lg p-4 border border-[rgba(0,83,219,0.1)]">
               <div class="flex items-center gap-3 mb-2">
                 <span class="flex items-center justify-center w-7 h-7 rounded-full bg-[rgba(0,83,219,0.1)] font-['Inter'] font-semibold text-sm text-[#0053db]">2</span>
-                <h4 class="font-['Inter'] font-semibold text-sm text-[#191c1e]">Nowa lekcja</h4>
+                <h4 class="font-['Inter'] font-semibold text-md text-[#191c1e]">Nowa lekcja</h4>
               </div>
-              <p class="font-['Inter'] text-xs text-[#454652]">
+              <p class="font-['Inter'] text-sm text-[#454652]">
                 Twórz nowe lekcje i planuj ich przebieg z pomocą AI.
               </p>
             </div>
@@ -61,9 +61,9 @@
             <div class="bg-[#f7f9fc] rounded-lg p-4 border border-[rgba(0,83,219,0.1)]">
               <div class="flex items-center gap-3 mb-2">
                 <span class="flex items-center justify-center w-7 h-7 rounded-full bg-[rgba(0,83,219,0.1)] font-['Inter'] font-semibold text-sm text-[#0053db]">3</span>
-                <h4 class="font-['Inter'] font-semibold text-sm text-[#191c1e]">Archiwum notatek</h4>
+                <h4 class="font-['Inter'] font-semibold text-md text-[#191c1e]">Archiwum notatek</h4>
               </div>
-              <p class="font-['Inter'] text-xs text-[#454652]">
+              <p class="font-['Inter'] text-sm text-[#454652]">
                 Notatki ze swoich lekcji są przechowywane w archiwum.
               </p>
             </div>
@@ -71,9 +71,7 @@
 
           <!-- CTA -->
           <div class="flex items-center justify-between">
-            <p class="font-['Inter'] text-sm text-[#454652]">
-              Potrzebujesz pomocy? Sprawdź dokumentację lub zobacz więcej tutoriali.
-            </p>
+           
             <button
               @click="dismiss"
               class="ml-4 px-4 py-2 rounded-lg bg-[#0053db] hover:bg-[#0046b8] transition-colors font-['Inter'] font-semibold text-sm text-white"
