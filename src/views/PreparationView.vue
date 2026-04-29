@@ -57,7 +57,10 @@
             Wybierz notatkę
           </h3>
           <!-- Create new button -->
-          <RouterLink to="/notes" type="button" class="bg-[#0c3dfe] text-center text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] px-6 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] w-full sm:w-auto">
+          <RouterLink to="/notes" type="button" :class="[
+            'bg-[#0c3dfe] text-center text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] px-6 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] w-full sm:w-auto',
+            !state.notes || state.notes.length === 0 ? 'sound-wave-btn' : ''
+          ]">
             Utwórz nową
           </RouterLink>
         </div>
@@ -101,7 +104,7 @@
         <div v-if="error" class="mb-4 text-sm text-destructive font-['Plus_Jakarta_Sans'] font-semibold">
           {{ error }}
         </div>
-        <div class="flex w-full flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
+        <div class="flex w-full flex-col items-stretch justify-end gap-5 sm:flex-row sm:items-center">
           <input type="file" ref="audioFileInput" class="hidden" accept="audio/*" @change="handleAudioLesson" />
           <button type="button" :disabled="!selectedNoteId || isGenerating" @click="triggerAudioUpload" class="bg-white border-2 border-dashed border-[#0c3dfe] text-[#0c3dfe] font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-6 py-2.5 rounded-lg hover:bg-[#f0f4ff] transition-colors w-full sm:w-auto sm:mr-auto disabled:opacity-50">
             {{ isGenerating ? "Przetwarzam..." : "Stwórz lekcję z pliku audio" }}
@@ -111,7 +114,10 @@
             Anuluj
           </button>
           <!-- Button Rozpocznij lekcję -->
-          <button type="button" :disabled="isGenerating" @click="handleGenerate" class="bg-[#0c3dfe] text-white font-['Plus_Jakarta_Sans'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto">
+          <button type="button" :disabled="isGenerating" @click="handleGenerate" :class="[
+            'bg-[#0c3dfe] text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto',
+            selectedNoteId && (!state.lessons || state.lessons.length <= 1) ? 'sound-wave-btn' : ''
+          ]">
             {{ isGenerating ? "Przetwarzam..." : "Rozpocznij lekcję" }}
           </button>
         </div>
@@ -125,13 +131,16 @@
             <h2 class="font-['Plus_Jakarta_Sans'] text-3xl font-extrabold text-[#191c1e] tracking-[-0.9px]">Edytor planu lekcji</h2>
             <p class="font-['Plus_Jakarta_Sans'] text-[16px] text-[#454652] mt-1">Korekta przed startem lekcji na żywo</p>
           </div>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-5">
             <button type="button" class="font-['Plus_Jakarta_Sans'] rounded-xl border border-transparent bg-white px-6 py-2.5 text-[16px] font-semibold text-[#454652] hover:bg-[#f2f2f2] transition-colors shadow-sm" @click="resetPlan">
               Wróć
             </button>
             <button
               type="button"
-              class="font-['Plus_Jakarta_Sans'] rounded-xl bg-[#0c3dfe] px-6 py-2.5 text-[16px] font-semibold text-white transition hover:bg-[#0a34d4] disabled:opacity-50 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+              :class="[
+                'font-[\'Plus_Jakarta_Sans\'] rounded-xl bg-[#0c3dfe] px-6 py-2.5 text-[16px] font-semibold text-white transition hover:bg-[#0a34d4] disabled:opacity-50 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]',
+                !state.lessons || state.lessons.length <= 1 ? 'sound-wave-btn' : ''
+              ]"
               :disabled="isSaving"
               @click="saveAndStart"
             >

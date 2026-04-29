@@ -106,7 +106,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
               'mb-4 flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-colors',
               startLessonCta.isLive
                 ? 'bg-primary/10 text-primary hover:bg-primary/15'
-                : 'justify-center bg-primary text-primary-foreground hover:opacity-90'
+                : ['justify-center bg-primary text-primary-foreground hover:opacity-90', showSoundWave ? 'sound-wave-btn' : '']
             ]"
             @click="navigate(); open = false;"
           >
@@ -344,6 +344,13 @@ const startLessonCta = computed(() => {
     to: `/live-lesson/${liveLesson.id}`,
     label: `Lekcja: ${liveLesson.title || "Lekcja"}`
   };
+});
+
+const showSoundWave = computed(() => {
+  const hasNoLessons = !state.lessons || state.lessons.length <= 1;
+  const isNotPreparation = route.path !== "/preparation";
+  const isNotNotes = route.path !== "/notes";
+  return !startLessonCta.value.isLive && hasNoLessons && isNotPreparation && isNotNotes;
 });
 
 const activeLessonLink = computed(() => {

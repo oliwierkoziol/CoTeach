@@ -134,6 +134,7 @@
 }
 
 @layer base {
+
   html,
   body,
   #app {
@@ -303,4 +304,38 @@
 
 .dark .app-shell .hover\:bg-\[rgba\(12\,61\,254\,0\.14\)\]:hover {
   background-color: color-mix(in oklab, var(--primary) 26%, transparent) !important;
+}
+
+/* Sound wave animation for Rozpocznij lekcję button */
+.sound-wave-btn {
+  position: relative;
+  isolation: isolate;
+}
+
+.sound-wave-btn::before,
+.sound-wave-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 var(--primary);
+  animation: pulse-sound-wave 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.sound-wave-btn::after {
+  animation-delay: 1.25s;
+}
+
+@keyframes pulse-sound-wave {
+  0% {
+    box-shadow: 0 0 0 0 var(--primary);
+    opacity: 0.6;
+  }
+
+  100% {
+    box-shadow: 0 0 0 16px var(--primary);
+    opacity: 0;
+  }
 }
