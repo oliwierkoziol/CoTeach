@@ -21,6 +21,9 @@
       </div>
     </header>
 
+    <!-- Tutorial -->
+    <DashboardTutorial />
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-full relative z-10">
       <!-- Card 1 -->
@@ -140,6 +143,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
+import DashboardTutorial from "../components/DashboardTutorial.vue";
 import iconOne from "../assets/1.svg";
 import iconTwo from "../assets/2.svg";
 import iconThree from "../assets/3.svg";
