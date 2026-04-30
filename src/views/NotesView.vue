@@ -155,7 +155,7 @@
             </button>
             <button type="button" :disabled="saving" @click="handleSave" :class="[
               'bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto',
-              (!state.notes || state.notes.length === 0) && subject && title && rawTextContent ? 'sound-wave-btn' : ''
+              !isLoadingNotes && (!state.notes || state.notes.length === 0) && subject && title && rawTextContent ? 'sound-wave-btn' : ''
             ]">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
             </button>
@@ -188,12 +188,14 @@ async function getPdfMake() {
       const pdfMake = pdfMakeModule.default || pdfMakeModule;
       const pdfFonts = pdfFontsModule.default || pdfFontsModule;
 
-      const resolvedVfs =
-        pdfFonts?.vfs ||
-        pdfFonts?.pdfMake?.vfs ||
-        pdfFonts?.default?.vfs ||
-        pdfFonts?.default?.pdfMake?.vfs ||
-        (typeof window !== "undefined" && window.pdfMake?.vfs);
+      let resolvedVfs = null;
+      if (pdfFonts?.pdfMake?.vfs) resolvedVfs = pdfFonts.pdfMake.vfs;
+      else if (pdfFonts?.vfs) resolvedVfs = pdfFonts.vfs;
+      else if (pdfFonts?.default?.pdfMake?.vfs) resolvedVfs = pdfFonts.default.pdfMake.vfs;
+      else if (pdfFonts?.default?.vfs) resolvedVfs = pdfFonts.default.vfs;
+      else if (pdfFonts?.default && pdfFonts.default["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts.default;
+      else if (pdfFonts && pdfFonts["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts;
+      else if (typeof window !== "undefined" && window.pdfMake?.vfs) resolvedVfs = window.pdfMake.vfs;
 
       if (resolvedVfs) {
         if (typeof pdfMake.addVirtualFileSystem === "function") {
@@ -227,8 +229,11 @@ async function getPdfMake() {
 
 const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes } = useLessonStore();
 
+const isLoadingNotes = ref(true);
+
 onMounted(async () => {
   await fetchTeacherNotes();
+  isLoadingNotes.value = false;
 });
 const router = useRouter();
 const classOptions = [

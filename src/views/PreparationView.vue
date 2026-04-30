@@ -59,7 +59,7 @@
           <!-- Create new button -->
           <RouterLink to="/notes" type="button" :class="[
             'bg-[#0c3dfe] text-center text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] px-6 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] w-full sm:w-auto',
-            !state.notes || state.notes.length === 0 ? 'sound-wave-btn' : ''
+            !isLoadingData && (!state.notes || state.notes.length === 0) ? 'sound-wave-btn' : ''
           ]">
             Utwórz nową
           </RouterLink>
@@ -116,7 +116,7 @@
           <!-- Button Rozpocznij lekcję -->
           <button type="button" :disabled="isGenerating" @click="handleGenerate" :class="[
             'bg-[#0c3dfe] text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto',
-            selectedNoteId && (!state.lessons || state.lessons.length <= 1) ? 'sound-wave-btn' : ''
+            !isLoadingData && selectedNoteId && (!state.lessons || state.lessons.length <= 1) ? 'sound-wave-btn' : ''
           ]">
             {{ isGenerating ? "Przetwarzam..." : "Rozpocznij lekcję" }}
           </button>
@@ -139,7 +139,7 @@
               type="button"
               :class="[
                 'font-[\'Plus_Jakarta_Sans\'] rounded-xl bg-[#0c3dfe] px-6 py-2.5 text-[16px] font-semibold text-white transition hover:bg-[#0a34d4] disabled:opacity-50 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]',
-                !state.lessons || state.lessons.length <= 1 ? 'sound-wave-btn' : ''
+                !isLoadingData && (!state.lessons || state.lessons.length <= 1) ? 'sound-wave-btn' : ''
               ]"
               :disabled="isSaving"
               @click="saveAndStart"
@@ -209,7 +209,7 @@ import { useLessonStore } from "../composables/useLessonStore";
 import archiveIcon from "../assets/archive.svg";
 
 const router = useRouter();
-const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes, transcribeAudioFile, sendTranscript, refreshCoverage, deleteLesson } = useLessonStore();
+const { state, createLesson, uploadLessonMaterial, savePlan, startLive, fetchTeacherNotes, fetchLessons, transcribeAudioFile, sendTranscript, refreshCoverage, deleteLesson } = useLessonStore();
 const lesson = computed(() => state.lesson);
 
 const title = ref("");
@@ -231,8 +231,11 @@ const sourceNote = computed(() => {
 
 const selectedNote = computed(() => state.notes.find((note) => note.id === selectedNoteId.value) || null);
 
+const isLoadingData = ref(true);
+
 onMounted(async () => {
-  await fetchTeacherNotes();
+  await Promise.allSettled([fetchTeacherNotes(), fetchLessons()]);
+  isLoadingData.value = false;
 });
 
 watch(selectedNoteId, (noteId) => {
