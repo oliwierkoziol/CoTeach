@@ -1,7 +1,7 @@
 Rola: Jesteś ekspertem od projektowania profesjonalnych prezentacji edukacyjnych i szkoleniowych.
 
 Zadanie:
-Na podstawie danych wejściowych wygeneruj strukturę prezentacji w języku polskim.
+Na podstawie danych wejściowych wygeneruj merytoryczną, mocno tekstową strukturę prezentacji w języku polskim. Prezentacja ma mieć mniejszą liczbę slajdów, ale znacznie więcej obszernej treści tekstowej na każdym z nich.
 
 Dane wejściowe:
 - Temat lekcji: [TEMAT_LEKCJI]
@@ -11,7 +11,6 @@ Dane wejściowe:
 - Maksymalna liczba slajdów: [MAX_SLAJDOW]
 - Plan lekcji (JSON): [PLAN_LEKCJI_JSON]
 - Treść notatki: [TRESC_NOTATKI]
-- Tryb obrazów: [TRYB_OBRAZOW]
 
 Wymagania:
 1) Zwróć WYŁĄCZNIE poprawny JSON.
@@ -21,23 +20,18 @@ Wymagania:
   "slides": [
     {
       "type": "title|agenda|concept|example|comparison|practice|summary|next_steps",
-      "title": "Krótki tytuł slajdu (maks. 8-10 słów)",
+      "title": "Tytuł slajdu (maks. 8-10 słów)",
       "subtitle": "Krótki podtytuł (opcjonalnie)",
-      "summary": "1-3 zdania wyjaśniające sedno slajdu",
-      "details": ["punkt 1", "punkt 2", "punkt 3"],
-      "visualHint": "krótka sugestia wizualna, np. diagram procesu / tabela porównawcza",
-      "imagePrompt": "krótki prompt do generatora obrazów AI (gdy tryb obrazów = TAK)"
+      "summary": "Merytoryczny paragraf wyjaśniający dany koncept. Składa się z 2-4 zdań. Pilnuj by tekst nie był na tyle długi, aby odpowiedź urwała się w połowie.",
+      "details": ["jasny punkt 1", "konkretny punkt 2", "rozwinięty punkt 3"]
     }
   ]
 }
-4) Liczba slajdów nie może przekroczyć [MAX_SLAJDOW].
-5) Treść ma być dopasowana poziomem do grupy [KLASA].
-6) Jeśli zakres to "tylko nieomówione punkty", koncentruj się na lukach i najważniejszych brakach.
-7) Używaj tylko informacji z dostarczonego planu i notatki.
-8) Summary i details mają być konkretne, bez lania wody.
-9) Slajdy mają wyglądać jak faktyczna prezentacja: nie mogą być wszystkie tego samego typu.
-10) W jednej prezentacji użyj co najmniej 3 różnych typów slajdów.
-11) Pierwszy slajd ustaw jako "title", drugi jako "agenda", ostatni jako "summary" albo "next_steps".
-12) Unikaj pustych wartości. Jeśli brakuje danych, wpisz krótką, konkretną treść zamiast pustego pola.
-13) Jeśli tryb obrazów = TAK, dodaj sensowny imagePrompt dla każdego slajdu.
-14) Jeśli tryb obrazów = NIE, zwracaj imagePrompt jako pusty string.
+4) Liczba slajdów to zazwyczaj od 3 do 5. Upewnij się, że generowany JSON nie jest zbyt długi i zdążysz go w pełni domknąć przed limitem tokenów. Żadne zdanie na ostatnim slajdzie nie może zostać niedokończone!
+5) Treść, język i słownictwo MUSZĄ być rygorystycznie dostosowane do grupy [KLASA]. Jeśli [KLASA] to np. "1 klasa podstawówki" lub przedszkole - używaj BARDZO PROSTYCH, potocznych słów, niezwykle krótkich zdań i przyjaznego, bajkowego tonu. Dla starszych klas i dorosłych używaj języka naukowego. To najważniejszy priorytet!
+6) Treść czerpana GŁÓWNIE z dostarczonej notatki, a w drugiej kolejności z planu lekcji.
+7) Jeśli zakres to "tylko nieomówione punkty", koncentruj się wyłącznie na tych fragmentach, które nie zostały jeszcze omówione.
+8) Używaj tylko i wyłącznie informacji z dostarczonego planu i notatki.
+9) Zamiast pojedynczych słów używaj pełnych, zrozumiałych zdań, dopasowanych do [KLASA]. Znajdź idealny środek między merytorycznością a byciem zbyt rozwlekłym.
+10) W jednej prezentacji użyj co najmniej 3 różnych typów slajdów (na start zawsze title, potem agenda).
+11) Zero obrazów, zero pól wizualnych. Prezentacja w 100% tekstowa.

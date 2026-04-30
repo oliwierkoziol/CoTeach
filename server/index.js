@@ -1602,32 +1602,6 @@ async function resolveWikipediaImage(query) {
   return "";
 }
 
-async function fetchImageAsDataUrl(url) {
-  const target = String(url || "").trim();
-  if (!target) return "";
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch(target, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        Accept: "image/*"
-      }
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) return "";
-    const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-    if (!contentType.startsWith("image/")) return "";
-    const arrayBuffer = await res.arrayBuffer();
-    if (!arrayBuffer.byteLength) return "";
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
-  } catch {
-    return "";
-  }
-}
-
 async function generatePresentationWithLLM({
   noteContent,
   lessonTitle,
@@ -1635,11 +1609,10 @@ async function generatePresentationWithLLM({
   classLevel,
   scope,
   plan,
-  includeImages = false,
-  maxSlides = 12,
+  maxSlides = 8,
   context = {}
 }) {
-  const safeMaxSlides = Math.max(4, Math.min(Number(maxSlides || 12), 20));
+  const safeMaxSlides = Math.max(4, Math.min(Number(maxSlides || 8), 15));
   const safeScope = scope === "full" ? "full" : "pending";
   const safeNote = String(noteContent || "").trim();
   const safePlan = Array.isArray(plan) ? plan : [];
@@ -1652,14 +1625,13 @@ async function generatePresentationWithLLM({
     .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
     .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
     .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
-    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000))
-    .replace("[TRYB_OBRAZOW]", includeImages ? "TAK - dodaj imagePrompt dla każdego slajdu." : "NIE - nie dodawaj imagePrompt i nie projektuj slajdu pod obraz.");
+    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
 
   try {
     const out = await callOpenRouter({
       model: OPENROUTER_PRESENTATION_MODEL,
       parts: [{ text: prompt }],
-      maxTokens: Math.max(2500, Math.min(5000, OPENROUTER_MAX_TOKENS + 1000)),
+      maxTokens: 12000,
       temperature: 0.2
     });
     const parsed = parseJsonFromModel(out.text);
@@ -1667,38 +1639,6 @@ async function generatePresentationWithLLM({
     const slides = slidesRaw.slice(0, safeMaxSlides).map((slide, index) => normalizePresentationSlide(slide, index));
     if (!slides.length) {
       throw new Error("Empty slides");
-    }
-    if (includeImages) {
-      const usedImageSignatures = new Set();
-      const maxImageSlides = Math.min(slides.length, 5);
-      const slidesWithImages = await Promise.all(
-        slides.map(async (slide, index) => {
-          const normalizedPrompt = String(slide.imagePrompt || slide.visualHint || slide.summary || "").slice(0, 320);
-          if (index >= maxImageSlides) {
-            return {
-              ...slide,
-              imagePrompt: normalizedPrompt,
-              imageUrl: ""
-            };
-          }
-          const imageUrl = await generateSlideImageWithAI({
-            imagePrompt: normalizedPrompt,
-            title: slide.title,
-            summary: slide.summary,
-            visualHint: slide.visualHint,
-            subject: lessonSubject,
-            classLevel,
-            slideKey: `${index}-${slide.title}-${slide.summary}`,
-            usedImageSignatures
-          });
-          return {
-            ...slide,
-            imagePrompt: normalizedPrompt,
-            imageUrl: String(imageUrl || "").trim()
-          };
-        })
-      );
-      return slidesWithImages;
     }
 
     recordCostFromBase({
@@ -1709,20 +1649,27 @@ async function generatePresentationWithLLM({
       model: out.model,
       feature: "presentation_generation",
       category: "presentation",
-      baseAmountPLN: out.baseUsd * USD_TO_PLN,
-      providerCostUsd: out.baseUsd,
-      costUsd: out.baseUsd,
-      promptTokens: out.usage.promptTokens,
-      completionTokens: out.usage.completionTokens,
-      totalTokens: out.usage.totalTokens,
-      requestId: out.requestId,
+      baseAmountPLN: estimateOpenRouterBaseUsdCost({
+        model: out.model,
+        promptTokens: out.promptTokens,
+        completionTokens: out.completionTokens
+      }) * USD_TO_PLN,
+      providerCostUsd: estimateOpenRouterBaseUsdCost({
+        model: out.model,
+        promptTokens: out.promptTokens,
+        completionTokens: out.completionTokens
+      }),
+      promptTokens: out.promptTokens,
+      completionTokens: out.completionTokens,
+      totalTokens: out.totalTokens,
       latencyMs: out.latencyMs
     });
 
     return slides.map((slide) => ({
       ...slide,
       imagePrompt: "",
-      imageUrl: ""
+      imageUrl: "",
+      visualHint: ""
     }));
   } catch {
     const fallbackSlides = fallbackPresentationSlides({
@@ -1732,23 +1679,11 @@ async function generatePresentationWithLLM({
       noteContent: safeNote,
       maxSlides: safeMaxSlides
     });
-    if (!includeImages) {
-      return fallbackSlides.map((slide) => ({ ...slide, imagePrompt: "", imageUrl: "" }));
-    }
     return fallbackSlides.map((slide) => ({
       ...slide,
-      imagePrompt: String(slide.visualHint || slide.summary || "").slice(0, 320),
-      imageUrl:
-        typeof buildSlideImageUrl === "function"
-          ? buildSlideImageUrl({
-              imagePrompt: slide.imagePrompt,
-              title: slide.title,
-              summary: slide.summary,
-              visualHint: slide.visualHint,
-              subject: lessonSubject,
-              classLevel
-            })
-          : ""
+      imagePrompt: "",
+      imageUrl: "",
+      visualHint: ""
     }));
   }
 }
@@ -2475,8 +2410,7 @@ app.post("/api/presentations/generate", async (req, res) => {
     const noteId = String(req.body?.noteId || "").trim();
     const classLevel = String(req.body?.classLevel || "").trim();
     const scope = String(req.body?.scope || "pending").trim() === "full" ? "full" : "pending";
-    const maxSlides = Number(req.body?.maxSlides || 12);
-    const includeImages = Boolean(req.body?.includeImages);
+    const maxSlides = Number(req.body?.maxSlides || 8);
 
     let lesson = null;
     if (lessonId) {
@@ -2515,7 +2449,6 @@ app.post("/api/presentations/generate", async (req, res) => {
       classLevel: classLevel || note?.classLevel || "",
       scope,
       plan: scopedPlan,
-      includeImages,
       maxSlides,
       context: {
         lessonId: lesson?.id || null,
@@ -2533,7 +2466,7 @@ app.post("/api/presentations/generate", async (req, res) => {
       title: `${lesson?.title || note?.title || "Prezentacja"} (${new Date().toLocaleDateString("pl-PL")})`,
       subject: lesson?.subject || note?.subject || "",
       slideCount: slides.length,
-      includeImages,
+      includeImages: false,
       slides,
       createdAt: new Date().toISOString()
     };
