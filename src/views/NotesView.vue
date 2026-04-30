@@ -55,7 +55,7 @@
 
           <!-- Klasa -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Klasa</label>
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Poziom Klasy</label>
             <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
               <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
@@ -69,6 +69,65 @@
                 </svg>
               </div>
             </div>
+          </div>
+
+          <!-- Moja Klasa -->
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Moja Klasa</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
+                <option value="">Wybierz klasę...</option>
+                <option value="add-new">+ Dodaj swoją klasę</option>
+                <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id">{{ classItem.class_name }}</option>
+              </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+                <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
+                  <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
+                </svg>
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal dodawania nowej klasy -->
+      <div v-if="showAddClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-[12px] shadow-lg p-[24px] max-w-[400px] w-full">
+          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-[16px]">Dodaj nową klasę</h3>
+          <div class="flex flex-col gap-[12px] mb-[20px]">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Nazwa klasy</label>
+            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input 
+                v-model="newClassName" 
+                @keyup.enter="handleAddClass"
+                class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" 
+                placeholder="np. 3A, 5B, Liceum 1..."
+                autofocus
+              />
+            </div>
+          </div>
+          <div v-if="classError" class="text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold mb-[16px]">
+            {{ classError }}
+          </div>
+          <div class="flex gap-[12px] justify-end">
+            <button 
+              type="button" 
+              @click="closeAddClassModal"
+              class="bg-muted border border-border content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-background/70 transition-colors"
+            >
+              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[16px] leading-[24px]">Anuluj</span>
+            </button>
+            <button 
+              type="button" 
+              @click="handleAddClass"
+              :disabled="addingClass || !newClassName.trim()"
+              class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors disabled:opacity-50"
+            >
+              <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ addingClass ? 'Dodawanie...' : 'Dodaj klasę' }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -167,7 +226,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import cloudIcon from "../assets/cloud.svg";
@@ -225,10 +284,11 @@ async function getPdfMake() {
   return pdfMakeLoadingPromise;
 }
 
-const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes } = useLessonStore();
+const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes, fetchUserClasses, addUserClass } = useLessonStore();
 
 onMounted(async () => {
   await fetchTeacherNotes();
+  await fetchUserClasses();
 });
 const router = useRouter();
 const classOptions = [
@@ -256,6 +316,7 @@ const subject = ref("");
 const title = ref("");
 const lessonDate = ref(new Date().toISOString().split("T")[0]);
 const classLevel = ref("4 Szkoła Średnia");
+const selectedClass = ref("");
 const rawTextContent = ref("");
 const selectedFile = ref(null);
 
@@ -263,6 +324,19 @@ const loading = ref(false);
 const saving = ref(false);
 const error = ref("");
 const info = ref("");
+
+const showAddClassModal = ref(false);
+const newClassName = ref("");
+const classError = ref("");
+const addingClass = ref(false);
+
+// Watcher na zmianę wybranej klasy
+watch(selectedClass, (newValue) => {
+  if (newValue === "add-new") {
+    showAddClassModal.value = true;
+    selectedClass.value = "";
+  }
+});
 
 async function handleFileChange(event) {
   const file = event.target.files?.[0];
@@ -290,10 +364,37 @@ function resetForm() {
   lessonDate.value = new Date().toISOString().split("T")[0];
   classLevel.value = "1 Klasa Szkoły Podstawowej";
   title.value = "";
+  selectedClass.value = "";
   rawTextContent.value = "";
   selectedFile.value = null;
   error.value = "";
   info.value = "";
+}
+
+function closeAddClassModal() {
+  showAddClassModal.value = false;
+  newClassName.value = "";
+  classError.value = "";
+}
+
+async function handleAddClass() {
+  try {
+    classError.value = "";
+    if (!newClassName.value.trim()) {
+      classError.value = "Wpisz nazwę klasy";
+      return;
+    }
+
+    addingClass.value = true;
+    const newClass = await addUserClass(newClassName.value);
+    selectedClass.value = newClass.id;
+    closeAddClassModal();
+    info.value = `Klasa "${newClass.class_name}" została dodana`;
+  } catch (err) {
+    classError.value = err.message || "Nie udało się dodać klasy";
+  } finally {
+    addingClass.value = false;
+  }
 }
 
 async function handleGenerate() {
@@ -329,13 +430,23 @@ async function handleSave() {
       error.value = "Uzupełnij przedmiot, temat i treść w obszarze roboczym.";
       return;
     }
-    await saveTeacherNote({
+    const payload = {
       title: title.value,
       subject: subject.value,
       classLevel: classLevel.value,
       content: rawTextContent.value,
       source: "ai"
-    });
+    };
+    
+    // Dodaj class_name jeśli użytkownik wybrał własną klasę
+    if (selectedClass.value) {
+      const selectedClassObj = state.userClasses.find(c => c.id === selectedClass.value);
+      if (selectedClassObj) {
+        payload.class_name = selectedClassObj.class_name;
+      }
+    }
+    
+    await saveTeacherNote(payload);
     info.value = "Notatka zapisana pomyślnie.";
     await router.push("/preparation");
   } catch (e) {

@@ -610,6 +610,7 @@ function rowToLesson(row) {
     finalNote: row.final_note || null,
     startedAt: row.started_at || null,
     finishedAt: row.finished_at || null,
+    class_name: row.class_name || null,
     updatedAt: row.updated_at || null
   };
 }
@@ -625,6 +626,7 @@ function rowToFinalNote(row) {
     html: row.html || "",
     publicPath: row.public_path || "",
     shareUrl: row.share_url || "",
+    class_name: row.class_name || null,
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
   };
@@ -638,6 +640,7 @@ function rowToSavedNote(row) {
     title: row.title || "",
     subject: row.subject || "",
     classLevel: row.class_level || "",
+    class_name: row.class_name || null,
     content: row.content || "",
     source: row.source || "manual",
     createdAt: row.created_at || null,
@@ -664,6 +667,7 @@ function lessonToRow(lesson) {
     final_note: lesson.finalNote || null,
     started_at: lesson.startedAt || null,
     finished_at: lesson.finishedAt || null,
+    class_name: lesson.class_name || null,
     updated_at: new Date().toISOString()
   };
 }
@@ -680,6 +684,7 @@ function finalNoteToRow(finalNote, teacherId) {
     html: String(finalNote.html || ""),
     public_path: String(finalNote.publicPath || ""),
     share_url: String(finalNote.shareUrl || ""),
+    class_name: finalNote.class_name || null,
     created_at: finalNote.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -693,6 +698,7 @@ function savedNoteToRow(note, teacherId) {
     title: String(note.title || ""),
     subject: String(note.subject || ""),
     class_level: String(note.classLevel || ""),
+    class_name: note.class_name || null,
     content: String(note.content || ""),
     source: String(note.source || "manual"),
     created_at: note.createdAt || new Date().toISOString(),
@@ -2257,7 +2263,7 @@ app.post("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
-  const { title, subject, month, date, rawText = "", length } = req.body || {};
+  const { title, subject, month, date, rawText = "", length, class_name } = req.body || {};
   if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
   const activeLicense = getActiveUserLicense(teacher.userId);
@@ -2280,7 +2286,8 @@ app.post("/api/lessons", async (req, res) => {
     transcripts: [],
     finalNote: null,
     startedAt: null,
-    finishedAt: null
+    finishedAt: null,
+    class_name: class_name || null
   };
 
   if (rawText && activeLicense) {
@@ -2626,6 +2633,7 @@ app.post("/api/notes", async (req, res) => {
     const classLevel = String(req.body?.classLevel || "").trim();
     const content = String(req.body?.content || "").trim();
     const source = String(req.body?.source || "manual").trim() || "manual";
+    const className = String(req.body?.class_name || "").trim() || null;
 
     if (!title || !subject || !content) {
       return res.status(400).json({ error: "Title, subject and content are required." });
@@ -2641,6 +2649,7 @@ app.post("/api/notes", async (req, res) => {
       classLevel,
       content,
       source,
+      class_name: className,
       createdAt: now,
       updatedAt: now
     };
@@ -2673,8 +2682,27 @@ app.delete("/api/notes/:noteId", async (req, res) => {
 app.put("/api/lessons/:lessonId/plan", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
-  if (!lesson) return;
+
+  // Try to find lesson in memory first; if missing, attempt refresh from Supabase
+  let lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    console.warn(`[PUT /api/lessons/${req.params.lessonId}/plan] lesson not found in memory, attempting refresh from Supabase`);
+    await refreshSingleLessonFromSupabaseSafe(req.params.lessonId, teacher.teacherId, teacher.schoolId);
+    lesson = db.lessons.get(req.params.lessonId);
+  }
+
+  if (!lesson) {
+    return res.status(404).json({ error: "Lesson not found", lessonId: req.params.lessonId });
+  }
+
+  // Ownership checks
+  if (String(lesson.teacherId) !== String(teacher.teacherId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (teacher.schoolId && String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   lesson.plan = normalizePlanArray(req.body.plan || []);
   lesson.status = "ready";
   db.lessons.set(lesson.id, lesson);
@@ -2810,6 +2838,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
     html,
     publicPath: `/share/${noteId}`,
     shareUrl: `${baseUrl}/share/${noteId}`,
+    class_name: lesson.class_name || null,
     createdAt: new Date().toISOString()
   };
   lesson.status = "finished";
@@ -3891,6 +3920,76 @@ Dla liceum/technikum: Bardzo krótko, zakładając dobrą znajomość tematu.`;
     });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Failed to process question." });
+  }
+});
+
+app.post("/api/classes", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    const className = String(req.body?.class_name || "").trim();
+    if (!className) {
+      return res.status(400).json({ error: "Nazwa klasy jest wymagana." });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: "Database connection not available." });
+    }
+
+    const { data: newClass, error } = await supabase
+      .from("classes")
+      .insert([{ teacher_id: teacher.userId, class_name: className }])
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        return res.status(400).json({ error: "Ta klasa już istnieje." });
+      }
+      console.error("Database error:", error);
+      return res.status(400).json({ error: error.message || "Nie udało się dodać klasy." });
+    }
+
+    return res.json({
+      class: {
+        id: newClass.id,
+        class_name: newClass.class_name,
+        teacher_id: newClass.teacher_id
+      }
+    });
+  } catch (error) {
+    console.error("Classes endpoint error:", error);
+    return res.status(500).json({ error: error.message || "Nie udało się dodać klasy." });
+  }
+});
+
+app.get("/api/classes", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    if (!supabase) {
+      return res.status(500).json({ error: "Database connection not available." });
+    }
+
+    const { data: classes, error } = await supabase
+      .from("classes")
+      .select("id, class_name")
+      .eq("teacher_id", teacher.userId)
+      .order("class_name", { ascending: true });
+
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(400).json({ error: error.message || "Nie udało się pobrać klas." });
+    }
+
+    return res.json({
+      classes: classes || []
+    });
+  } catch (error) {
+    console.error("Classes GET endpoint error:", error);
+    return res.status(500).json({ error: error.message || "Nie udało się pobrać klas." });
   }
 });
 
