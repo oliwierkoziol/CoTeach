@@ -84,67 +84,51 @@
       <div v-else class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
         <div :class="['mx-auto h-full max-h-full w-full max-w-6xl rounded-3xl p-5 shadow-2xl sm:p-7 lg:p-9', activeTheme.wrapperClass]">
           <div class="flex h-full min-h-0 flex-col">
-            <div class="mb-3">
-              <h1 class="clamp-2 text-2xl font-extrabold leading-tight sm:text-4xl">{{ current.title }}</h1>
-              <p v-if="current.subtitle" class="clamp-2 mt-2 text-base text-white/85 sm:text-lg">{{ current.subtitle }}</p>
+            <div class="mb-4">
+              <h1 class="text-[clamp(1.6rem,4vh,3.25rem)] font-extrabold leading-tight">{{ current.title }}</h1>
+              <p v-if="current.subtitle" class="mt-2 text-[clamp(1.05rem,2.5vh,1.65rem)] text-white/85">{{ current.subtitle }}</p>
             </div>
 
-            <div class="mb-3 flex flex-wrap gap-2">
+            <div class="mb-4 flex flex-wrap gap-2">
               <span
                 v-for="k in currentDetailChips"
                 :key="k"
-                class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white sm:text-sm"
+                class="rounded-full bg-white/20 px-3 py-1 text-[clamp(0.8rem,1.6vh,1.05rem)] font-semibold text-white"
               >
                 {{ k }}
               </span>
             </div>
 
-            <div class="min-h-0 flex-1">
-              <div v-if="isComparisonLayout" class="grid h-full min-h-0 grid-cols-2 gap-3">
-                <div :class="['rounded-xl border p-4', activeTheme.panelClass]">
-                  <p class="mb-2 text-sm font-semibold text-white/80">Aspekt A</p>
-                  <p class="clamp-8 text-sm text-white/95">{{ comparisonLeft }}</p>
+            <div class="min-h-0 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              <div v-if="isComparisonLayout" class="grid h-auto min-h-full grid-cols-2 gap-4">
+                <div :class="['rounded-2xl border p-5', activeTheme.panelClass]">
+                  <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Aspekt A</p>
+                  <p class="text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-relaxed break-words">{{ comparisonLeft }}</p>
                 </div>
-                <div :class="['rounded-xl border p-4', activeTheme.panelClass]">
-                  <p class="mb-2 text-sm font-semibold text-white/80">Aspekt B</p>
-                  <p class="clamp-8 text-sm text-white/95">{{ comparisonRight }}</p>
+                <div :class="['rounded-2xl border p-5', activeTheme.panelClass]">
+                  <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Aspekt B</p>
+                  <p class="text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-relaxed break-words">{{ comparisonRight }}</p>
                 </div>
               </div>
 
-              <div v-else-if="isAgendaLayout" :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
-                <p class="mb-3 text-sm font-semibold text-white/80">Agenda slajdu</p>
+              <div v-else-if="isAgendaLayout" :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
+                <p class="mb-3 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Agenda slajdu</p>
                 <ul class="space-y-2">
-                  <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-2 text-sm text-white/95">
-                    <span class="font-bold text-white/80">{{ i + 1 }}.</span>
-                    <span class="clamp-2">{{ item }}</span>
+                  <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-2 text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-snug break-words">
+                    <span class="font-bold text-white/80 shrink-0">{{ i + 1 }}.</span>
+                    <span>{{ item }}</span>
                   </li>
                 </ul>
-                <p class="clamp-5 mt-4 text-sm text-white/90">{{ currentMainText }}</p>
+                <p class="mt-4 text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/90 leading-relaxed break-words">{{ currentMainText }}</p>
               </div>
 
-              <div v-else-if="isPracticeLayout" :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
-                <p class="mb-2 text-sm font-semibold text-white/80">Ćwiczenie</p>
-                <p class="clamp-5 mb-3 text-sm text-white/95">{{ currentMainText }}</p>
-                <div v-if="resolvedCurrentImageUrl" class="mb-3 overflow-hidden rounded-lg border border-white/20">
-                  <div class="w-full bg-black/15">
-                    <img :src="resolvedCurrentImageUrl" alt="Ilustracja slajdu" class="h-[220px] w-full object-cover sm:h-[280px]" loading="lazy" @error="handleSlideImageError" />
-                  </div>
-                </div>
-                <div v-else-if="showImagePlaceholder" :class="['rounded-lg p-3', activeTheme.innerPanelClass]">
-                  <p class="clamp-5 text-sm text-white/85">{{ current.visualHint || "Zadanie: podaj przykład i krótko uzasadnij odpowiedź." }}</p>
-                </div>
+              <div v-else-if="isPracticeLayout" :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
+                <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Ćwiczenie</p>
+                <p class="whitespace-pre-wrap text-[clamp(1.15rem,2.5vh,1.85rem)] leading-relaxed text-white/95 break-words">{{ currentMainText }}</p>
               </div>
 
-              <div v-else :class="['h-full rounded-xl border p-4', activeTheme.panelClass]">
-                <p class="clamp-8 text-sm leading-relaxed text-white/95 sm:text-base">{{ currentMainText }}</p>
-                <div v-if="resolvedCurrentImageUrl" class="mt-3 overflow-hidden rounded-lg border border-white/20">
-                  <div class="w-full bg-black/15">
-                    <img :src="resolvedCurrentImageUrl" alt="Ilustracja slajdu" class="h-[240px] w-full object-cover sm:h-[320px]" loading="lazy" @error="handleSlideImageError" />
-                  </div>
-                </div>
-                <div v-else-if="showImagePlaceholder" :class="['mt-3 rounded-lg p-3', activeTheme.innerPanelClass]">
-                  <p class="clamp-4 text-sm text-white/85">{{ current.visualHint || "Wizualizacja: prosty schemat lub wykres wspierający ten slajd." }}</p>
-                </div>
+              <div v-else :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
+                <p class="whitespace-pre-wrap text-[clamp(1.15rem,2.5vh,1.85rem)] leading-relaxed text-white/95 break-words">{{ currentMainText }}</p>
               </div>
             </div>
           </div>
@@ -231,27 +215,7 @@
               </div>
               <div>
                 <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Główne podsumowanie</label>
-                <textarea v-model="slide.summary" rows="3" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-3 text-[15px] leading-relaxed text-[#454652] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all"></textarea>
-              </div>
-              <div class="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                <div class="flex-1">
-                  <label class="block text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-1">Sugestia dla generatora obrazów</label>
-                  <input v-model="slide.visualHint" class="w-full bg-transparent border-none p-0 text-sm text-blue-900 placeholder:text-blue-300 focus:ring-0" placeholder="Opisz co ma być na obrazku..." />
-                </div>
-                <button
-                  @click="generateImageForSlide(index)"
-                  :disabled="slide.isImageLoading || !slide.visualHint"
-                  class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
-                >
-                  <span v-if="slide.isImageLoading" class="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full"></span>
-                  {{ slide.imageUrl ? "Generuj ponownie" : "Generuj grafikę" }}
-                </button>
-              </div>
-              <div v-if="slide.imageUrl" class="mt-2 relative w-48 h-28 group overflow-hidden rounded-xl border">
-                <img :src="slide.imageUrl" class="w-full h-full object-cover" />
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <button @click="slide.imageUrl = null" class="text-white text-xs font-bold underline">Usuń</button>
-                </div>
+                <textarea v-model="slide.summary" rows="5" class="w-full bg-[#e0e3e6] border-none rounded-[8px] px-4 py-3 text-[15px] leading-relaxed text-[#454652] font-['Plus_Jakarta_Sans'] focus:ring-2 focus:ring-[#0c3dfe]/50 transition-all"></textarea>
               </div>
             </div>
           </div>
@@ -347,10 +311,6 @@
           <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
             Ustawienia prezentacji
           </h3>
-          <label class="inline-flex cursor-pointer items-center gap-2 font-['Plus_Jakarta_Sans'] text-[14px] font-semibold text-muted-foreground">
-            <input v-model="includeImages" type="checkbox" class="h-4 w-4 rounded border-border bg-input-background text-primary accent-primary" />
-            Generuj slajdy ze zdjęciami AI
-          </label>
         </div>
         <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
           <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Zakres treści</label>
@@ -436,7 +396,6 @@ const isGenerating = ref(false);
 const isPresenting = ref(false);
 const slides = ref([]);
 const slideIndex = ref(0);
-const currentImageFailed = ref(false);
 const presentationHistory = ref([]);
 const isReviewing = ref(false);
 const isPilot = ref(false);
@@ -458,7 +417,6 @@ const slideTypeTranslations = {
 
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
-const includeImages = ref(true);
 const generationMessage = ref("");
 const presentationTheme = ref({
   wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
@@ -466,7 +424,7 @@ const presentationTheme = ref({
   innerPanelClass: "bg-black/20"
 });
 
-const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "", visualHint: "", imagePrompt: "", imageUrl: "" });
+const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
 const hasLessons = computed(() => availableLessons.value.length > 0);
 const availableNotes = computed(() => (Array.isArray(state.notes) ? state.notes : []));
@@ -530,37 +488,6 @@ const isAgendaLayout = computed(() => currentType.value === "agenda" || currentT
 const isPracticeLayout = computed(() => currentType.value === "practice" || currentType.value === "next_steps");
 const comparisonLeft = computed(() => currentDetailChips.value.slice(0, Math.ceil(currentDetailChips.value.length / 2)).join(" • "));
 const comparisonRight = computed(() => currentDetailChips.value.slice(Math.ceil(currentDetailChips.value.length / 2)).join(" • ") || currentMainText.value);
-const currentImageUrl = computed(() => String(current.value.imageUrl || "").trim());
-const resolvedCurrentImageUrl = computed(() => {
-  if (!includeImages.value) return "";
-  if (currentImageFailed.value) return "";
-  const backendUrl = String(currentImageUrl.value || "").trim();
-  if (backendUrl) return backendUrl;
-
-  const raw = `${current.value.title || ""} ${current.value.imagePrompt || ""} ${current.value.visualHint || ""} ${current.value.summary || ""}`.toLowerCase();
-  const tags = ["education", "school"];
-  const add = (tag) => {
-    if (!tags.includes(tag)) tags.push(tag);
-  };
-  if (/(matemat|mnożen|dzielen|algebra|geometr)/.test(raw)) {
-    add("math");
-    add("numbers");
-    add("classroom");
-  } else if (/(biolog|fotosyntez|roślin|organizm)/.test(raw)) {
-    add("biology");
-    add("nature");
-  } else if (/(histori|wojna|starożyt|średniowie)/.test(raw)) {
-    add("history");
-  } else {
-    add("learning");
-    add("students");
-  }
-  const lockSeed = Math.abs(
-    Array.from(`${current.value.id || ""}-${current.value.title || ""}`).reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  ) % 1000;
-  return `https://loremflickr.com/1280/720/${tags.slice(0, 4).join(",")}?lock=${lockSeed}`;
-});
-const showImagePlaceholder = computed(() => includeImages.value && !resolvedCurrentImageUrl.value);
 
 onMounted(async () => {
   // Setup BroadcastChannel for cross-window slide sync
@@ -659,7 +586,6 @@ watch(selectedLesson, (lesson) => {
 });
 
 watch(slideIndex, () => {
-  currentImageFailed.value = false;
 });
 
 watch(presentationSource, (source) => {
@@ -709,7 +635,6 @@ function savePresentationSnapshot(currentSlides) {
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
     slides: currentSlides,
-    includeImages: includeImages.value,
     ownerId: String(historyOwnerId.value || "").trim() || undefined
   };
   presentationHistory.value.unshift(item);
@@ -747,8 +672,7 @@ async function startGeneratedPresentation() {
       noteId: presentationSource.value === "note" ? selectedNote.value?.id || "" : "",
       classLevel: selectedClassLevel.value || "",
       scope: effectivePresentationScope.value,
-      includeImages: includeImages.value,
-      maxSlides: 12
+      maxSlides: 5
     });
     const generatedSlides = (generated?.slides || [])
       .map((slide) => ({
@@ -757,10 +681,7 @@ async function startGeneratedPresentation() {
         title: String(slide.title || "").trim(),
         subtitle: String(slide.subtitle || "").trim(),
         summary: String(slide.summary || "").trim(),
-        details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : [],
-        visualHint: String(slide.visualHint || "").trim(),
-        imagePrompt: String(slide.imagePrompt || "").trim(),
-        imageUrl: String(slide.imageUrl || "").trim()
+        details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : []
       }))
       .filter((slide) => slide.title || slide.summary || slide.details.length);
 
@@ -782,45 +703,10 @@ async function startGeneratedPresentation() {
   }
 }
 
-async function generateImageForSlide(index) {
-  const slide = slides.value[index];
-  if (!slide || !slide.visualHint) return;
-
-  slide.isImageLoading = true;
-  try {
-    const { data: authData } = await supabase.auth.getSession();
-    const token = authData?.session?.access_token;
-
-    const response = await fetch(`${API_BASE}/api/generate-image`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ prompt: slide.visualHint })
-    });
-
-    const data = await response.json();
-    if (response.ok && data.url) {
-      slide.imageUrl = data.url;
-    }
-  } catch (e) {
-    console.error("Image gen error:", e);
-  } finally {
-    slide.isImageLoading = false;
-  }
-}
-
 function openSavedPresentation(item) {
   const storedSlides = Array.isArray(item?.slides) ? item.slides : [];
   if (!storedSlides.length) return;
-  includeImages.value = Boolean(item?.includeImages || storedSlides.some((slide) => String(slide?.imageUrl || "").trim()));
-  currentImageFailed.value = false;
   startPresentation(storedSlides);
-}
-
-function handleSlideImageError() {
-  currentImageFailed.value = true;
 }
 
 function tryOpenRequestedPresentation() {
