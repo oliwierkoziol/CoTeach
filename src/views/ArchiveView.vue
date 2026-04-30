@@ -14,7 +14,20 @@
         </div>
 
         <!-- Global Class Filter -->
-        
+        <div class="mt-4 md:mt-0 flex items-center gap-3">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Klasa:</label>
+          <div class="bg-white border border-[#e0e3e6] h-[44px] relative rounded-[8px] flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-w-[200px]">
+            <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[15px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
+              <option value="all">Wszystkie klasy</option>
+              <option v-for="c in state.userClasses" :key="c.id" :value="c.class_name">{{ c.class_name }}</option>
+            </select>
+            <div class="absolute right-[12px] flex pointer-events-none items-center text-[#222E75] opacity-40">
+              <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-cols-12 gap-8">
@@ -393,7 +406,7 @@ import presentationIcon from "../assets/presentation.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
-const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote, fetchUserClasses } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
@@ -409,29 +422,21 @@ const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
 const isQrModalOpen = ref(false);
-const userClasses = ref([]);
 const selectedClass = ref("all");
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
+  await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchUserClasses()]);
   await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
   if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
 });
 
-async function loadUserClasses() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
-  if (profile?.classes) userClasses.value = profile.classes;
-}
-
 const filteredLessons = computed(() => {
   let archivedLessons = state.lessons;
   
   if (selectedClass.value !== 'all') {
-    archivedLessons = archivedLessons.filter(l => l.classLevel === selectedClass.value);
+    archivedLessons = archivedLessons.filter(l => l.classLevel === selectedClass.value || l.class_name === selectedClass.value);
   }
 
   const q = searchQuery.value.toLowerCase().trim();
@@ -447,7 +452,7 @@ const filteredNotes = computed(() => {
   let notes = Array.isArray(state.notes) ? state.notes : [];
 
   if (selectedClass.value !== 'all') {
-    notes = notes.filter(n => n.classLevel === selectedClass.value);
+    notes = notes.filter(n => n.classLevel === selectedClass.value || n.class_name === selectedClass.value);
   }
 
   const q = searchQuery.value.toLowerCase().trim();
