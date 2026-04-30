@@ -638,7 +638,7 @@ function normalizeBaseUrl(url) {
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
-const COVERAGE_REFRESH_MIN_INTERVAL_MS = 5_000; // Reduced from 90s to 5s for faster coverage updates
+const COVERAGE_REFRESH_MIN_INTERVAL_MS = 2_000; // Szybsza reakcja na słowa kluczowe
 
 const lessonDurationOptions = [
   { label: "45 min", minutes: 45 },

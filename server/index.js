@@ -1789,44 +1789,39 @@ function polishFuzzyMatch(spoken, keyword) {
   const normalizeFuzzy = (text) => {
     let normalized = text.toLowerCase()
       // Remove common Polish grammatical endings
-      .replace(/(ski|ska|skie|scy|skiej|skim|ską|skimi|skim)$/g, '')  // przymiotniki -ski
-      .replace(/(czny|czna|czne|czni|cznej|cznym|czną|cznymi|cznym)$/g, '')  // -czny
-      .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
+      .replace(/(ski|ska|skie|scy|skiej|skim|skimi)$/g, '')  // przymiotniki -ski
+      .replace(/(czny|czna|czne|czni|cznej|cznym|cznymi)$/g, '')  // -czny
+      .replace(/(owy|owa|owe|owi|owej|owym|owymi)$/g, '')  // -owy
       .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
-      .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
-      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą|i|u|ów|em|ach|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '') // podstawowe końcówki
       .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
-      .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
-      .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
+      .replace(/(ika|iki|iki|ikami|ik)$/g, '')  // -ika
+      .replace(/(cia|cie|cia|cje|cji|cjami)$/g, '')  // -cja
       .replace(/(stwo|stwa|stwie|stwu|stwem|stwami)$/g, '')  // -stwo
-      .replace(/(ot|ota|ocie|ocie|otę|otą|otami|ot)$/g, '')  // -ota
-      .replace(/(ość|ości|ością|ościom|ościach)$/g, '')  // -ość
-      .replace(/(nik|nika|niku|niku|nikiem|nikami|nik)$/g, '')  // -nik
+      .replace(/(ot|ota|ocie|otami|ot)$/g, '')  // -ota
+      .replace(/(osc|osci|oscia|osciom|osciach)$/g, '')  // -osc
+      .replace(/(nik|nika|niku|nikiem|nikami|nik)$/g, '')  // -nik
       .replace(/(ca|cy|cem|cami|cę|cą|cą)$/g, '')  // -ca
       .replace(/(ar|ara|arem|arami|arzy|arze)$/g, '')  // -ar
       .replace(/(er|era|erem|erami|erzy|erze)$/g, '')  // -er
       .replace(/(or|ora|orem|orami|orzy|orze)$/g, '')  // -or
+      // Verbal/Noun derivations (e.g. -enie, -eń -> -en)
+      .replace(/(enie|enia|eniu|eniom|eniami|eniach|en)$/g, '')
       // Math and science specific endings
-      .replace(/(ia|ie|ii|ię|ią|ium)$/g, '')  // -ia, -ie (geometria, równania)
-      .replace(/(cja|cje|cji|cją|cjami|cję|cjach|cje)$/g, '')  // -cja (reakcja, pochodna)
-      .replace(/(ka|ki|kie|ki|kę|ką|kami|ką)$/g, '')  // -ka (matematyka)
-      .replace(/(ta|te|ty|tę|tą|tami|tom)$/g, '')  // -ta (jednostka)
-      .replace(/(na|ne|ni|nę|ną|nami|nom)$/g, '')  // -na (funkcja)
-      .replace(/(ga|ge|gi|gę|gą|gami|gom)$/g, '')  // -ga (jednostka)
-      .replace(/(ra|re|ri|rę|rą|rami|rom)$/g, '')  // -ra (jednostka)
-      .replace(/(da|de|di|dę|dą|dam|dom)$/g, '')  // -da (jednostka)
+      .replace(/(ia|ie|ii|ium)$/g, '')  // -ia, -ie (geometria, równania)
+      .replace(/(ka|ki|kie|kami)$/g, '')  // -ka (matematyka)
+      .replace(/(ta|te|ty|tami|tom)$/g, '')  // -ta (jednostka)
+      .replace(/(na|ne|ni|nami|nom)$/g, '')  // -na (funkcja)
       // Physics and chemistry specific
-      .replace(/(ma|me|mi|mę|mą|mami|mom)$/g, '')  // -ma (jednostka)
-      .replace(/(la|le|li|lę|lą|lami|lom)$/g, '')  // -la (jednostka)
-      .replace(/(wa|we|wi|wę|wą|wami|wom)$/g, '')  // -wa (jednostka)
-      // History and geography specific
-      .replace(/(ża|że|żi|żę|żą|żami|żom)$/g, '')  // -ża (jednostka)
-      .replace(/(za|ze|zi|zę|zą|zami|zom)$/g, '')  // -za (jednostka)
+      .replace(/(ma|me|mi|mami|mom)$/g, '')  // -ma (jednostka)
+      .replace(/(la|le|li|lami|lom)$/g, '')  // -la (jednostka)
+      .replace(/(wa|we|wi|wami|wom)$/g, '')  // -wa (jednostka)
+      // Generic endings - MUST BE LAST
+      .replace(/(y|a|e|ym|ymi|o|om|i|u|ow|em|ach|ami|ego|emu|ej|as|os|is|es|us)$/g, '')
       // Remove double letters and normalize common patterns
       .replace(/([a-z])\1{2,}/g, '$1')  // Reduce triple+ letters to single
-      .replace(/([^aeiouyąęó])ie([a-z])/g, '$1e$2')  // Polish ie → e
+      .replace(/([^aeiouyaeo])ie([a-z])/g, '$1e$2')  // Polish ie → e
       // Normalize common spelling variations
-      .replace(/rz/g, 'ż')  // Standardize rz/ż
+      .replace(/rz/g, 'z')  // Standardize rz/z
       .replace(/ch/g, 'h')  // Standardize ch/h
       .trim();
     return normalized;
