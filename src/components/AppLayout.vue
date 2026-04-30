@@ -347,7 +347,8 @@ const startLessonCta = computed(() => {
 });
 
 const showSoundWave = computed(() => {
-  const hasNoLessons = !state.lessons || state.lessons.length <= 1;
+  if (!state.isInitialLoadDone) return false;
+  const hasNoLessons = !state.lessons || state.lessons.length <= 0;
   const isNotPreparation = route.path !== "/preparation";
   const isNotNotes = route.path !== "/notes";
   return !startLessonCta.value.isLive && hasNoLessons && isNotPreparation && isNotNotes;

@@ -116,7 +116,7 @@
           <!-- Button Rozpocznij lekcję -->
           <button type="button" :disabled="isGenerating" @click="handleGenerate" :class="[
             'bg-[#0c3dfe] text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] leading-[24px] px-8 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto',
-            selectedNoteId && (!state.lessons || state.lessons.length <= 1) ? 'sound-wave-btn' : ''
+            selectedNoteId && (!state.lessons || state.lessons.length <= 0) ? 'sound-wave-btn' : ''
           ]">
             {{ isGenerating ? "Przetwarzam..." : "Rozpocznij lekcję" }}
           </button>

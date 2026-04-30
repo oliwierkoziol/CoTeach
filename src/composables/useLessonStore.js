@@ -94,6 +94,7 @@ const state = reactive({
   userClasses: [],
   error: "",
   info: "",
+  isInitialLoadDone: false,
   missing: [],
   costInfo: null,
   shareUrl: ""
@@ -319,6 +320,8 @@ export function useLessonStore() {
       state.lessons = [];
       state.error = error.message || "Nie udało się pobrać lekcji";
       return [];
+    } finally {
+      state.isInitialLoadDone = true;
     }
   }
 
