@@ -214,7 +214,7 @@
             </button>
             <button type="button" :disabled="saving" @click="handleSave" :class="[
               'bg-[#0c3dfe] content-stretch flex items-center justify-center px-[32px] py-[10px] rounded-[8px] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] hover:bg-[#0a34d4] transition-colors disabled:opacity-50 w-full sm:w-auto',
-              (!state.notes || state.notes.length === 0) && subject && title && rawTextContent ? 'sound-wave-btn' : ''
+              !isLoadingNotes && (!state.notes || state.notes.length === 0) && subject && title && rawTextContent ? 'sound-wave-btn' : ''
             ]">
               <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ saving ? 'Zapisywanie...' : 'Zapisz i kontynuuj' }}</span>
             </button>
@@ -247,12 +247,14 @@ async function getPdfMake() {
       const pdfMake = pdfMakeModule.default || pdfMakeModule;
       const pdfFonts = pdfFontsModule.default || pdfFontsModule;
 
-      const resolvedVfs =
-        pdfFonts?.vfs ||
-        pdfFonts?.pdfMake?.vfs ||
-        pdfFonts?.default?.vfs ||
-        pdfFonts?.default?.pdfMake?.vfs ||
-        (typeof window !== "undefined" && window.pdfMake?.vfs);
+      let resolvedVfs = null;
+      if (pdfFonts?.pdfMake?.vfs) resolvedVfs = pdfFonts.pdfMake.vfs;
+      else if (pdfFonts?.vfs) resolvedVfs = pdfFonts.vfs;
+      else if (pdfFonts?.default?.pdfMake?.vfs) resolvedVfs = pdfFonts.default.pdfMake.vfs;
+      else if (pdfFonts?.default?.vfs) resolvedVfs = pdfFonts.default.vfs;
+      else if (pdfFonts?.default && pdfFonts.default["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts.default;
+      else if (pdfFonts && pdfFonts["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts;
+      else if (typeof window !== "undefined" && window.pdfMake?.vfs) resolvedVfs = window.pdfMake.vfs;
 
       if (resolvedVfs) {
         if (typeof pdfMake.addVirtualFileSystem === "function") {
@@ -285,32 +287,44 @@ async function getPdfMake() {
 }
 
 const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes, fetchUserClasses, addUserClass } = useLessonStore();
+const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetchTeacherNotes } = useLessonStore();
+
+const isLoadingNotes = ref(true);
+
+const userClasses = ref([]);
+
+function unifyClassName(name) {
+  if (!name) return name;
+  let n = name.toLowerCase().trim();
+  // np. "5 klasa szkoły średniej" -> "5 szkoła średnia"
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*średniej/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*podstawowej/g, "$1 szkoła podstawowa");
+  // Inne warianty
+  n = n.replace(/(\d+)\s*klasa\s*sp/g, "$1 szkoła podstawowa");
+  n = n.replace(/(\d+)\s*klasa\s*lo/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*technikum/g, "$1 szkoła średnia");
+  return n;
+}
 
 onMounted(async () => {
   await fetchTeacherNotes();
-  await fetchUserClasses();
 });
 const router = useRouter();
-const classOptions = [
-  "1 Klasa Szkoły Podstawowej",
-  "2 Klasa Szkoły Podstawowej",
-  "3 Klasa Szkoły Podstawowej",
-  "4 Szkoła Podstawowa",
-  "5 Szkoła Podstawowa",
-  "6 Szkoła Podstawowa",
-  "7 Szkoła Podstawowa",
-  "8 Szkoła Podstawowa",
-  "1 Szkoła Średnia",
-  "2 Szkoła Średnia",
-  "3 Szkoła Średnia",
-  "4 Szkoła Średnia",
-  "5 Szkoła Średnia",
-  "Szkolenie firmowe",
-  "Szkolenie wewnętrzne",
-  "Warsztat",
-  "Konsultacje",
-  "Inny typ notatki"
-];
+const schoolType = ref("Szkoła Podstawowa");
+
+const classOptions = computed(() => {
+  let base = [];
+  if (schoolType.value === "Szkoła Podstawowa") {
+    base = ["1 szkoła podstawowa", "2 szkoła podstawowa", "3 szkoła podstawowa", "4 szkoła podstawowa", "5 szkoła podstawowa", "6 szkoła podstawowa", "7 szkoła podstawowa", "8 szkoła podstawowa"];
+  } else if (schoolType.value === "Szkoła Ponadpodstawowa") {
+    base = ["1 szkoła średnia", "2 szkoła średnia", "3 szkoła średnia", "4 szkoła średnia", "5 szkoła średnia"];
+  } else {
+    base = ["Szkolenie firmowe", "Szkolenie wewnętrzne", "Warsztat", "Konsultacje", "Inny typ notatki"];
+  }
+  
+  const uniqueClasses = new Set([...base, ...userClasses.value]);
+  return Array.from(uniqueClasses).filter(c => c && c !== "+ dodaj własną" && c !== "+ dodaj klasę" && c !== "+ zarządzaj klasami");
+});
 
 const subject = ref("");
 const title = ref("");
@@ -362,39 +376,13 @@ async function handleFileChange(event) {
 function resetForm() {
   subject.value = "";
   lessonDate.value = new Date().toISOString().split("T")[0];
-  classLevel.value = "1 Klasa Szkoły Podstawowej";
+  classLevel.value = "4 szkoła średnia";
   title.value = "";
   selectedClass.value = "";
   rawTextContent.value = "";
   selectedFile.value = null;
   error.value = "";
   info.value = "";
-}
-
-function closeAddClassModal() {
-  showAddClassModal.value = false;
-  newClassName.value = "";
-  classError.value = "";
-}
-
-async function handleAddClass() {
-  try {
-    classError.value = "";
-    if (!newClassName.value.trim()) {
-      classError.value = "Wpisz nazwę klasy";
-      return;
-    }
-
-    addingClass.value = true;
-    const newClass = await addUserClass(newClassName.value);
-    selectedClass.value = newClass.id;
-    closeAddClassModal();
-    info.value = `Klasa "${newClass.class_name}" została dodana`;
-  } catch (err) {
-    classError.value = err.message || "Nie udało się dodać klasy";
-  } finally {
-    addingClass.value = false;
-  }
 }
 
 async function handleGenerate() {

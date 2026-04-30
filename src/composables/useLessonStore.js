@@ -220,6 +220,10 @@ export function useLessonStore() {
     });
   }
 
+  async function clearTranscripts(lessonId) {
+    return api(`/api/lessons/${lessonId}/transcripts`, { method: "DELETE" });
+  }
+
   async function transcribeAudioFile(lessonId, file) {
     const form = new FormData();
     form.set("lessonId", lessonId);

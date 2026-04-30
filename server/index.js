@@ -270,6 +270,8 @@ function getTodayIsoDate() {
 function normalize(text) {
   return String(text || "")
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -1798,7 +1800,7 @@ function polishFuzzyMatch(spoken, keyword) {
       .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
       .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
       .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
-      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą)$/g, '')  // podstawowe końcówki
+      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą|i|u|ów|em|ach|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '') // podstawowe końcówki
       .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
       .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
       .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
@@ -1865,11 +1867,32 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
 
     const previouslyFound = new Set(item.foundKeywords || []);
     // Split transcript into words for better matching
-    const words = normalizedTranscript.split(/\s+/);
+    const transcriptWords = normalizedTranscript.split(/\s+/);
     const foundKeywords = keywords.filter(keyword => {
       if (previouslyFound.has(keyword)) return true;
-      if (normalizedTranscript.includes(normalize(keyword))) return true;
-      return words.some(word => polishFuzzyMatch(word, keyword));
+
+      const normalizedKeyword = normalize(keyword);
+      if (normalizedTranscript.includes(normalizedKeyword)) return true;
+
+      const keywordWords = normalizedKeyword.split(/\s+/);
+
+      if (keywordWords.length > 1) {
+        // Szukanie fraz wielowyrazowych z rozmytym dopasowaniem (sliding window)
+        for (let i = 0; i <= transcriptWords.length - keywordWords.length; i++) {
+          let match = true;
+          for (let j = 0; j < keywordWords.length; j++) {
+            if (!polishFuzzyMatch(transcriptWords[i + j], keywordWords[j])) {
+              match = false;
+              break;
+            }
+          }
+          if (match) return true;
+        }
+        return false;
+      } else {
+        // Dopasowanie pojedynczego słowa
+        return transcriptWords.some(word => polishFuzzyMatch(word, normalizedKeyword));
+      }
     });
 
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
@@ -2798,6 +2821,18 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({ ok: true });
+});
+
+app.delete("/api/lessons/:lessonId/transcripts", async (req, res) => {
+  const teacher = await resolveTeacherContext(req, res);
+  if (!teacher) return;
+  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  if (!lesson) return;
+
+  lesson.transcripts = [];
+  db.lessons.set(lesson.id, lesson);
+  await persistLessonSafe(lesson);
+  return res.json({ ok: true, message: "Transkrypcja została wyczyszczona." });
 });
 
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
@@ -3729,23 +3764,36 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       lessonId
     });
 
-    const file = await toFile(req.file.buffer, req.file.originalname || "audio.webm", {
-      type: req.file.mimetype || "audio/webm"
-    });
+    // Convert audio buffer to base64 for multimodal model
+    const base64Audio = req.file.buffer.toString('base64');
+    const prompt = "Transcribe the audio exactly as heard, including all punctuation (commas, periods, exclamation marks). Do not summarize, do not add commentary, and do not repeat phrases if there is silence.";
 
-    console.log('[transcribe] Calling Whisper API with model:', OPENAI_WHISPER_MODEL);
-
-    const transcription = await openai.audio.transcriptions.create({
-      file,
-      model: OPENAI_WHISPER_MODEL,
-      language: "pl",
-      response_format: "verbose_json",
-      temperature: 0.0, // Lower temperature for more deterministic results
-      prompt: "Oto nagranie z polskiej lekcji edukacyjnej. Nauczyciel i uczniowie omawiają materiał i wykonują zadania." // Context prompt
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "input_audio",
+            source: {
+              type: "base64",
+              media_type: req.file.mimetype || "audio/webm",
+              data: base64Audio
+            }
+          },
+          { type: "text", text: prompt }
+        ]
+      }]
     }).catch(err => {
-      console.error('[transcribe] Whisper API error:', err);
+      console.error('[transcribe] OpenAI API error:', err);
       throw err;
     });
+
+    const transcription = {
+      text: response?.choices?.[0]?.message?.content || "",
+      duration: undefined // duration not provided by this model
+    };
 
     console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars, ${transcription.duration}s)`);
 
