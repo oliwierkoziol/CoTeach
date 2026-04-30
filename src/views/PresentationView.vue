@@ -81,56 +81,75 @@
         </div>
       </div>
 
-      <div v-else class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
-        <div :class="['mx-auto h-full max-h-full w-full max-w-6xl rounded-3xl p-5 shadow-2xl sm:p-7 lg:p-9', activeTheme.wrapperClass]">
-          <div class="flex h-full min-h-0 flex-col">
-            <div class="mb-4">
-              <h1 class="text-[clamp(1.6rem,4vh,3.25rem)] font-extrabold leading-tight">{{ current.title }}</h1>
-              <p v-if="current.subtitle" class="mt-2 text-[clamp(1.05rem,2.5vh,1.65rem)] text-white/85">{{ current.subtitle }}</p>
-            </div>
+      <div v-else :class="['flex-1 overflow-hidden p-4 sm:p-6 lg:p-8 transition-colors duration-700', activeTheme.wrapperClass]">
+        <div :class="['relative mx-auto h-full max-h-full w-full max-w-7xl rounded-[2.5rem] p-6 shadow-2xl sm:p-10 lg:p-14 overflow-hidden ring-1 ring-white/10 transition-all duration-700', activeTheme.panelClass]">
+          <!-- Dekoracyjne miękkie poświaty w tle -->
+          <div class="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] rounded-full bg-white/10 blur-[120px] mix-blend-overlay pointer-events-none"></div>
+          <div class="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] rounded-full bg-white/10 blur-[120px] mix-blend-overlay pointer-events-none"></div>
+          
+          <div class="relative z-10 flex h-full min-h-0 flex-col">
+            <template v-if="current.type === 'title'">
+              <div class="flex h-full flex-col items-center justify-center text-center p-8">
+                <h1 class="text-[clamp(3rem,8vh,6rem)] font-black text-white drop-shadow-2xl leading-tight mb-6">{{ current.title }}</h1>
+                <p v-if="current.subtitle" class="text-[clamp(1.5rem,4vh,2.5rem)] font-bold text-white/90 drop-shadow-lg">{{ current.subtitle }}</p>
+                <p v-if="current.summary" class="mt-8 max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] text-white/95 font-medium leading-relaxed drop-shadow-sm">{{ current.summary }}</p>
+              </div>
+            </template>
 
-            <div class="mb-4 flex flex-wrap gap-2">
-              <span
-                v-for="k in currentDetailChips"
-                :key="k"
-                class="rounded-full bg-white/20 px-3 py-1 text-[clamp(0.8rem,1.6vh,1.05rem)] font-semibold text-white"
-              >
-                {{ k }}
-              </span>
-            </div>
-
-            <div class="min-h-0 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <div v-if="isComparisonLayout" class="grid h-auto min-h-full grid-cols-2 gap-4">
-                <div :class="['rounded-2xl border p-5', activeTheme.panelClass]">
-                  <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Aspekt A</p>
-                  <p class="text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-relaxed break-words">{{ comparisonLeft }}</p>
+            <template v-else-if="current.type === 'summary'">
+              <div class="flex h-full flex-col items-center justify-center text-center p-8">
+                <div class="inline-flex h-24 w-24 items-center justify-center rounded-full bg-white/20 mb-8 shadow-xl backdrop-blur-md">
+                  <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
-                <div :class="['rounded-2xl border p-5', activeTheme.panelClass]">
-                  <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Aspekt B</p>
-                  <p class="text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-relaxed break-words">{{ comparisonRight }}</p>
+                <h2 class="text-[clamp(2.5rem,6vh,5rem)] font-black text-white drop-shadow-2xl leading-tight mb-6">{{ current.title || 'Podsumowanie' }}</h2>
+                <p class="max-w-4xl text-[clamp(1.2rem,3vh,2rem)] text-white/95 font-medium leading-relaxed drop-shadow-sm">{{ current.summary }}</p>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="mb-6 shrink-0">
+                <h1 class="text-white text-[clamp(2.2rem,5.5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
+                <p v-if="current.subtitle" class="mt-3 text-[clamp(1.15rem,2.8vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
+              </div>
+
+              <div class="mb-6 flex flex-wrap gap-3 shrink-0">
+                <span v-for="k in currentDetailChips" :key="k" class="rounded-full bg-white/20 border border-white/30 backdrop-blur-md px-4 py-1.5 text-[clamp(0.85rem,1.8vh,1.1rem)] font-bold text-white shadow-sm tracking-wide">{{ k }}</span>
+              </div>
+
+              <div class="min-h-0 flex-1 overflow-y-auto pr-3 custom-scrollbar">
+                <div v-if="isComparisonLayout" class="grid h-auto min-h-full grid-cols-2 gap-6">
+                  <div class="p-8 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                    <p class="mb-4 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Aspekt A</p>
+                    <p class="text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/95 leading-relaxed break-words font-medium">{{ comparisonLeft }}</p>
+                  </div>
+                  <div class="p-8 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                    <p class="mb-4 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Aspekt B</p>
+                    <p class="text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/95 leading-relaxed break-words font-medium">{{ comparisonRight }}</p>
+                  </div>
+                </div>
+
+                <div v-else-if="isAgendaLayout" class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                  <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Agenda slajdu</p>
+                  <ul class="space-y-4">
+                    <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-4 text-[clamp(1.2rem,2.6vh,1.8rem)] text-white/95 leading-snug break-words items-start font-medium">
+                      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white shadow-inner">{{ i + 1 }}</span>
+                      <span class="pt-1.5">{{ item }}</span>
+                    </li>
+                  </ul>
+                  <div class="mt-8 h-px w-1/4 bg-white/20"></div>
+                  <p class="mt-6 text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/90 leading-relaxed break-words">{{ currentMainText }}</p>
+                </div>
+
+                <div v-else-if="isPracticeLayout" class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                  <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-emerald-400/90 uppercase tracking-widest">Ćwiczenie praktyczne</p>
+                  <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 break-words font-medium">{{ currentMainText }}</p>
+                </div>
+
+                <div v-else class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                  <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 break-words font-medium">{{ currentMainText }}</p>
                 </div>
               </div>
-
-              <div v-else-if="isAgendaLayout" :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
-                <p class="mb-3 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Agenda slajdu</p>
-                <ul class="space-y-2">
-                  <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-2 text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/95 leading-snug break-words">
-                    <span class="font-bold text-white/80 shrink-0">{{ i + 1 }}.</span>
-                    <span>{{ item }}</span>
-                  </li>
-                </ul>
-                <p class="mt-4 text-[clamp(1.05rem,2.2vh,1.6rem)] text-white/90 leading-relaxed break-words">{{ currentMainText }}</p>
-              </div>
-
-              <div v-else-if="isPracticeLayout" :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
-                <p class="mb-2 text-[clamp(0.95rem,2vh,1.3rem)] font-bold text-white/80">Ćwiczenie</p>
-                <p class="whitespace-pre-wrap text-[clamp(1.15rem,2.5vh,1.85rem)] leading-relaxed text-white/95 break-words">{{ currentMainText }}</p>
-              </div>
-
-              <div v-else :class="['h-auto min-h-full rounded-2xl border p-5', activeTheme.panelClass]">
-                <p class="whitespace-pre-wrap text-[clamp(1.15rem,2.5vh,1.85rem)] leading-relaxed text-white/95 break-words">{{ currentMainText }}</p>
-              </div>
-            </div>
+            </template>
           </div>
         </div>
       </div>
@@ -419,9 +438,8 @@ const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationTheme = ref({
-  wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
-  panelClass: "border-white/20 bg-white/10",
-  innerPanelClass: "bg-black/20"
+  wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
+  panelClass: "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl"
 });
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "" });
@@ -763,31 +781,30 @@ function openPresentationWindow() {
 
 function resolvePresentationTheme(title, slides) {
   const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
-  if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil)/.test(text)) {
+  
+  const basePanel = "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl";
+
+  if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil|ziemi|zwierz)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-emerald-700 via-green-700 to-teal-700",
-      panelClass: "border-white/25 bg-white/12",
-      innerPanelClass: "bg-black/15"
+      wrapperClass: "bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700",
+      panelClass: basePanel
     };
   }
-  if (/(histori|wojn|pa[nń]stw|kr[oó]l|staro|średniowie)/.test(text)) {
+  if (/(histori|wojn|pa[nń]stw|kr[oó]l|staro|średniowie|wiek|wojsk)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-amber-700 via-orange-700 to-red-700",
-      panelClass: "border-white/20 bg-white/10",
-      innerPanelClass: "bg-black/20"
+      wrapperClass: "bg-gradient-to-br from-orange-500 via-red-600 to-rose-700",
+      panelClass: basePanel
     };
   }
-  if (/(matemat|fizy|chem|technicz|algorytm|program|kod)/.test(text)) {
+  if (/(matemat|fizy|chem|technicz|algorytm|program|kod|licz|równan)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-blue-700 via-indigo-700 to-cyan-700",
-      panelClass: "border-white/20 bg-white/10",
-      innerPanelClass: "bg-black/20"
+      wrapperClass: "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700",
+      panelClass: basePanel
     };
   }
   return {
-    wrapperClass: "bg-gradient-to-br from-indigo-700 via-purple-700 to-fuchsia-700",
-    panelClass: "border-white/20 bg-white/10",
-    innerPanelClass: "bg-black/20"
+    wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
+    panelClass: basePanel
   };
 }
 </script>

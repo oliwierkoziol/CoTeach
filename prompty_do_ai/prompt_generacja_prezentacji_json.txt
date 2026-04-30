@@ -33,5 +33,5 @@ Wymagania:
 7) Jeśli zakres to "tylko nieomówione punkty", koncentruj się wyłącznie na tych fragmentach, które nie zostały jeszcze omówione.
 8) Używaj tylko i wyłącznie informacji z dostarczonego planu i notatki.
 9) Zamiast pojedynczych słów używaj pełnych, zrozumiałych zdań, dopasowanych do [KLASA]. Znajdź idealny środek między merytorycznością a byciem zbyt rozwlekłym.
-10) W jednej prezentacji użyj co najmniej 3 różnych typów slajdów (na start zawsze title, potem agenda).
+10) Pierwszy slajd musi bezwzględnie mieć "type": "title" (zawierający temat lekcji i ewentualny podtytuł, bez details). Ostatni slajd musi mieć "type": "summary" (jako wielkie podsumowanie i zakończenie prezentacji).
 11) Zero obrazów, zero pól wizualnych. Prezentacja w 100% tekstowa.
