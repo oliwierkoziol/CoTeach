@@ -270,8 +270,6 @@ function getTodayIsoDate() {
 function normalize(text) {
   return String(text || "")
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -1795,39 +1793,44 @@ function polishFuzzyMatch(spoken, keyword) {
   const normalizeFuzzy = (text) => {
     let normalized = text.toLowerCase()
       // Remove common Polish grammatical endings
-      .replace(/(ski|ska|skie|scy|skiej|skim|skimi)$/g, '')  // przymiotniki -ski
-      .replace(/(czny|czna|czne|czni|cznej|cznym|cznymi)$/g, '')  // -czny
-      .replace(/(owy|owa|owe|owi|owej|owym|owymi)$/g, '')  // -owy
+      .replace(/(ski|ska|skie|scy|skiej|skim|ską|skimi|skim)$/g, '')  // przymiotniki -ski
+      .replace(/(czny|czna|czne|czni|cznej|cznym|czną|cznymi|cznym)$/g, '')  // -czny
+      .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
       .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
+      .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
+      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą)$/g, '')  // podstawowe końcówki
       .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
-      .replace(/(ika|iki|iki|ikami|ik)$/g, '')  // -ika
-      .replace(/(cia|cie|cia|cje|cji|cjami)$/g, '')  // -cja
+      .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
+      .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
       .replace(/(stwo|stwa|stwie|stwu|stwem|stwami)$/g, '')  // -stwo
-      .replace(/(ot|ota|ocie|otami|ot)$/g, '')  // -ota
-      .replace(/(osc|osci|oscia|osciom|osciach)$/g, '')  // -osc
-      .replace(/(nik|nika|niku|nikiem|nikami|nik)$/g, '')  // -nik
+      .replace(/(ot|ota|ocie|ocie|otę|otą|otami|ot)$/g, '')  // -ota
+      .replace(/(ość|ości|ością|ościom|ościach)$/g, '')  // -ość
+      .replace(/(nik|nika|niku|niku|nikiem|nikami|nik)$/g, '')  // -nik
       .replace(/(ca|cy|cem|cami|cę|cą|cą)$/g, '')  // -ca
       .replace(/(ar|ara|arem|arami|arzy|arze)$/g, '')  // -ar
       .replace(/(er|era|erem|erami|erzy|erze)$/g, '')  // -er
       .replace(/(or|ora|orem|orami|orzy|orze)$/g, '')  // -or
-      // Verbal/Noun derivations (e.g. -enie, -eń -> -en)
-      .replace(/(enie|enia|eniu|eniom|eniami|eniach|en)$/g, '')
       // Math and science specific endings
-      .replace(/(ia|ie|ii|ium)$/g, '')  // -ia, -ie (geometria, równania)
-      .replace(/(ka|ki|kie|kami)$/g, '')  // -ka (matematyka)
-      .replace(/(ta|te|ty|tami|tom)$/g, '')  // -ta (jednostka)
-      .replace(/(na|ne|ni|nami|nom)$/g, '')  // -na (funkcja)
+      .replace(/(ia|ie|ii|ię|ią|ium)$/g, '')  // -ia, -ie (geometria, równania)
+      .replace(/(cja|cje|cji|cją|cjami|cję|cjach|cje)$/g, '')  // -cja (reakcja, pochodna)
+      .replace(/(ka|ki|kie|ki|kę|ką|kami|ką)$/g, '')  // -ka (matematyka)
+      .replace(/(ta|te|ty|tę|tą|tami|tom)$/g, '')  // -ta (jednostka)
+      .replace(/(na|ne|ni|nę|ną|nami|nom)$/g, '')  // -na (funkcja)
+      .replace(/(ga|ge|gi|gę|gą|gami|gom)$/g, '')  // -ga (jednostka)
+      .replace(/(ra|re|ri|rę|rą|rami|rom)$/g, '')  // -ra (jednostka)
+      .replace(/(da|de|di|dę|dą|dam|dom)$/g, '')  // -da (jednostka)
       // Physics and chemistry specific
-      .replace(/(ma|me|mi|mami|mom)$/g, '')  // -ma (jednostka)
-      .replace(/(la|le|li|lami|lom)$/g, '')  // -la (jednostka)
-      .replace(/(wa|we|wi|wami|wom)$/g, '')  // -wa (jednostka)
-      // Generic endings - MUST BE LAST
-      .replace(/(y|a|e|ym|ymi|o|om|i|u|ow|em|ach|ami|ego|emu|ej|as|os|is|es|us)$/g, '')
+      .replace(/(ma|me|mi|mę|mą|mami|mom)$/g, '')  // -ma (jednostka)
+      .replace(/(la|le|li|lę|lą|lami|lom)$/g, '')  // -la (jednostka)
+      .replace(/(wa|we|wi|wę|wą|wami|wom)$/g, '')  // -wa (jednostka)
+      // History and geography specific
+      .replace(/(ża|że|żi|żę|żą|żami|żom)$/g, '')  // -ża (jednostka)
+      .replace(/(za|ze|zi|zę|zą|zami|zom)$/g, '')  // -za (jednostka)
       // Remove double letters and normalize common patterns
       .replace(/([a-z])\1{2,}/g, '$1')  // Reduce triple+ letters to single
-      .replace(/([^aeiouyaeo])ie([a-z])/g, '$1e$2')  // Polish ie → e
+      .replace(/([^aeiouyąęó])ie([a-z])/g, '$1e$2')  // Polish ie → e
       // Normalize common spelling variations
-      .replace(/rz/g, 'z')  // Standardize rz/z
+      .replace(/rz/g, 'ż')  // Standardize rz/ż
       .replace(/ch/g, 'h')  // Standardize ch/h
       .trim();
     return normalized;
@@ -1862,32 +1865,11 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
 
     const previouslyFound = new Set(item.foundKeywords || []);
     // Split transcript into words for better matching
-    const transcriptWords = normalizedTranscript.split(/\s+/);
+    const words = normalizedTranscript.split(/\s+/);
     const foundKeywords = keywords.filter(keyword => {
       if (previouslyFound.has(keyword)) return true;
-
-      const normalizedKeyword = normalize(keyword);
-      if (normalizedTranscript.includes(normalizedKeyword)) return true;
-
-      const keywordWords = normalizedKeyword.split(/\s+/);
-
-      if (keywordWords.length > 1) {
-        // Szukanie fraz wielowyrazowych z rozmytym dopasowaniem (sliding window)
-        for (let i = 0; i <= transcriptWords.length - keywordWords.length; i++) {
-          let match = true;
-          for (let j = 0; j < keywordWords.length; j++) {
-            if (!polishFuzzyMatch(transcriptWords[i + j], keywordWords[j])) {
-              match = false;
-              break;
-            }
-          }
-          if (match) return true;
-        }
-        return false;
-      } else {
-        // Dopasowanie pojedynczego słowa
-        return transcriptWords.some(word => polishFuzzyMatch(word, normalizedKeyword));
-      }
+      if (normalizedTranscript.includes(normalize(keyword))) return true;
+      return words.some(word => polishFuzzyMatch(word, keyword));
     });
 
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
@@ -2816,18 +2798,6 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({ ok: true });
-});
-
-app.delete("/api/lessons/:lessonId/transcripts", async (req, res) => {
-  const teacher = await resolveTeacherContext(req, res);
-  if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
-  if (!lesson) return;
-
-  lesson.transcripts = [];
-  db.lessons.set(lesson.id, lesson);
-  await persistLessonSafe(lesson);
-  return res.json({ ok: true, message: "Transkrypcja została wyczyszczona." });
 });
 
 app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
@@ -3759,36 +3729,23 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       lessonId
     });
 
-    // Convert audio buffer to base64 for multimodal model
-    const base64Audio = req.file.buffer.toString('base64');
-    const prompt = "Transcribe the audio exactly as heard, including all punctuation (commas, periods, exclamation marks). Do not summarize, do not add commentary, and do not repeat phrases if there is silence.";
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "input_audio",
-            source: {
-              type: "base64",
-              media_type: req.file.mimetype || "audio/webm",
-              data: base64Audio
-            }
-          },
-          { type: "text", text: prompt }
-        ]
-      }]
-    }).catch(err => {
-      console.error('[transcribe] OpenAI API error:', err);
-      throw err;
+    const file = await toFile(req.file.buffer, req.file.originalname || "audio.webm", {
+      type: req.file.mimetype || "audio/webm"
     });
 
-    const transcription = {
-      text: response?.choices?.[0]?.message?.content || "",
-      duration: undefined // duration not provided by this model
-    };
+    console.log('[transcribe] Calling Whisper API with model:', OPENAI_WHISPER_MODEL);
+
+    const transcription = await openai.audio.transcriptions.create({
+      file,
+      model: OPENAI_WHISPER_MODEL,
+      language: "pl",
+      response_format: "verbose_json",
+      temperature: 0.0, // Lower temperature for more deterministic results
+      prompt: "Oto nagranie z polskiej lekcji edukacyjnej. Nauczyciel i uczniowie omawiają materiał i wykonują zadania." // Context prompt
+    }).catch(err => {
+      console.error('[transcribe] Whisper API error:', err);
+      throw err;
+    });
 
     console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars, ${transcription.duration}s)`);
 

@@ -6,14 +6,6 @@
         Wprowadź nowe hasło dla swojego konta.
       </p>
 
-      <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in fade-in slide-in-from-top-2 duration-300">
-        {{ errorMessage }}
-      </div>
-
-      <div v-if="infoMessage" class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 animate-in fade-in slide-in-from-top-2 duration-300">
-        {{ infoMessage }}
-      </div>
-
       <form class="mt-6 space-y-4" @submit.prevent="handleResetPassword">
         <label class="block text-sm font-semibold text-foreground">
           Nowe hasło
@@ -47,6 +39,14 @@
           {{ isSubmitting ? "Zapisywanie..." : "Zapisz nowe hasło" }}
         </button>
       </form>
+
+      <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {{ errorMessage }}
+      </div>
+
+      <div v-if="infoMessage" class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+        {{ infoMessage }}
+      </div>
 
       <div class="mt-6 flex justify-end">
         <button

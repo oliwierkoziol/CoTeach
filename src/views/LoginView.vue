@@ -25,22 +25,6 @@
             Wprowadź dane, aby uzyskać dostęp do konta.
           </p>
         </header>
-        
-        <div v-if="errorMessage" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in fade-in slide-in-from-top-2 duration-300">
-          {{ errorMessage }}
-        </div>
-
-        <div v-if="infoMessage" class="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 animate-in fade-in slide-in-from-top-2 duration-300">
-          {{ infoMessage }}
-        </div>
-
-        <div v-if="shouldShowBlockedImage" class="mb-6 flex justify-center">
-          <img
-            :src="blockedImage"
-            alt="Konto zablokowane"
-            class="h-40 w-40 object-contain"
-          />
-        </div>
 
         <div class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
           <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
@@ -152,9 +136,21 @@
           </form>
         </div>
 
+        <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {{ errorMessage }}
         </div>
 
-      </div>
+        <div v-if="infoMessage" class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+          {{ infoMessage }}
+        </div>
+
+        <div v-if="shouldShowBlockedImage" class="mt-4 flex justify-center">
+          <img
+            :src="blockedImage"
+            alt="Konto zablokowane"
+            class="h-40 w-40 object-contain"
+          />
+        </div>
 
       </div>
     </div>
@@ -246,10 +242,6 @@ function tryPlayBlockedSound() {
 function mapLoginErrorMessage(error, mode = "individual") {
   const raw = String(error?.message || "").toLowerCase();
   const status = Number(error?.status || 0);
-
-  if (raw.includes("password should be at least") || raw.includes("at least 6 characters")) {
-    return "Hasło musi mieć co najmniej 6 znaków.";
-  }
 
   if (raw.includes("email not confirmed") || raw.includes("email_not_confirmed")) {
     return "Konto nie zostało jeszcze potwierdzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.";

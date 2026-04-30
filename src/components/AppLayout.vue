@@ -308,8 +308,6 @@ const open = ref(false);
 const { state, fetchLessons } = useLessonStore();
 const { isDark, toggleTheme } = useTheme();
 
-const isLoadingLessons = ref(true);
-
 const displayName = ref("");
 const avatarUrl = ref("");
 const isAdmin = ref(false);
@@ -349,7 +347,6 @@ const startLessonCta = computed(() => {
 });
 
 const showSoundWave = computed(() => {
-  if (isLoadingLessons.value) return false;
   const hasNoLessons = !state.lessons || state.lessons.length <= 1;
   const isNotPreparation = route.path !== "/preparation";
   const isNotNotes = route.path !== "/notes";
@@ -426,7 +423,6 @@ let authSub = null;
 
 onMounted(async () => {
   await Promise.allSettled([fetchLessons(), loadHeaderUser()]);
-  isLoadingLessons.value = false;
   const { data } = supabase.auth.onAuthStateChange(() => {
     void loadHeaderUser();
   });
