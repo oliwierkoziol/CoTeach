@@ -127,10 +127,16 @@ async function api(path, options = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers
+    });
+  } catch (err) {
+    throw new Error("Błąd połączenia z serwerem API. Upewnij się, że backend jest uruchomiony na porcie 3001.");
+  }
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) cachedAccessToken = null;
@@ -406,9 +412,14 @@ export function useLessonStore() {
   }
 
   async function fetchTeacherNotes() {
-    const data = await api("/api/notes");
-    state.notes = data.notes || [];
-    return state.notes;
+    try {
+      const data = await api("/api/notes");
+      state.notes = data.notes || [];
+      return state.notes;
+    } catch (err) {
+      state.error = err.message;
+      throw err;
+    }
   }
 
   async function fetchUserClasses() {
@@ -417,9 +428,9 @@ export function useLessonStore() {
       state.userClasses = data.classes || [];
       return state.userClasses;
     } catch (err) {
-      state.error = err.message || "Nie udało się pobrać klas";
+      state.error = err.message;
       state.userClasses = [];
-      return [];
+      throw err;
     }
   }
 
