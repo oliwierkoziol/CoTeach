@@ -25,6 +25,13 @@
           </p>
         </header>
 
+        <div v-if="errorMessage" class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in fade-in slide-in-from-top-2 duration-300">
+          {{ errorMessage }}
+        </div>
+        <div v-if="infoMessage" class="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground animate-in fade-in slide-in-from-top-2 duration-300">
+          {{ infoMessage }}
+        </div>
+
         <div class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
           <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
             <button
@@ -164,12 +171,9 @@
           </template>
         </div>
 
-        <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {{ errorMessage }}
         </div>
-        <div v-if="infoMessage" class="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-          {{ infoMessage }}
-        </div>
+
+      </div>
 
       </div>
     </div>
@@ -232,7 +236,12 @@ async function handleRegister() {
   });
 
   if (error) {
-    errorMessage.value = error.message;
+    const msg = String(error.message || "").toLowerCase();
+    if (msg.includes("password should be at least") || msg.includes("at least 6 characters")) {
+      errorMessage.value = "Hasło musi mieć co najmniej 6 znaków.";
+    } else {
+      errorMessage.value = error.message;
+    }
     return;
   }
 

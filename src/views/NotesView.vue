@@ -231,31 +231,51 @@ const { state, generateTeacherNote, saveTeacherNote, extractTextFromUpload, fetc
 
 const isLoadingNotes = ref(true);
 
+const userClasses = ref([]);
+
+function unifyClassName(name) {
+  if (!name) return name;
+  let n = name.toLowerCase().trim();
+  // np. "5 klasa szkoły średniej" -> "5 szkoła średnia"
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*średniej/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*podstawowej/g, "$1 szkoła podstawowa");
+  // Inne warianty
+  n = n.replace(/(\d+)\s*klasa\s*sp/g, "$1 szkoła podstawowa");
+  n = n.replace(/(\d+)\s*klasa\s*lo/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*technikum/g, "$1 szkoła średnia");
+  return n;
+}
+
 onMounted(async () => {
   await fetchTeacherNotes();
   isLoadingNotes.value = false;
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
+    if (profile?.classes) {
+      userClasses.value = profile.classes
+        .map(unifyClassName)
+        .filter(c => c && c !== "+ dodaj własną" && c !== "+ dodaj klasę" && c !== "+ zarządzaj klasami");
+    }
+  }
 });
 const router = useRouter();
-const classOptions = [
-  "1 Klasa Szkoły Podstawowej",
-  "2 Klasa Szkoły Podstawowej",
-  "3 Klasa Szkoły Podstawowej",
-  "4 Szkoła Podstawowa",
-  "5 Szkoła Podstawowa",
-  "6 Szkoła Podstawowa",
-  "7 Szkoła Podstawowa",
-  "8 Szkoła Podstawowa",
-  "1 Szkoła Średnia",
-  "2 Szkoła Średnia",
-  "3 Szkoła Średnia",
-  "4 Szkoła Średnia",
-  "5 Szkoła Średnia",
-  "Szkolenie firmowe",
-  "Szkolenie wewnętrzne",
-  "Warsztat",
-  "Konsultacje",
-  "Inny typ notatki"
-];
+const schoolType = ref("Szkoła Podstawowa");
+
+const classOptions = computed(() => {
+  let base = [];
+  if (schoolType.value === "Szkoła Podstawowa") {
+    base = ["1 szkoła podstawowa", "2 szkoła podstawowa", "3 szkoła podstawowa", "4 szkoła podstawowa", "5 szkoła podstawowa", "6 szkoła podstawowa", "7 szkoła podstawowa", "8 szkoła podstawowa"];
+  } else if (schoolType.value === "Szkoła Ponadpodstawowa") {
+    base = ["1 szkoła średnia", "2 szkoła średnia", "3 szkoła średnia", "4 szkoła średnia", "5 szkoła średnia"];
+  } else {
+    base = ["Szkolenie firmowe", "Szkolenie wewnętrzne", "Warsztat", "Konsultacje", "Inny typ notatki"];
+  }
+  
+  const uniqueClasses = new Set([...base, ...userClasses.value]);
+  return Array.from(uniqueClasses).filter(c => c && c !== "+ dodaj własną" && c !== "+ dodaj klasę" && c !== "+ zarządzaj klasami");
+});
 
 const subject = ref("");
 const title = ref("");
@@ -293,12 +313,25 @@ async function handleFileChange(event) {
 function resetForm() {
   subject.value = "";
   lessonDate.value = new Date().toISOString().split("T")[0];
-  classLevel.value = "1 Klasa Szkoły Podstawowej";
+  classLevel.value = "4 szkoła średnia";
   title.value = "";
   rawTextContent.value = "";
   selectedFile.value = null;
   error.value = "";
   info.value = "";
+}
+
+function unifyClassName(name) {
+  if (!name) return name;
+  let n = name.toLowerCase().trim();
+  // np. "5 klasa szkoły średniej" -> "5 szkoła średnia"
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*średniej/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*podstawowej/g, "$1 szkoła podstawowa");
+  // Inne warianty
+  n = n.replace(/(\d+)\s*klasa\s*sp/g, "$1 szkoła podstawowa");
+  n = n.replace(/(\d+)\s*klasa\s*lo/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*technikum/g, "$1 szkoła średnia");
+  return n;
 }
 
 async function handleGenerate() {
