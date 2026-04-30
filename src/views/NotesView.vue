@@ -476,7 +476,7 @@ async function downloadNotePdf() {
   const noteContent = String(rawTextContent.value || "").trim();
 
   if (!noteContent) {
-    error.value = "Brak treści notatki do pobrania.";
+    error.value = "Brak treści notatki do pobrania. sraczka";
     return;
   }
 
