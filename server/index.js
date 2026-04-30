@@ -270,6 +270,8 @@ function getTodayIsoDate() {
 function normalize(text) {
   return String(text || "")
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -1792,7 +1794,7 @@ function polishFuzzyMatch(spoken, keyword) {
       .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
       .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
       .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
-      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą)$/g, '')  // podstawowe końcówki
+      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą|i|u|ów|em|ach|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '') // podstawowe końcówki
       .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
       .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
       .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
@@ -1859,11 +1861,32 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
 
     const previouslyFound = new Set(item.foundKeywords || []);
     // Split transcript into words for better matching
-    const words = normalizedTranscript.split(/\s+/);
+    const transcriptWords = normalizedTranscript.split(/\s+/);
     const foundKeywords = keywords.filter(keyword => {
       if (previouslyFound.has(keyword)) return true;
-      if (normalizedTranscript.includes(normalize(keyword))) return true;
-      return words.some(word => polishFuzzyMatch(word, keyword));
+
+      const normalizedKeyword = normalize(keyword);
+      if (normalizedTranscript.includes(normalizedKeyword)) return true;
+
+      const keywordWords = normalizedKeyword.split(/\s+/);
+
+      if (keywordWords.length > 1) {
+        // Szukanie fraz wielowyrazowych z rozmytym dopasowaniem (sliding window)
+        for (let i = 0; i <= transcriptWords.length - keywordWords.length; i++) {
+          let match = true;
+          for (let j = 0; j < keywordWords.length; j++) {
+            if (!polishFuzzyMatch(transcriptWords[i + j], keywordWords[j])) {
+              match = false;
+              break;
+            }
+          }
+          if (match) return true;
+        }
+        return false;
+      } else {
+        // Dopasowanie pojedynczego słowa
+        return transcriptWords.some(word => polishFuzzyMatch(word, normalizedKeyword));
+      }
     });
 
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
