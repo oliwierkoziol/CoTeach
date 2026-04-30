@@ -393,6 +393,20 @@ import presentationIcon from "../assets/presentation.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
+
+function unifyClassName(name) {
+  if (!name) return name;
+  let n = name.toLowerCase().trim();
+  // np. "5 klasa szkoły średniej" -> "5 szkoła średnia"
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*średniej/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*podstawowej/g, "$1 szkoła podstawowa");
+  // Inne warianty
+  n = n.replace(/(\d+)\s*klasa\s*sp/g, "$1 szkoła podstawowa");
+  n = n.replace(/(\d+)\s*klasa\s*lo/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*technikum/g, "$1 szkoła średnia");
+  return n;
+}
+
 const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
@@ -424,14 +438,17 @@ async function loadUserClasses() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
-  if (profile?.classes) userClasses.value = profile.classes;
+  if (profile?.classes) {
+    userClasses.value = Array.from(new Set(profile.classes.map(unifyClassName)))
+      .filter(c => c && !c.includes("+ dodaj"));
+  }
 }
 
 const filteredLessons = computed(() => {
   let archivedLessons = state.lessons;
   
   if (selectedClass.value !== 'all') {
-    archivedLessons = archivedLessons.filter(l => l.classLevel === selectedClass.value);
+    archivedLessons = archivedLessons.filter(l => unifyClassName(l.classLevel) === selectedClass.value);
   }
 
   const q = searchQuery.value.toLowerCase().trim();
@@ -447,7 +464,7 @@ const filteredNotes = computed(() => {
   let notes = Array.isArray(state.notes) ? state.notes : [];
 
   if (selectedClass.value !== 'all') {
-    notes = notes.filter(n => n.classLevel === selectedClass.value);
+    notes = notes.filter(n => unifyClassName(n.classLevel) === selectedClass.value);
   }
 
   const q = searchQuery.value.toLowerCase().trim();

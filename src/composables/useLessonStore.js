@@ -91,6 +91,7 @@ const state = reactive({
   lesson: readCurrentLessonCache(),
   lessons: [],
   notes: [],
+  userClasses: [],
   error: "",
   info: "",
   missing: [],
@@ -217,6 +218,10 @@ export function useLessonStore() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, startedAtMs: Date.now(), language: "pl" })
     });
+  }
+
+  async function clearTranscripts(lessonId) {
+    return api(`/api/lessons/${lessonId}/transcripts`, { method: "DELETE" });
   }
 
   async function transcribeAudioFile(lessonId, file) {
@@ -410,6 +415,43 @@ export function useLessonStore() {
     return state.notes;
   }
 
+  async function fetchUserClasses() {
+    try {
+      const data = await api("/api/classes");
+      state.userClasses = data.classes || [];
+      return state.userClasses;
+    } catch (err) {
+      state.error = err.message || "Nie udało się pobrać klas";
+      state.userClasses = [];
+      return [];
+    }
+  }
+
+  async function addUserClass(className) {
+    try {
+      if (!className || !className.trim()) {
+        throw new Error("Nazwa klasy nie może być pusta");
+      }
+
+      const data = await api("/api/classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ class_name: className.trim() })
+      });
+
+      if (data?.class) {
+        state.userClasses = [data.class, ...state.userClasses].sort((a, b) => 
+          a.class_name.localeCompare(b.class_name)
+        );
+        return data.class;
+      }
+
+      throw new Error("Nie udało się dodać klasy");
+    } catch (err) {
+      throw err;
+    }
+  }
+
   return {
     state,
     createLesson,
@@ -436,6 +478,8 @@ export function useLessonStore() {
     askMeAI,
     saveTeacherNote,
     deleteTeacherNote,
-    fetchTeacherNotes
+    fetchTeacherNotes,
+    fetchUserClasses,
+    addUserClass
   };
 }

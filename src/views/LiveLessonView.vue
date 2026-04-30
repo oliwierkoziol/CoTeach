@@ -120,10 +120,10 @@
                 {{ ((currentCost / costLimit) * 100).toFixed(0) }}%
               </span>
               <button
-                @click="resetCosts"
+                @click="clearTranscription"
                 class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
               >
-                Reset
+                Wyczyść transkrypcje
               </button>
             </div>
           </div>
@@ -207,10 +207,10 @@
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
               <option value="webspeech">Web Speech API (Domyślne)</option>
-              <option value="whisper">Whisper AI (Zalecane dla jakości)</option>
+              <option value="whisper">AI (GPT-4o-mini) (Zalecane dla jakości)</option>
             </select>
             <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
-              {{ transcriptionMethod === 'whisper' ? 'Whisper AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
+              {{ transcriptionMethod === 'whisper' ? 'AI (GPT-4o-mini) (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
               <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -661,7 +661,8 @@ const {
   fetchLessons,
   fetchLesson,
   hydrateLessonFromCache, 
-  askMeAI
+  askMeAI,
+  clearTranscripts
 } = useLessonStore();
 
 const aiQueryTextarea = ref(null);
@@ -706,6 +707,19 @@ const demoMaxLiveMinutes = ref(null);
 let apiPingTimer = null;
 let interimScrollTimer = null;
 let handleEscapeKey = null;
+
+function unifyClassName(name) {
+  if (!name) return name;
+  let n = name.toLowerCase().trim();
+  // np. "5 klasa szkoły średniej" -> "5 szkoła średnia"
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*średniej/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*szkoły\s*podstawowej/g, "$1 szkoła podstawowa");
+  // Inne warianty
+  n = n.replace(/(\d+)\s*klasa\s*sp/g, "$1 szkoła podstawowa");
+  n = n.replace(/(\d+)\s*klasa\s*lo/g, "$1 szkoła średnia");
+  n = n.replace(/(\d+)\s*klasa\s*technikum/g, "$1 szkoła średnia");
+  return n;
+}
 
 // Unified AI Assistant state
 const aiQuery = ref("");
@@ -1198,12 +1212,27 @@ async function loadUserClasses() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.classes && profile.classes.length > 0) {
-    classOptions.value = profile.classes;
-    if (!selectedClassLevel.value) selectedClassLevel.value = profile.classes[0];
-  } else {
-    classOptions.value = ["Brak klas w profilu"];
-    selectedClassLevel.value = classOptions.value[0];
+  const basePrimary = ["1 szkoła podstawowa", "2 szkoła podstawowa", "3 szkoła podstawowa", "4 szkoła podstawowa", "5 szkoła podstawowa", "6 szkoła podstawowa", "7 szkoła podstawowa", "8 szkoła podstawowa"];
+  const baseSecondary = ["1 szkoła średnia", "2 szkoła średnia", "3 szkoła średnia", "4 szkoła średnia", "5 szkoła średnia"];
+  const baseInne = ["Szkolenie firmowe", "Szkolenie wewnętrzne", "Warsztat", "Konsultacje", "Inny typ"];
+  
+  const userClasses = (profile?.classes || []).map(unifyClassName);
+  const all = [...basePrimary, ...baseSecondary, ...baseInne, ...userClasses];
+  const unique = Array.from(new Set(all)).filter(c => c && !c.includes("+ dodaj"));
+  
+  classOptions.value = unique;
+  
+  if (!selectedClassLevel.value && unique.length > 0) {
+    if (state.lesson?.classLevel) {
+      const unifiedLessonClass = unifyClassName(state.lesson.classLevel);
+      if (unique.includes(unifiedLessonClass)) {
+        selectedClassLevel.value = unifiedLessonClass;
+      } else {
+        selectedClassLevel.value = unique[0];
+      }
+    } else {
+      selectedClassLevel.value = unique[0];
+    }
   }
 }
 
@@ -1356,7 +1385,7 @@ async function startSession() {
       }
     }, 1000);
 
-    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Whisper' : 'Web Speech'})...`;
+    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'AI (GPT-4o-mini)' : 'Web Speech'})...`;
     isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
 
     try {
@@ -1365,7 +1394,7 @@ async function startSession() {
 
       if (transcriptionMethod.value === 'whisper') {
         await beginWhisperMode();
-        info.value = "Whisper aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+        info.value = "AI aktywne. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
       } else {
         await beginWebSpeechMode();
       }
@@ -1421,7 +1450,7 @@ function stopSession() {
 async function beginWebSpeechMode() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Whisper AI.");
+    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj AI (GPT-4o-mini).");
   }
 
   recognition.value = new SpeechRecognition();
@@ -1457,7 +1486,7 @@ async function beginWebSpeechMode() {
     if (event.error !== 'no-speech') {
       console.error("WebSpeech Error:", event.error);
       const errorMap = {
-        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Whisper AI.',
+        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj AI (GPT-4o-mini).',
         'not-allowed': 'Brak uprawnień do mikrofonu dla Web Speech API.',
         'no-speech': 'Nie wykryto mowy.'
       };
@@ -1578,7 +1607,7 @@ async function beginWhisperMode() {
 
   mediaRecorder.value = recorder;
   sttStatus.value = "listening";
-  info.value = "Whisper aktywny. System wykrywa mowę i automatycznie wysyła fragmenty.";
+  info.value = "AI (GPT-4o-mini) aktywne. System wykrywa mowę i automatycznie wysyła fragmenty.";
 
   recorder.ondataavailable = (event) => {
     if (event.data && event.data.size > 0) {
@@ -2012,26 +2041,18 @@ async function toggleManualApproval(point) {
   }
 }
 
-async function resetCosts() {
+async function clearTranscription() {
   if (!state.lesson?.id) return;
+  if (!confirm("Czy na pewno chcesz wyczyścić transkrypcję tej lekcji?")) return;
+  
   try {
     error.value = "";
-    const { data: authData } = await supabase.auth.getSession();
-    const token = authData?.session?.access_token;
-    const response = await fetch(`${API_BASE}/api/lessons/${state.lesson.id}/costs`, {
-      method: "DELETE",
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      info.value = data.message || "Koszty zostały zresetowane.";
-      await updateCurrentCost();
-    } else {
-      throw new Error("Nie udało się zresetować kosztów");
-    }
+    await clearTranscripts(state.lesson.id);
+    transcription.value = [];
+    interimCaption.value = "";
+    info.value = "Transkrypcja została wyczyszczona.";
   } catch (e) {
-    error.value = e.message || "Błąd podczas resetowania kosztów";
+    error.value = e.message || "Błąd podczas czyszczenia transkrypcji";
   }
 }
 
