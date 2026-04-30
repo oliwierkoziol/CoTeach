@@ -108,17 +108,8 @@
             Napisy na żywo
           </h2>
 
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-['Inter'] text-[#454652]">
-              Koszt: {{ currentCost.toFixed(2) }} PLN / {{ costLimit.toFixed(2) }} PLN
-            </span>
+          <div class="flex items-center justify-between text-xs ml-auto">
             <div class="flex items-center gap-2">
-              <span
-                class="font-['Inter'] font-semibold"
-                :class="currentCost >= costLimit ? 'text-red-600' : 'text-green-600'"
-              >
-                {{ ((currentCost / costLimit) * 100).toFixed(0) }}%
-              </span>
               <button
                 @click="resetCosts"
                 class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
@@ -677,8 +668,6 @@ const micLevel = ref(0);
 const interimCaption = ref("");
 const sttStatus = ref("idle");
 const apiStatus = ref("checking");
-const currentCost = ref(0); 
-const costLimit = ref(3.5);
 const micStream = ref(null);
 const isTranscribing = ref(false); // Prevent duplicate transcriptions
 const processedTranscriptionIds = new Set(); // Track processed transcriptions
@@ -1047,9 +1036,6 @@ const durationLabel = computed(() => {
   if (remainder === 0) return `${hours}h`;
   return `${hours}h ${remainder} min`;
 });
-const costLabel = computed(() =>
-  state.costInfo ? `${Number(state.costInfo.total).toFixed(2)} PLN` : "0.00 PLN"
-);
 const sttStatusLabel = computed(() => {
   if (sttStatus.value === "listening") return "nasłuchiwanie";
   if (sttStatus.value === "starting") return "uruchamianie";
@@ -1103,9 +1089,7 @@ onMounted(async () => {
   void loadMicDevices();
   void checkApiHealth();
   void fetchLicenseStatus();
-  void updateCurrentCost();
   apiPingTimer = setInterval(checkApiHealth, 10000);
-  setInterval(updateCurrentCost, 5000); // Update costs every 5 seconds
 
   // Check microphone permissions first
   try {
@@ -1168,6 +1152,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  stopSession();
   if (timer.value) clearInterval(timer.value);
   if (window.__whisperActivityInterval) clearInterval(window.__whisperActivityInterval);
   if (window.__whisperCleanup) {
@@ -1335,6 +1320,7 @@ function handleScroll() {
 }
 
 async function startSession() {
+  if (isRecording.value) return;
   try {
     error.value = "";
     await fetchLicenseStatus();
@@ -1384,11 +1370,23 @@ async function startSession() {
 }
 
 function stopSession() {
+  isRecording.value = false;
+  sttStatus.value = "idle";
+  if (timer.value) {
+    clearInterval(timer.value);
+    timer.value = null;
+  }
+  
   if (recognition.value) {
     recognition.value.onend = null; // Prevent auto-restart
     recognition.value.stop();
     recognition.value = null;
   }
+  
+  if (mediaRecorder.value && mediaRecorder.value.state !== 'inactive') {
+    mediaRecorder.value.stop();
+  }
+  mediaRecorder.value = null;
 
   // Call cleanup function if it exists
   if (window.__whisperCleanup) {
@@ -1454,14 +1452,16 @@ async function beginWebSpeechMode() {
   };
 
   recognition.value.onerror = (event) => {
-    if (event.error !== 'no-speech') {
+    // Ignore 'no-speech' and 'aborted' as they are often transient and not fatal
+    if (event.error !== 'no-speech' && event.error !== 'aborted') {
       console.error("WebSpeech Error:", event.error);
       const errorMap = {
         'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Whisper AI.',
         'not-allowed': 'Brak uprawnień do mikrofonu dla Web Speech API.',
-        'no-speech': 'Nie wykryto mowy.'
       };
       error.value = errorMap[event.error] || `Błąd transkrypcji lokalnej: ${event.error}`;
+    } else {
+      console.log(`[WebSpeech] Info: ${event.error}`);
     }
   };
 
@@ -1689,7 +1689,6 @@ async function beginWhisperMode() {
             scheduleCoverageRefresh(true); // Force immediate coverage check after transcription
           }, 100);
 
-          void updateCurrentCost(); // Update costs after successful transcription
         }
       } else {
         console.log(`❌ Filtered: "${text}" (hallucination/too short)`);
@@ -1899,23 +1898,6 @@ async function checkApiHealth() {
   }
 }
 
-async function updateCurrentCost() {
-  if (!state.lesson?.id) return;
-  try {
-    const { data: authData } = await supabase.auth.getSession();
-    const token = authData?.session?.access_token;
-    const response = await fetch(`${API_BASE}/api/lessons/${state.lesson.id}/costs`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (response.ok) {
-      const data = await response.json();
-      currentCost.value = data.total || 0;
-      costLimit.value = data.limit || 3.5;
-    }
-  } catch (e) {
-    console.error("Failed to fetch costs:", e);
-  }
-}
 
 async function startMicTest() {
   try {

@@ -60,10 +60,14 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
   : null;
 
-const openaiClientConfig = process.env.OPENAI_API_KEY
+const openaiClientConfig = process.env.OPENROUTER_API_KEY
   ? {
-    apiKey: process.env.OPENAI_API_KEY,
-    ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": PUBLIC_APP_URL,
+      "X-Title": "CoTeach"
+    }
   }
   : null;
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
@@ -1534,7 +1538,7 @@ async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary 
   });
   if (unsplashSecondary) candidateUrls.push(unsplashSecondary);
 
-  if (openai && String(process.env.OPENAI_API_KEY || "").trim()) {
+  if (openai && String(process.env.OPENROUTER_API_KEY || "").trim()) {
     try {
       const imageRes = await openai.images.generate({
         model: OPENAI_IMAGE_MODEL,
@@ -3713,13 +3717,15 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Audio file is required." });
     }
 
+    /* 
     const summary = getCostSummary(lessonId);
     if (summary.total >= SESSION_LIMIT_PLN) {
       return res.status(402).json({ error: "Budget exceeded", message: "Limit kosztu sesji został osiągnięty." });
     }
+    */
 
     if (!openai) {
-      return res.status(500).json({ error: "OPENAI_API_KEY is missing for Whisper STT." });
+      return res.status(500).json({ error: "OPENROUTER_API_KEY is missing for AI transcription." });
     }
 
     console.log('[transcribe] Processing audio file:', {
@@ -3729,25 +3735,19 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       lessonId
     });
 
-    const file = await toFile(req.file.buffer, req.file.originalname || "audio.webm", {
-      type: req.file.mimetype || "audio/webm"
+    // Use openai/gpt-4o-transcribe via OpenRouter
+    const transcriptionResponse = await openai.audio.transcriptions.create({
+      file: await toFile(req.file.buffer, `audio-${Date.now()}.webm`),
+      model: "openai/gpt-4o-transcribe",
+      prompt: "Transcribe the audio exactly as heard, including all punctuation (commas, periods, exclamation marks). Do not summarize, do not add commentary, and do not repeat phrases if there is silence."
     });
 
-    console.log('[transcribe] Calling Whisper API with model:', OPENAI_WHISPER_MODEL);
+    const transcription = {
+      text: transcriptionResponse.text || "",
+      duration: undefined 
+    };
 
-    const transcription = await openai.audio.transcriptions.create({
-      file,
-      model: OPENAI_WHISPER_MODEL,
-      language: "pl",
-      response_format: "verbose_json",
-      temperature: 0.0, // Lower temperature for more deterministic results
-      prompt: "Oto nagranie z polskiej lekcji edukacyjnej. Nauczyciel i uczniowie omawiają materiał i wykonują zadania." // Context prompt
-    }).catch(err => {
-      console.error('[transcribe] Whisper API error:', err);
-      throw err;
-    });
-
-    console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars, ${transcription.duration}s)`);
+    console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars)`);
 
     const durationSec = Number(transcription.duration || 0);
     const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
@@ -3766,6 +3766,8 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
 
     // Only record cost if transcription is valid
     if (isValidTranscription) {
+      // Cost recording removed as per request
+      /*
       recordCostFromBase({
         lessonId,
         schoolId: teacher.schoolId,
@@ -3774,6 +3776,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
         category: "live_transcription",
         baseAmountPLN: fragmentCost
       });
+      */
     } else {
       console.log(`[❌] Skipping cost - transcription filtered`);
     }
