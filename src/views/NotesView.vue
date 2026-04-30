@@ -247,12 +247,14 @@ async function getPdfMake() {
       const pdfMake = pdfMakeModule.default || pdfMakeModule;
       const pdfFonts = pdfFontsModule.default || pdfFontsModule;
 
-      const resolvedVfs =
-        pdfFonts?.vfs ||
-        pdfFonts?.pdfMake?.vfs ||
-        pdfFonts?.default?.vfs ||
-        pdfFonts?.default?.pdfMake?.vfs ||
-        (typeof window !== "undefined" && window.pdfMake?.vfs);
+      let resolvedVfs = null;
+      if (pdfFonts?.pdfMake?.vfs) resolvedVfs = pdfFonts.pdfMake.vfs;
+      else if (pdfFonts?.vfs) resolvedVfs = pdfFonts.vfs;
+      else if (pdfFonts?.default?.pdfMake?.vfs) resolvedVfs = pdfFonts.default.pdfMake.vfs;
+      else if (pdfFonts?.default?.vfs) resolvedVfs = pdfFonts.default.vfs;
+      else if (pdfFonts?.default && pdfFonts.default["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts.default;
+      else if (pdfFonts && pdfFonts["Roboto-Regular.ttf"]) resolvedVfs = pdfFonts;
+      else if (typeof window !== "undefined" && window.pdfMake?.vfs) resolvedVfs = window.pdfMake.vfs;
 
       if (resolvedVfs) {
         if (typeof pdfMake.addVirtualFileSystem === "function") {
