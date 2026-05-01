@@ -127,11 +127,12 @@
 
           <div class="max-h-[350px] overflow-y-auto space-y-3" ref="transcriptionContainer" @scroll="handleScroll">
             <p
-              v-for="(text, index) in transcription"
+              v-for="(item, index) in transcription"
               :key="index"
-              class="font-['Inter'] text-[#454652] text-[18px] leading-[29.25px]"
+              class="flex items-center font-['Inter'] text-[#454652] text-[18px] leading-[26.25px]"
             >
-              {{ text }}
+              <span class="font-mono text-[12px] text-[#8B8D97] mr-4 shrink-0">{{ item.timestamp }}</span>
+              <span>{{ item.text }}</span>
             </p>
 
             <p v-if="interimCaption" class="font-['Inter'] italic text-[#8B8D97] text-[18px] leading-[29.25px]">
@@ -628,6 +629,13 @@ function normalizeBaseUrl(url) {
     .replace(/\/$/, "");
 }
 
+function formatTimestamp(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 const COVERAGE_REFRESH_MIN_INTERVAL_MS = 2_000; // Reduced from 90s to 5s for faster coverage updates
 
@@ -998,7 +1006,29 @@ watch(
   () => state.lesson?.transcripts,
   (newVal) => {
     if (newVal && Array.isArray(newVal) && transcription.value.length === 0) {
-      transcription.value = newVal.map((t) => (typeof t === "string" ? t : t.text)).filter(Boolean);
+      // Fix: Determine a proper baseline for relative timestamps.
+      // Using 0 (default startAt.value) results in Unix Epoch timestamps (huge numbers).
+      let baseline = startAt.value;
+
+      if (baseline <= 0) {
+        const lessonStartAt = new Date(state.lesson?.startedAt || 0).getTime();
+        baseline = (Number.isFinite(lessonStartAt) && lessonStartAt > 0) ? lessonStartAt : 0;
+      }
+
+      if (baseline <= 0 && newVal.length > 0) {
+        const first = newVal[0];
+        baseline = first.startedAtMs || (first.createdAt ? new Date(first.createdAt).getTime() : Date.now());
+      }
+
+      transcription.value = newVal.map((t) => {
+        const text = typeof t === "string" ? t : t.text;
+        const entryTime = t.startedAtMs || (t.createdAt ? new Date(t.createdAt).getTime() : baseline);
+        const relativeMs = entryTime - baseline;
+        return {
+          text,
+          timestamp: formatTimestamp(relativeMs)
+        };
+      }).filter(item => item.text);
       nextTick(() => autoScrollToBottom());
     }
   },
@@ -1438,7 +1468,8 @@ async function beginWebSpeechMode() {
       if (event.results[i].isFinal) {
         const text = event.results[i][0].transcript.trim();
         if (text) {
-          transcription.value.push(text);
+          const relativeMs = Date.now() - startAt.value;
+          transcription.value.push({ text, timestamp: formatTimestamp(relativeMs) });
           isUserScrolling.value = false;
           autoScrollToBottom();
           await sendTranscript(state.lesson.id, text);
@@ -1668,11 +1699,12 @@ async function beginWhisperMode() {
 
       if (isValidTranscription) {
         // Check if this text is already in the array to prevent duplicates
-        const isDuplicate = transcription.value.includes(text);
+        const isDuplicate = transcription.value.some(t => t.text === text);
         if (isDuplicate) {
           console.log(`⚠️ Duplicate skipped: "${text.substring(0, 30)}..."`);
         } else {
-          transcription.value.push(text);
+          const relativeMs = Date.now() - startAt.value;
+          transcription.value.push({ text, timestamp: formatTimestamp(relativeMs) });
           console.log(`✅ Added transcription #${transcription.value.length}`);
           await nextTick();
 
