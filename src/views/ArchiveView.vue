@@ -217,6 +217,14 @@
             </button>
 
             <button
+              v-if="selected.finalNote.shareUrl"
+              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
+              @click="openTranscript"
+            >
+              Otwórz transkrypcję (link)
+            </button>
+
+            <button
               type="button"
               class="w-full rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
               @click="openGoldenNotePreview"
@@ -540,6 +548,11 @@ async function handleDeleteLesson() {
 function openFinalNote() {
   if (!selected.value?.finalNote?.shareUrl) return;
   window.open(selected.value.finalNote.shareUrl, "_blank", "noopener,noreferrer");
+}
+
+function openTranscript() {
+  if (!selected.value?.finalNote?.shareUrl) return;
+  window.open(selected.value.finalNote.shareUrl + "?type=transcript", "_blank", "noopener,noreferrer");
 }
 
 function openQrModal() {

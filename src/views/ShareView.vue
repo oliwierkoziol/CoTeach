@@ -28,7 +28,7 @@
         <div class="flex flex-col gap-4">
           <div>
             <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] md:text-[42px] tracking-[-0.9px] leading-tight mb-3">
-              {{ note.title }}
+              {{ isTranscript ? 'Transkrypcja: ' : '' }}{{ note.title }}
             </h1>
             <div class="flex items-center gap-4 text-[#767683] font-['Plus_Jakarta_Sans'] font-medium">
               <span class="flex items-center gap-1.5">
@@ -46,7 +46,27 @@
 
         <!-- Main Rendered Note Card -->
         <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 md:p-12 overflow-hidden border border-white">
-          <div class="note-render-area" v-html="note.html"></div>
+          <div v-if="isTranscript" class="space-y-6">
+            <h2 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[32px] mb-6 border-b border-gray-100 pb-4">
+              Zapis przebiegu lekcji
+            </h2>
+            
+            <div v-if="transcripts.length === 0" class="text-center py-12">
+              <p class="font-['Plus_Jakarta_Sans'] text-[#767683]">Brak zapisanej transkrypcji dla tej lekcji.</p>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div v-for="(t, idx) in transcripts" :key="idx" class="flex gap-4">
+                <span class="font-mono text-[13px] text-[#767683] bg-gray-50 px-2 py-0.5 rounded h-fit shrink-0">
+                  {{ formatTimestamp(calculateOffset(t)) }}
+                </span>
+                <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px] leading-relaxed font">
+                  {{ typeof t === 'string' ? t : t.text }}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div v-else class="note-render-area" v-html="note.html"></div>
         </div>
       </div>
     </div>
@@ -54,12 +74,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLessonStore } from '../composables/useLessonStore';
 
 const route = useRoute();
 const { fetchSharedNote } = useLessonStore();
+
+const isTranscript = computed(() => route.query.type === 'transcript');
+const transcripts = ref([]);
+const startedAt = ref(null);
 
 const note = ref(null);
 const loading = ref(true);
@@ -72,12 +96,27 @@ onMounted(async () => {
     const data = await fetchSharedNote(noteId);
     if (!data?.finalNote) throw new Error("Notatka już nie istnieje.");
     note.value = data.finalNote;
+    transcripts.value = data.transcripts || [];
+    startedAt.value = data.startedAt || null;
   } catch (e) {
     error.value = e.message || "Błąd pobierania notatki.";
   } finally {
     loading.value = false;
   }
 });
+
+function formatTimestamp(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function calculateOffset(t) {
+  if (typeof t === 'string' || !t.startedAtMs || !startedAt.value) return 0;
+  const startMs = new Date(startedAt.value).getTime();
+  return Math.max(0, t.startedAtMs - startMs);
+}
 
 function formatDate(val) {
   if (!val) return "";

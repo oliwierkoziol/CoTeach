@@ -2923,7 +2923,11 @@ app.delete("/api/lessons/:lessonId/costs", async (req, res) => {
 app.get("/api/share/:noteId", (req, res) => {
   const lesson = [...db.lessons.values()].find((item) => item.finalNote?.id === req.params.noteId);
   if (!lesson?.finalNote) return res.status(404).json({ error: "Not found" });
-  return res.json({ finalNote: lesson.finalNote });
+  return res.json({ 
+    finalNote: lesson.finalNote,
+    transcripts: lesson.transcripts || [],
+    startedAt: lesson.startedAt || null
+  });
 });
 
 app.get("/api/admin", (_req, res) => {
