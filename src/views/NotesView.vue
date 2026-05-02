@@ -23,8 +23,8 @@
           <!-- Przedmiot -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Przedmiot</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input v-model="subject" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="np. Matematyka, Język Polski..." />
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input v-model="subject" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="np. Matematyka, Język Polski..." />
               <svg class="absolute right-[12px] w-[22px] h-[18px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 22 18">
                 <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
               </svg>
@@ -34,8 +34,8 @@
           <!-- Data -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Data</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input type="date" v-model="lessonDate" class="bg-transparent border-none outline-none w-full h-full px-[16px] pr-[40px] text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] [color-scheme:light]" />
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input type="date" v-model="lessonDate" class="bg-transparent border-none outline-none w-full h-full px-[16px] pr-[40px] text-[16px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] [color-scheme:light] dark:[color-scheme:dark]" />
               <svg class="absolute right-[12px] w-[18px] h-[20px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 20">
                 <path d="M4 2H14V0H16V2H18V20H0V2H2V0H4V2ZM16 18V6H2V18H16ZM14 10H4V8H14V10ZM14 14H4V12H14V14Z" />
               </svg>
@@ -45,8 +45,8 @@
           <!-- Temat -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Temat</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input v-model="title" class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans']" placeholder="Wprowadź temat zajęć..." />
               <svg class="absolute right-[12px] w-[18px] h-[16px] pointer-events-none opacity-40 text-[#222E75]" fill="currentColor" viewBox="0 0 18 16">
                 <path d="M14.06 0L18 3.94L16.42 5.51L12.49 1.58L14.06 0ZM0 12.49L11.08 1.41L15.02 5.35L3.94 16.43H0V12.49Z" />
               </svg>
@@ -56,9 +56,9 @@
           <!-- Klasa -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full mt-[-8px] lg:mt-0">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Poziom Klasy</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
-                <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
+                <option v-for="level in classOptions" :key="level" :value="level" class="dark:bg-card dark:text-foreground">{{ level }}</option>
               </select>
               <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
@@ -74,11 +74,11 @@
           <!-- Moja Klasa -->
           <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Moja Klasa</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
-                <option value="">Wybierz klasę...</option>
-                <option value="add-new">+ Dodaj swoją klasę</option>
-                <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id">{{ classItem.class_name }}</option>
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
+                <option value="" class="dark:bg-card dark:text-foreground">Wybierz klasę...</option>
+                <option value="add-new" class="dark:bg-card dark:text-foreground">+ Dodaj swoją klasę</option>
+                <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id" class="dark:bg-card dark:text-foreground">{{ classItem.class_name }}</option>
               </select>
               <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
@@ -99,11 +99,11 @@
           <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-[16px]">Dodaj nową klasę</h3>
           <div class="flex flex-col gap-[12px] mb-[20px]">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Nazwa klasy</label>
-            <div class="bg-[#e0e3e6] h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
               <input 
                 v-model="newClassName" 
                 @keyup.enter="handleAddClass"
-                class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans']" 
+                class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans']" 
                 placeholder="np. 3A, 5B, Liceum 1..."
                 autofocus
               />
@@ -158,10 +158,10 @@
                 </div>
               </div>
 
-              <div class="bg-[#e0e3e6] relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[250px]">
+              <div class="bg-[#e0e3e6] dark:bg-input-background relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[250px]">
                 <textarea 
                   v-model="rawTextContent"
-                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
+                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
                   placeholder="Wklej tu notatki z lekcji, fragmenty książek lub struktury sylabusów do analizy AI..."
                 ></textarea>
               </div>

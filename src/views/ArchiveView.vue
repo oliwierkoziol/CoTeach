@@ -158,7 +158,7 @@
                 Szczegóły lekcji
               </h3>
               <button
-                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors disabled:opacity-60 cursor-pointer"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors disabled:opacity-60 cursor-pointer dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/20"
                 @click="handleDeleteLesson"
                 :disabled="saving"
               >
@@ -246,7 +246,7 @@
               </h3>
               <button
                 type="button"
-                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/20"
                 @click="handleDeleteTeacherNote"
               >
                 Usuń
@@ -296,7 +296,7 @@
               </h3>
               <button
                 type="button"
-                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/20"
                 @click="handleDeletePresentation"
               >
                 Usuń

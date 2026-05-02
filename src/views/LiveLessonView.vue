@@ -51,7 +51,7 @@
                   class="size-8 rounded-full flex items-center justify-center shrink-0 transition"
                   :class="point.status === 'discussed' || point.manualApproved ? 'bg-[#68a962]' : 'bg-[#e0e3e6] group-hover:bg-[#d0d3d6]'"
                 >
-                <span 
+                <span
                   class="font-['Inter'] font-semibold text-[16px]"
                   :class="point.status === 'discussed' || point.manualApproved ? 'text-white' : 'text-[#454652]'"
                 >
@@ -88,10 +88,10 @@
               {{ progress }}%
             </p>
           </div>
-          <div class="bg-[#d8e2ff] h-4 rounded-full overflow-hidden">
-            <div 
-              class="bg-[#0059bb] h-full rounded-full shadow-[0px_0px_8px_0px_rgba(0,89,187,0.4)] transition-all duration-300" 
-              :style="{ width: `${progress}%` }" 
+          <div class="bg-[#d8e2ff] dark:bg-muted h-4 rounded-full overflow-hidden">
+            <div
+              class="bg-[#0059bb] dark:bg-primary h-full rounded-full shadow-[0px_0px_8px_0px_rgba(0,89,187,0.4)] transition-all duration-300"
+              :style="{ width: `${progress}%` }"
             ></div>
           </div>
         </div>
@@ -112,7 +112,7 @@
             <div class="flex items-center gap-2">
               <button
                 @click="resetCosts"
-                class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                class="text-[10px] px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
               >
                 Reset
               </button>
@@ -169,17 +169,17 @@
           <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
             Mikrofon
           </label>
-          <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
+          <div class="bg-[#e0e3e6] dark:bg-input-background rounded-lg px-4 py-3 flex items-center justify-between relative">
             <select
               v-model="selectedMicId"
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
-              <option value="">Domyślny mikrofon systemowy</option>
-              <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId">
+              <option value="" class="dark:bg-card dark:text-foreground">Domyślny mikrofon systemowy</option>
+              <option v-for="d in micDevices" :key="d.deviceId" :value="d.deviceId" class="dark:bg-card dark:text-foreground">
                 {{ d.label || `Mikrofon ${d.deviceId.slice(0, 6)}` }}
               </option>
             </select>
-            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
+            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] dark:text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
               {{ micDevices.find(d => d.deviceId === selectedMicId)?.label || 'Domyślny - System Mic' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
@@ -193,15 +193,15 @@
           <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
             Metoda transkrypcji
           </label>
-          <div class="bg-[#e0e3e6] rounded-lg px-4 py-3 flex items-center justify-between relative">
+          <div class="bg-[#e0e3e6] dark:bg-input-background rounded-lg px-4 py-3 flex items-center justify-between relative">
             <select
               v-model="transcriptionMethod"
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
-              <option value="webspeech">Web Speech API (Domyślne)</option>
-              <option value="whisper">Whisper AI (Zalecane dla jakości)</option>
+              <option value="webspeech" class="dark:bg-card dark:text-foreground">Web Speech API (Domyślne)</option>
+              <option value="whisper" class="dark:bg-card dark:text-foreground">Whisper AI (Zalecane dla jakości)</option>
             </select>
-            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[16px] truncate max-w-[85%] pointer-events-none">
+            <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] dark:text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
               {{ transcriptionMethod === 'whisper' ? 'Whisper AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
@@ -220,8 +220,8 @@
               +{{ Math.round(micLevel) }}db
             </span>
           </div>
-          <div class="bg-[#e0e3e6] h-1 rounded-full overflow-hidden">
-            <div class="bg-[#142588] h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }"></div>
+          <div class="bg-[#e0e3e6] dark:bg-muted h-1 rounded-full overflow-hidden">
+            <div class="bg-[#142588] dark:bg-primary h-full transition-all duration-100" :style="{ width: `${Math.min(100, micLevel)}%` }"></div>
           </div>
         </div>
       </div>
@@ -284,14 +284,14 @@
                 v-for="shortcut in mathShortcuts"
                 :key="shortcut.label"
                 @click="shortcut.action ? handleShortcutAction(shortcut.action) : insertMathShortcut(shortcut.template)"
-                class="px-3 py-1.5 bg-[#f2f4f7] hover:bg-[#e0e3e6] text-[#191c1e] font-['Inter'] text-[12px] rounded-md transition-colors border border-gray-200"
+                class="px-3 py-1.5 bg-muted dark:bg-input-background hover:bg-accent hover:text-accent-foreground text-foreground font-['Inter'] text-[12px] rounded-md transition-colors border border-border"
                 :title="shortcut.label"
               >
                 {{ shortcut.label }}
               </button>
               <button
                 @click="openFractionBuilder"
-                class="px-3 py-1.5 bg-[#0059BB] hover:bg-[#004799] text-white font-['Inter'] text-[12px] rounded-md transition-colors border border-[#0059BB]"
+                class="px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground font-['Inter'] text-[12px] rounded-md transition-colors border border-primary"
                 title="Stwórz ułamek"
               >
                 <span class="text-lg font-bold">a/b</span>
@@ -375,7 +375,7 @@
                   v-for="shortcut in mathShortcuts.slice(0, 15)"
                   :key="'modal-' + shortcut.label"
                   @click="insertMathShortcut(shortcut.template)"
-                  class="px-2 py-1 bg-white hover:bg-gray-100 text-[#191c1e] text-[11px] rounded border border-gray-200 transition-colors"
+                    class="px-2 py-1 bg-card dark:bg-input-background hover:bg-muted text-foreground text-[11px] rounded border border-border transition-colors"
                 >
                   {{ shortcut.label }}
                 </button>
@@ -511,10 +511,10 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <!-- Calendar Icon -->
-            <svg class="w-[21px] h-[22px]" fill="none" stroke="#0053DB" viewBox="0 0 24 24" stroke-width="2.5">
+            <svg class="w-[21px] h-[22px] text-[#0053DB] dark:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#566166] text-[14px] tracking-[0.7px] uppercase">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#566166] dark:text-muted-foreground text-[14px] tracking-[0.7px] uppercase">
               POSTĘP LEKCJI
             </h3>
           </div>
@@ -523,10 +523,10 @@
           </p>
         </div>
 
-        <div class="bg-[#d9e4ea] h-8 rounded-2xl overflow-hidden relative">
-          <div 
-            class="absolute inset-y-0 left-0 bg-[#0053db] rounded-2xl transition-all duration-1000 ease-linear" 
-            :style="{ width: `${lessonProgressPercent}%` }" 
+        <div class="bg-[#d9e4ea] dark:bg-muted h-8 rounded-2xl overflow-hidden relative">
+          <div
+            class="absolute inset-y-0 left-0 bg-[#0053db] dark:bg-primary rounded-2xl transition-all duration-1000 ease-linear"
+            :style="{ width: `${lessonProgressPercent}%` }"
           ></div>
           <div class="absolute left-1/4 top-0 bottom-0 w-0.5 bg-white/30"></div>
           <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30"></div>
@@ -534,7 +534,7 @@
         </div>
 
         <div class="flex items-center justify-between text-[10px] font-['Plus_Jakarta_Sans'] font-bold tracking-[1px] uppercase">
-          <span class="text-[#566166]">POCZĄTEK</span>
+          <span class="text-[#566166] dark:text-muted-foreground">POCZĄTEK</span>
           <span class="text-[#0053db]">KONIEC</span>
         </div>
       </div>
@@ -542,7 +542,7 @@
       <!-- Action Buttons -->
       <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
         <button 
-          class="w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
+          class="presentation-btn-static w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
           @click="goPresentation"
         >
           <!-- Presentation Icon -->
@@ -613,6 +613,19 @@
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+}
+
+.dark .app-shell .presentation-btn-static {
+  background-color: #e6e8eb !important;
+}
+.dark .app-shell .presentation-btn-static:hover {
+  background-color: #d8dadd !important;
+}
+.dark .app-shell .presentation-btn-static span {
+  color: #142588 !important;
+}
+.dark .app-shell .presentation-btn-static svg {
+  stroke: #142588 !important;
 }
 </style>
 

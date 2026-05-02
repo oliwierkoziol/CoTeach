@@ -69,7 +69,7 @@
   --accent-foreground: oklch(0.93 0.02 95);
   --destructive: oklch(0.58 0.2 25);
   --destructive-foreground: oklch(0.98 0.01 95);
-  --border: oklch(0.31 0.028 265);
+  --border: oklch(28.817% 0.02594 262.691);
   --input: oklch(0.31 0.028 265);
   --input-background: oklch(0.16 0.022 265);
   --switch-background: oklch(0.38 0.03 265);
@@ -264,7 +264,8 @@
   border-color: var(--border) !important;
 }
 
-.dark .app-shell .hover\:bg-black\/5:hover {
+.dark .app-shell .hover\:bg-black\/5:hover,
+.dark .app-shell .hover\:bg-\[\#f7f9fc\]:hover {
   background-color: var(--muted) !important;
 }
 

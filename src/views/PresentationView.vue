@@ -339,8 +339,8 @@
               :disabled="presentationSource === 'note'"
               class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
             >
-              <option value="full">Cała lekcja/notatka</option>
-              <option value="pending">Tylko nieomówione punkty</option>
+              <option value="full" class="dark:bg-card dark:text-foreground">Cała lekcja/notatka</option>
+              <option value="pending" class="dark:bg-card dark:text-foreground">Tylko nieomówione punkty</option>
             </select>
             <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
               <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">

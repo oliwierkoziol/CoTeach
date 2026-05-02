@@ -29,10 +29,10 @@
       <!-- Card 1 -->
       <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
         <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#1381361a] border)] text-[#138136]">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#1381161a] border)] text-[#138116ff]">
             <img :src="iconOne" alt="" class="h-5 w-5" />
           </div>
-          <div class="px-2 py-1 rounded bg-[#1381361a] text-[#138136]">
+          <div class="px-2 py-1 rounded bg-[#1381161a] text-[#138116ff]">
             <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Liczba</span>
           </div>
         </div>
