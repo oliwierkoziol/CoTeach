@@ -55,3 +55,16 @@ Dzienniczek - Oliwier Kozioł
 - zmieniłem stronę główną, aby wyświetlała poprawne informacje o koncie nauczyciela
 - dodałem możliwośc zczytywania plików do notatki
 - modyfikowanie notatki
+
+27 Kwietnia
+- zaprezentowałem nasz projekt na Powiatowych Targach Edukacyjnych
+
+28 Kwietnia
+- zredesignowałem i ujednoliciłem panel admina
+- dodałem możliwość podglądu transkrypcji lekcji
+- ulepszyłem okno napisów na żywo
+
+30 Kwietnia
+- tworzenie lekcji z pliku audio
+- ulepszyłem system licencji
+- dodałem możliwośc edytowania danych szkoły przez admina
