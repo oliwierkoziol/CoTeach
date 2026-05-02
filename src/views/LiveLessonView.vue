@@ -1983,13 +1983,6 @@ async function finalizeNow() {
     error.value = "";
     stopSession();
     const note = await finalizeLesson(state.lesson.id, window.location.origin);
-    if (state.lesson) {
-      state.lesson = {
-        ...state.lesson,
-        status: "finished",
-        finishedAt: new Date().toISOString()
-      };
-    }
     router.push(`/archive?note=${encodeURIComponent(note.shareUrl)}`);
   } catch (e) {
     error.value = e.message || "Nie udało się zakończyć lekcji.";

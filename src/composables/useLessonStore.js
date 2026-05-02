@@ -269,7 +269,15 @@ export function useLessonStore() {
     });
     if (state.lesson?.id === lessonId) {
       const nowIso = new Date().toISOString();
-      const finishedLesson = { ...state.lesson, status: "finished", finishedAt: nowIso };
+      let actualMinutes = state.lesson.length || 45;
+      if (state.lesson.startedAt) {
+        const startMs = new Date(state.lesson.startedAt).getTime();
+        const endMs = new Date(nowIso).getTime();
+        if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
+          actualMinutes = Math.max(1, Math.round((endMs - startMs) / 60000));
+        }
+      }
+      const finishedLesson = { ...state.lesson, status: "finished", finishedAt: nowIso, length: actualMinutes };
       setCurrentLessonInState(finishedLesson);
       upsertLessonInState(finishedLesson);
     }

@@ -831,6 +831,12 @@ function shouldAutoFinishLesson(lesson, nowMs = Date.now()) {
 function markLessonFinished(lesson, nowIso = new Date().toISOString()) {
   lesson.status = "finished";
   lesson.finishedAt = lesson.finishedAt || nowIso;
+  if (lesson.startedAt) {
+    const startMs = new Date(lesson.startedAt).getTime();
+    const endMs = new Date(lesson.finishedAt).getTime();
+    const actualMinutes = Math.max(1, Math.round((endMs - startMs) / 60000));
+    lesson.length = actualMinutes;
+  }
 }
 
 async function autoFinishDueLessons() {
@@ -2802,8 +2808,6 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson, {
     lessonId: lesson.id,
-    schoolId: teacher.schoolId,
-    teacherId: teacher.teacherId,
     isDemoLicense: activeLicense.demoMode === true
   });
   const noteId = randomUUID();
@@ -2821,8 +2825,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
     class_name: lesson.class_name || null,
     createdAt: new Date().toISOString()
   };
-  lesson.status = "finished";
-  lesson.finishedAt = new Date().toISOString();
+  markLessonFinished(lesson);
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   await persistFinalNoteSafe(lesson.finalNote, lesson.teacherId);
