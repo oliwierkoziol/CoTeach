@@ -75,7 +75,7 @@
               'flex w-full sm:w-[200px] items-center gap-3 min-h-[63px] py-3 pl-[15px] pr-[16px] rounded-[8px] transition-all text-left', 
               selectedNoteId === note.id 
                 ? 'bg-[#0c3dfe] text-white shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]' 
-                : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)]'
+                : 'bg-[#e4e4e4] text-[#2a3439] hover:bg-[#d4d4d4] shadow-[0px_10px_15px_0px_rgba(20,37,136,0.07)] dark:bg-muted dark:text-foreground dark:hover:bg-muted/80'
             ]"
           >
             <!-- Note Icon -->
@@ -84,12 +84,12 @@
               alt="Archive icon"
               :class="[
                 'h-[20px] w-[20px] shrink-0 opacity-90 transition-all',
-                selectedNoteId === note.id ? 'brightness-0 invert' : ''
+                selectedNoteId === note.id ? 'brightness-0 invert' : 'dark:invert'
               ]"
             />
             <div class="flex flex-col justify-center font-['Plus_Jakarta_Sans'] font-bold text-[14px]">
               <p class="leading-[18px] truncate max-w-[130px]">{{ note.title || 'Brak tytułu' }}</p>
-              <p class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[130px] mt-0.5" :class="selectedNoteId === note.id ? 'text-white' : 'text-[#454652]'">{{ note.subject || 'Brak przedmiotu' }}</p>
+              <p class="leading-[18px] font-medium text-[12px] opacity-80 truncate max-w-[130px] mt-0.5" :class="selectedNoteId === note.id ? 'text-white' : 'text-[#454652] dark:text-muted-foreground'">{{ note.subject || 'Brak przedmiotu' }}</p>
             </div>
           </button>
   

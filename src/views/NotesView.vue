@@ -60,7 +60,7 @@
               <select v-model="classLevel" class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans'] cursor-pointer">
                 <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
               </select>
-              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
                   <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
                 </svg>
@@ -80,7 +80,7 @@
                 <option value="add-new">+ Dodaj swoją klasę</option>
                 <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id">{{ classItem.class_name }}</option>
               </select>
-              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] opacity-40">
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
                 <svg class="w-[22px] h-[20px]" fill="currentColor" viewBox="0 0 22 18">
                   <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
                 </svg>
@@ -178,7 +178,7 @@
                 <img :src="cloudIcon" alt="Cloud upload icon" class="w-[28px] h-[20px]" />
               </div>
               <!-- Texts -->
-              <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-[20px] text-black text-center leading-[28px] max-w-[236px]">Prześlij plik z materiałem</h4>
+              <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-[20px] text-black dark:text-foreground text-center leading-[28px] max-w-[236px]">Prześlij plik z materiałem</h4>
               <div class="h-[9px] w-full shrink-0"></div>
               <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[14px] text-center leading-[20px] max-w-[250px]">
                 Upuść tu plik PDF, DOCX albo PPTX, aby odczytać z niego dane.
@@ -192,7 +192,7 @@
               <p v-if="selectedFile" class="mt-3 text-sm text-[#0c3dfe] truncate max-w-[200px]">{{ selectedFile.name }}</p>
             </div>
           </div>
-          <div class="absolute border-2 border-[rgba(0,0,0,0.1)] border-dashed inset-0 pointer-events-none rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]"></div>
+          <div class="absolute border-2 border-[rgba(0,0,0,0.1)] dark:border-border border-dashed inset-0 pointer-events-none rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]"></div>
         </div>
       </div>
 

@@ -29,10 +29,10 @@
       <!-- Card 1 -->
       <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
         <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(20,37,136,0.1)] text-[#142588]">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#1381361a] border)] text-[#138136]">
             <img :src="iconOne" alt="" class="h-5 w-5" />
           </div>
-          <div class="px-2 py-1 rounded bg-[rgba(20,37,136,0.05)] text-[#142588]">
+          <div class="px-2 py-1 rounded bg-[#1381361a] text-[#138136]">
             <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Liczba</span>
           </div>
         </div>
@@ -63,10 +63,10 @@
       <!-- Card 3 -->
       <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
         <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(88,35,0,0.1)] text-[#582300]">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#a842001a] text-[#a84200ff]">
             <img :src="iconThree" alt="" class="h-5 w-5" />
           </div>
-          <div class="px-2 py-1 rounded bg-[rgba(88,35,0,0.05)] text-[#582300]">
+          <div class="px-2 py-1 rounded bg-[#a842001a] text-[#a84200ff]">
             <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Postęp</span>
           </div>
         </div>
@@ -78,7 +78,7 @@
         <div class="mt-6">
           <div class="bg-[#e6e8eb] h-2 w-full rounded-full overflow-hidden">
             <div
-              class="h-full rounded-full bg-[#582300] transition-all duration-500 w-0"
+              class="h-full rounded-full bg-[#a84200] transition-all duration-500 w-0"
               :style="{ width: `${Math.min(100, completionRate)}%` }"
             />
           </div>
@@ -88,10 +88,10 @@
       <!-- Card 4 -->
       <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 col-span-full">
         <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(76,0,128,0.1)] text-[#582300]">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#7c00c71a] border)] text-[#7c00c7ff]">
             <img :src="iconFour" alt="" class="h-5 w-5" />
           </div>
-          <div class="px-2 py-1 rounded bg-[rgba(76,0,128,0.05)] text-[#4c0080]">
+          <div class="px-2 py-1 rounded bg-[#7c00c71a] text-[#7c00c7ff]">
             <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Powtórka</span>
           </div>
         </div>
