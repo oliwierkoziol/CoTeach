@@ -152,7 +152,7 @@ import sparklesIcon from "../assets/sparkles.svg";
 
 const route = useRoute();
 const router = useRouter();
-const { state, fetchLessons } = useLessonStore();
+const { state, fetchLessons, fetchUserClasses } = useLessonStore();
 
 const displayName = ref("użytkowniku");
 const summaryError = ref("");
@@ -172,25 +172,23 @@ async function loadUserData() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, classes")
+    .select("full_name")
     .eq("id", user.id)
     .maybeSingle();
 
   const profileName = String(profile?.full_name || "").trim();
-  if (profileName) {
-    displayName.value = profileName;
-  } else {
-    const metaName = String(user.user_metadata?.full_name || "").trim();
-    displayName.value = metaName || user.email?.split("@")[0] || "użytkowniku";
-  }
+  const metaName = String(user.user_metadata?.full_name || "").trim();
+  const fullName = profileName || metaName || user.email?.split("@")[0] || "użytkowniku";
 
-  if (profile?.classes && Array.isArray(profile.classes)) {
-    userClasses.value = profile.classes;
-  }
+  displayName.value = fullName.split(/\s+/)[0];
 }
 
 onMounted(async () => {
-  await Promise.allSettled([fetchLessons(), loadUserData()]);
+  await Promise.allSettled([
+    fetchLessons(),
+    loadUserData(),
+    fetchUserClasses()
+  ]);
 });
 
 watch(
@@ -201,6 +199,12 @@ watch(
     }
   }
 );
+
+// Keep local userClasses in sync with the store
+watch(() => state.userClasses, (newClasses) => {
+  userClasses.value = newClasses;
+}, { immediate: true });
+
 
 const filteredLessons = computed(() => {
   if (selectedClass.value === "all") return state.lessons;
