@@ -10,9 +10,17 @@ Dane wejściowe:
 - Zakres prezentacji: [ZAKRES_PREZENTACJI]
 - Maksymalna liczba slajdów: [MAX_SLAJDOW]
 - Plan lekcji (JSON): [PLAN_LEKCJI_JSON]
+- Styl prezentacji: [STYL_PREZENTACJI]
 - Treść notatki: [TRESC_NOTATKI]
 
 Wymagania:
+0) STYL PREZENTACJI: Jeśli [STYL_PREZENTACJI] to:
+   - "academic": używaj bardzo formalnego, naukowego języka, rozbudowanych definicji i profesjonalnego tonu.
+   - "creative": używaj barwnego języka, metafor, ciekawostek i dynamicznego stylu narracji.
+   - "minimalist": skup się na absolutnym konkretnie, używaj krótkich, uderzających zdań i kluczowych faktów.
+   - "fun": używaj luźnego, radosnego języka, żartów (jeśli pasują) i bardzo przystępnych porównań.
+   - "auto": dopasuj styl automatycznie do poziomu [KLASA].
+   Niezależnie od wybranego stylu, priorytetem pozostaje rygorystyczne dopasowanie do poziomu [KLASA].
 1) Zwróć WYŁĄCZNIE poprawny JSON.
 2) Bez markdown, bez komentarzy, bez dodatkowego tekstu.
 3) Struktura odpowiedzi:

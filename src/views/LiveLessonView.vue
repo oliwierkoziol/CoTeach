@@ -146,11 +146,7 @@
             </div>
           </div>
 
-          <p v-if="isDemoLicense" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-            Tryb demo: maksymalny czas lekcji live to {{ demoMaxLiveMinutes }} min.
-          </p>
-        </div>
-      </div>
+        div>
 
       <!-- Microphone Settings -->
       <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 space-y-6">
@@ -713,6 +709,7 @@ const activeSessionDurationMinutes = ref(45);
 const lastCoverageRefreshMs = ref(0);
 const coverageRefreshTimer = ref(null);
 const demoMaxLiveMinutes = ref(null);
+const demoMaxLiveLessons = ref(null);
 let apiPingTimer = null;
 let interimScrollTimer = null;
 let handleEscapeKey = null;
@@ -1282,6 +1279,7 @@ async function fetchLicenseStatus() {
     const isDemo = payload?.isDemoLicense === true || payload?.license?.demoMode === true;
     const maxMinutes = Number(payload?.demoLimits?.maxLiveMinutes || 0);
     demoMaxLiveMinutes.value = isDemo && maxMinutes > 0 ? maxMinutes : null;
+    demoMaxLiveLessons.value = isDemo && payload?.demoLimits?.maxLiveLessons ? payload.demoLimits.maxLiveLessons : null;
 
     if (!isDemo && String(info.value || "").startsWith(demoInfoPrefix)) {
       info.value = "";

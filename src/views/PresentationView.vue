@@ -335,27 +335,79 @@
         </div>
       </div>
 
-      <div class="bg-card border border-border content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
-        <div class="mb-1 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="bg-card border border-border content-stretch flex flex-col gap-6 items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
             Ustawienia prezentacji
           </h3>
         </div>
-        <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Zakres treści</label>
-          <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-            <select
-              v-model="presentationScope"
-              :disabled="presentationSource === 'note'"
-              class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
-            >
-              <option value="full" class="dark:bg-card dark:text-foreground">Cała lekcja/notatka</option>
-              <option value="pending" class="dark:bg-card dark:text-foreground">Tylko nieomówione punkty</option>
-            </select>
-            <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
-              <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
-                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-              </svg>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Zakres treści</label>
+            <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
+              <select
+                v-model="presentationScope"
+                :disabled="presentationSource === 'note'"
+                class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
+              >
+                <option value="full" class="dark:bg-card dark:text-foreground">Cała lekcja/notatka</option>
+                <option value="pending" class="dark:bg-card dark:text-foreground">Tylko nieomówione punkty</option>
+              </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-stretch flex flex-col gap-[12px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2 mt-4">
+            <label class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[16px] leading-[20px] mb-2">Wybierz styl wizualny</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+              <button
+                v-for="style in availableStyles"
+                :key="style.id"
+                type="button"
+                @click="presentationStyle = style.id"
+                :class="[
+                  'group relative flex flex-col gap-3 p-3 rounded-2xl border-2 transition-all text-left',
+                  presentationStyle === style.id
+                    ? 'border-primary bg-primary/5 shadow-md'
+                    : 'border-border bg-background hover:border-primary/30'
+                ]"
+              >
+                <!-- Mini Preview Box -->
+                <div :class="['w-full aspect-[16/10] rounded-lg overflow-hidden flex flex-col p-2 gap-1.5 shadow-sm transition-transform group-hover:scale-[1.02]', style.preview.wrapper]">
+                  <div class="flex gap-1.5 h-full">
+                    <div :class="['w-[40%] h-full rounded-sm p-1.5 flex flex-col gap-1', style.preview.accent]">
+                      <div :class="['h-1.5 w-full rounded-full opacity-40', style.preview.title]"></div>
+                      <div :class="['h-1 w-[80%] rounded-full opacity-20', style.preview.text]"></div>
+                      <div :class="['h-1 w-[60%] rounded-full opacity-20', style.preview.text]"></div>
+                    </div>
+                    <div class="flex-1 flex flex-col justify-center gap-1 px-1">
+                      <div :class="['h-2 w-full rounded-full', style.preview.title]"></div>
+                      <div :class="['h-1 w-[90%] rounded-full opacity-30', style.preview.text]"></div>
+                      <div :class="['h-1 w-[70%] rounded-full opacity-30', style.preview.text]"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="px-1">
+                  <p :class="['font-bold text-[14px] leading-tight mb-0.5', presentationStyle === style.id ? 'text-primary' : 'text-foreground']">
+                    {{ style.name }}
+                  </p>
+                  <p class="text-[11px] text-muted-foreground leading-tight">{{ style.description }}</p>
+                </div>
+
+                <!-- Checkmark for selected -->
+                <div 
+                  v-if="presentationStyle === style.id" 
+                  class="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -444,9 +496,68 @@ const slideTypeTranslations = {
   next_steps: "Zadania domowe"
 };
 
+const availableStyles = [
+  {
+    id: "auto",
+    name: "Automatyczny",
+    description: "Dopasowany do tematu",
+    preview: {
+      wrapper: "bg-[#f3f4f6]",
+      accent: "bg-[#0c3dfe]/10",
+      title: "bg-[#102a63]",
+      text: "bg-gray-400"
+    }
+  },
+  {
+    id: "academic",
+    name: "Akademicki",
+    description: "Formalny i poważny",
+    preview: {
+      wrapper: "bg-slate-200",
+      accent: "bg-slate-300 border-l-2 border-slate-800",
+      title: "bg-slate-900",
+      text: "bg-slate-500"
+    }
+  },
+  {
+    id: "creative",
+    name: "Kreatywny",
+    description: "Dynamiczny i barwny",
+    preview: {
+      wrapper: "bg-rose-50",
+      accent: "bg-rose-100 rounded-lg",
+      title: "bg-rose-800",
+      text: "bg-rose-400"
+    }
+  },
+  {
+    id: "minimalist",
+    name: "Minimalistyczny",
+    description: "Czysty i konkretny",
+    preview: {
+      wrapper: "bg-white border border-gray-100",
+      accent: "bg-gray-50",
+      title: "bg-black",
+      text: "bg-gray-400"
+    }
+  },
+  {
+    id: "fun",
+    name: "Dla dzieci",
+    description: "Zabawny i przyjazny",
+    preview: {
+      wrapper: "bg-yellow-50",
+      accent: "bg-yellow-100 rounded-xl border-2 border-yellow-200",
+      title: "bg-yellow-800",
+      text: "bg-yellow-600"
+    }
+  }
+];
+
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const generationMessage = ref("");
+const presentationStyle = ref("auto");
 const presentationTheme = ref({
   wrapperClass: "bg-[#f3f4f6]",
   panelClass: "bg-white border-none shadow-none rounded-none",
@@ -666,6 +777,7 @@ function savePresentationSnapshot(currentSlides) {
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
     slides: currentSlides,
+    style: presentationStyle.value,
     ownerId: String(historyOwnerId.value || "").trim() || undefined
   };
   presentationHistory.value.unshift(item);
@@ -673,12 +785,13 @@ function savePresentationSnapshot(currentSlides) {
   return item;
 }
 
-function startPresentation(currentSlides, skipReview = false) {
+function startPresentation(currentSlides, skipReview = false, style = "auto") {
   slides.value = currentSlides;
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(
     buildPresentationTitle(),
-    currentSlides
+    currentSlides,
+    style
   );
   isReviewing.value = !skipReview;
   isPresenting.value = skipReview;
@@ -702,6 +815,7 @@ async function startGeneratedPresentation() {
       lessonId: presentationSource.value === "lesson" ? selectedLesson.value?.id || "" : "",
       noteId: presentationSource.value === "note" ? selectedNote.value?.id || "" : "",
       classLevel: selectedClassLevel.value || "",
+      style: presentationStyle.value,
       scope: effectivePresentationScope.value,
       maxSlides: 5
     });
@@ -725,7 +839,7 @@ async function startGeneratedPresentation() {
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
-    startPresentation(generatedSlides, route.query.generate === "1");
+    startPresentation(generatedSlides, route.query.generate === "1", presentationStyle.value);
   } catch (error) {
     generationMessage.value = error?.message
       ? `Nie udało się wygenerować prezentacji: ${error.message}`
@@ -738,7 +852,7 @@ async function startGeneratedPresentation() {
 function openSavedPresentation(item) {
   const storedSlides = Array.isArray(item?.slides) ? item.slides : [];
   if (!storedSlides.length) return;
-  startPresentation(storedSlides);
+  startPresentation(storedSlides, false, item?.style || "auto");
 }
 
 function tryOpenRequestedPresentation() {
@@ -758,7 +872,7 @@ function tryOpenRequestedPresentation() {
 
   slides.value = storedSlides;
   slideIndex.value = 0;
-  presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides);
+  presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides, requested.style || "auto");
   
   if (shouldSkipReview) {
     isPresenting.value = true;
@@ -793,7 +907,7 @@ function openPresentationWindow() {
   isPilot.value = true;
 }
 
-function resolvePresentationTheme(title, slides) {
+function resolvePresentationTheme(title, slides, style = "auto") {
   const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
   
   const basePanel = "bg-white border-none shadow-none rounded-none";
@@ -805,6 +919,45 @@ function resolvePresentationTheme(title, slides) {
     accentClass: "bg-[#f0f1f4]"
   };
 
+  // If specific style is selected, use it
+  if (style === "academic") {
+    return {
+      wrapperClass: "bg-[#e2e8f0]",
+      panelClass: basePanel,
+      titleClass: "text-[#0f172a] font-serif",
+      textClass: "text-[#334155]",
+      accentClass: "bg-slate-100 border-l-4 border-slate-800"
+    };
+  }
+  if (style === "creative") {
+    return {
+      wrapperClass: "bg-[#fff1f2]",
+      panelClass: basePanel,
+      titleClass: "text-[#9f1239] italic",
+      textClass: "text-[#4c0519]",
+      accentClass: "bg-rose-50 rounded-3xl"
+    };
+  }
+  if (style === "minimalist") {
+    return {
+      wrapperClass: "bg-[#ffffff]",
+      panelClass: basePanel,
+      titleClass: "text-[#000000] tracking-tighter",
+      textClass: "text-[#171717]",
+      accentClass: "bg-neutral-50"
+    };
+  }
+  if (style === "fun") {
+    return {
+      wrapperClass: "bg-[#fef9c3]",
+      panelClass: basePanel,
+      titleClass: "text-[#854d0e] font-['Comic_Sans_MS',_cursive]",
+      textClass: "text-[#713f12]",
+      accentClass: "bg-yellow-50 rounded-[40px] border-4 border-yellow-200"
+    };
+  }
+
+  // Auto/Default theme resolution
   if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil|ziemi|zwierz)/.test(text)) {
     return {
       ...defaultTheme,

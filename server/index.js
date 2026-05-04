@@ -20,7 +20,8 @@ const UPLOAD_LIMITS = {
   unlicensed: { maxUploads: 3, maxFileSizeBytes: 5 * MB }
 };
 const DEMO_POLICY = {
-  maxLiveMinutes: 10,
+  maxLiveMinutes: 25,
+  maxLiveLessons: 10,
   watermarkText: "[TRYB DEMO] Material wygenerowany w wersji demonstracyjnej CoTeach."
 };
 
@@ -441,11 +442,11 @@ async function resolveTeacherContext(req, res) {
         const trialLicenseId = randomUUID();
         const trialLicense = {
           id: trialLicenseId,
-          key: `TRIAL-30D-${trialLicenseId.slice(0, 8).toUpperCase()}`,
+          key: `TRIAL-7D-${trialLicenseId.slice(0, 8).toUpperCase()}`,
           assignedUserId: user.id,
           maxActiveUsers: 1,
-          expiresAt: new Date(Date.now() + 30 * DAY_MS).toISOString(),
-          demoMode: false,
+          expiresAt: new Date(Date.now() + 7 * DAY_MS).toISOString(),
+          demoMode: true,
           schoolId: schoolId,
           createdAt: new Date().toISOString()
         };
@@ -1615,6 +1616,7 @@ async function generatePresentationWithLLM({
   lessonTitle,
   lessonSubject,
   classLevel,
+  style = "auto",
   scope,
   plan,
   maxSlides = 8,
@@ -1630,6 +1632,7 @@ async function generatePresentationWithLLM({
     .replace("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
     .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
     .replace("[KLASA]", String(classLevel || "Nie podano"))
+    .replace("[STYL_PREZENTACJI]", String(style || "auto"))
     .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
     .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
     .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
@@ -2458,6 +2461,7 @@ app.post("/api/presentations/generate", async (req, res) => {
     const lessonId = String(req.body?.lessonId || "").trim();
     const noteId = String(req.body?.noteId || "").trim();
     const classLevel = String(req.body?.classLevel || "").trim();
+    const style = String(req.body?.style || "auto").trim();
     const scope = String(req.body?.scope || "pending").trim() === "full" ? "full" : "pending";
     const maxSlides = Number(req.body?.maxSlides || 8);
 
@@ -2496,6 +2500,7 @@ app.post("/api/presentations/generate", async (req, res) => {
       lessonTitle: lesson?.title || note?.title || "Prezentacja",
       lessonSubject: lesson?.subject || note?.subject || "",
       classLevel: classLevel || note?.classLevel || "",
+      style,
       scope,
       plan: scopedPlan,
       maxSlides,
@@ -2511,6 +2516,7 @@ app.post("/api/presentations/generate", async (req, res) => {
       lessonId: lesson?.id || null,
       noteId: note?.id || null,
       scope,
+      style,
       classLevel: classLevel || note?.classLevel || "",
       title: `${lesson?.title || note?.title || "Prezentacja"} (${new Date().toLocaleDateString("pl-PL")})`,
       subject: lesson?.subject || note?.subject || "",
@@ -2733,9 +2739,20 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   if (!activeLicense) return;
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
+
+  if (activeLicense.demoMode && !lesson.startedAt) {
+    const liveLessonsCount = [...db.lessons.values()].filter(l => String(l.teacherId) === String(teacher.teacherId) && l.startedAt).length;
+    if (liveLessonsCount >= DEMO_POLICY.maxLiveLessons) {
+      return res.status(403).json({
+        code: "DEMO_LIVE_LESSON_LIMIT",
+        error: `W trybie demo możesz przeprowadzić maksymalnie ${DEMO_POLICY.maxLiveLessons} lekcji na żywo.`
+      });
+    }
+  }
+
   lesson.status = "live";
   lesson.finishedAt = null;
-  lesson.startedAt = new Date().toISOString();
+  lesson.startedAt = lesson.startedAt || new Date().toISOString();
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({
@@ -3601,7 +3618,8 @@ app.get("/api/account/license-status", async (req, res) => {
       : null,
     demoLimits: activeLicense?.demoMode
       ? {
-        maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
+        maxLiveMinutes: DEMO_POLICY.maxLiveMinutes,
+        maxLiveLessons: DEMO_POLICY.maxLiveLessons
       }
       : null,
     uploadPolicy,
@@ -3615,7 +3633,7 @@ app.patch("/api/account/grant-license", async (req, res) => {
 
   const userId = teacher.userId;
   const schoolId = String(teacher.schoolId || defaultSchoolId).trim() || defaultSchoolId;
-  const days = 30;
+  const days = 7;
   const maxActiveUsers = 1;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
   const fallbackLicenseId = randomUUID();
@@ -3625,10 +3643,10 @@ app.patch("/api/account/grant-license", async (req, res) => {
 
   const license = {
     id: licenseId,
-    key: existing?.key || `USER-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+    key: existing?.key || `DEMO-7D-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
     maxActiveUsers,
     expiresAt,
-    demoMode: false,
+    demoMode: true,
     schoolId,
     assignedUserId: userId
   };
