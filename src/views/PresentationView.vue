@@ -362,52 +362,24 @@
             </div>
           </div>
 
-          <div class="content-stretch flex flex-col gap-[12px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2 mt-4">
-            <label class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[16px] leading-[20px] mb-2">Wybierz styl wizualny</label>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
-              <button
-                v-for="style in availableStyles"
-                :key="style.id"
-                type="button"
-                @click="presentationStyle = style.id"
-                :class="[
-                  'group relative flex flex-col gap-3 p-3 rounded-2xl border-2 transition-all text-left',
-                  presentationStyle === style.id
-                    ? 'border-primary bg-primary/5 shadow-md'
-                    : 'border-border bg-background hover:border-primary/30'
-                ]"
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Styl i ton prezentacji</label>
+            <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
+              <select
+                v-model="presentationStyle"
+                class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer"
               >
-                <!-- Mini Preview Box -->
-                <div :class="['w-full aspect-[16/10] rounded-lg overflow-hidden flex flex-col p-2 gap-1.5 shadow-sm transition-transform group-hover:scale-[1.02]', style.preview.wrapper]">
-                  <div class="flex gap-1.5 h-full">
-                    <div :class="['w-[40%] h-full rounded-sm p-1.5 flex flex-col gap-1', style.preview.accent]">
-                      <div :class="['h-1.5 w-full rounded-full opacity-40', style.preview.title]"></div>
-                      <div :class="['h-1 w-[80%] rounded-full opacity-20', style.preview.text]"></div>
-                      <div :class="['h-1 w-[60%] rounded-full opacity-20', style.preview.text]"></div>
-                    </div>
-                    <div class="flex-1 flex flex-col justify-center gap-1 px-1">
-                      <div :class="['h-2 w-full rounded-full', style.preview.title]"></div>
-                      <div :class="['h-1 w-[90%] rounded-full opacity-30', style.preview.text]"></div>
-                      <div :class="['h-1 w-[70%] rounded-full opacity-30', style.preview.text]"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="px-1">
-                  <p :class="['font-bold text-[14px] leading-tight mb-0.5', presentationStyle === style.id ? 'text-primary' : 'text-foreground']">
-                    {{ style.name }}
-                  </p>
-                  <p class="text-[11px] text-muted-foreground leading-tight">{{ style.description }}</p>
-                </div>
-
-                <!-- Checkmark for selected -->
-                <div 
-                  v-if="presentationStyle === style.id" 
-                  class="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7"/></svg>
-                </div>
-              </button>
+                <option value="auto" class="dark:bg-card dark:text-foreground">Automatyczny (rekomendowany)</option>
+                <option value="academic" class="dark:bg-card dark:text-foreground">Akademicki (formalny)</option>
+                <option value="creative" class="dark:bg-card dark:text-foreground">Kreatywny (dynamiczny)</option>
+                <option value="minimalist" class="dark:bg-card dark:text-foreground">Minimalistyczny (konkretny)</option>
+                <option value="fun" class="dark:bg-card dark:text-foreground">Dla dzieci (zabawny)</option>
+              </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -495,64 +467,6 @@ const slideTypeTranslations = {
   summary: "Podsumowanie",
   next_steps: "Zadania domowe"
 };
-
-const availableStyles = [
-  {
-    id: "auto",
-    name: "Automatyczny",
-    description: "Dopasowany do tematu",
-    preview: {
-      wrapper: "bg-[#f3f4f6]",
-      accent: "bg-[#0c3dfe]/10",
-      title: "bg-[#102a63]",
-      text: "bg-gray-400"
-    }
-  },
-  {
-    id: "academic",
-    name: "Akademicki",
-    description: "Formalny i poważny",
-    preview: {
-      wrapper: "bg-slate-200",
-      accent: "bg-slate-300 border-l-2 border-slate-800",
-      title: "bg-slate-900",
-      text: "bg-slate-500"
-    }
-  },
-  {
-    id: "creative",
-    name: "Kreatywny",
-    description: "Dynamiczny i barwny",
-    preview: {
-      wrapper: "bg-rose-50",
-      accent: "bg-rose-100 rounded-lg",
-      title: "bg-rose-800",
-      text: "bg-rose-400"
-    }
-  },
-  {
-    id: "minimalist",
-    name: "Minimalistyczny",
-    description: "Czysty i konkretny",
-    preview: {
-      wrapper: "bg-white border border-gray-100",
-      accent: "bg-gray-50",
-      title: "bg-black",
-      text: "bg-gray-400"
-    }
-  },
-  {
-    id: "fun",
-    name: "Dla dzieci",
-    description: "Zabawny i przyjazny",
-    preview: {
-      wrapper: "bg-yellow-50",
-      accent: "bg-yellow-100 rounded-xl border-2 border-yellow-200",
-      title: "bg-yellow-800",
-      text: "bg-yellow-600"
-    }
-  }
-];
 
 const presentationScope = ref("pending");
 const selectedNoteId = ref("");
