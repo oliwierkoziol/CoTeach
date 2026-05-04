@@ -731,7 +731,8 @@ async function startGeneratedPresentation() {
       classLevel: selectedClassLevel.value || "",
       style: presentationStyle.value,
       scope: effectivePresentationScope.value,
-      maxSlides: 5
+      maxSlides: 5,
+      class_name: state.selectedClassName || null
     });
     const generatedSlides = (generated?.slides || [])
       .map((slide) => ({

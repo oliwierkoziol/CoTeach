@@ -21,6 +21,25 @@
         </RouterLink>
       </div>
 
+      <!-- Moja Klasa Dropdown -->
+      <div class="flex-1 flex items-center justify-center px-4 hidden sm:flex">
+        <div class="w-full max-w-[250px] bg-[#e0e3e6] dark:bg-input-background h-[40px] relative rounded-[8px] flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+          <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-3 appearance-none text-[14px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
+            <option value="" class="dark:bg-card dark:text-foreground">Wybierz klasę...</option>
+            <option value="add-new" class="dark:bg-card dark:text-foreground">+ Dodaj swoją klasę</option>
+            <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id" class="dark:bg-card dark:text-foreground">{{ classItem.class_name }}</option>
+          </select>
+          <div class="absolute right-[8px] flex gap-1 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
+            <svg class="w-[18px] h-[16px]" fill="currentColor" viewBox="0 0 22 18">
+              <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
+            </svg>
+            <svg class="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24">
+              <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <div class="flex shrink-0 items-center gap-2">
         <button
           type="button"
@@ -204,6 +223,45 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
       </div>
     </aside>
 
+    <!-- Modal dodawania nowej klasy -->
+    <div v-if="showAddClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-[12px] shadow-lg p-[24px] max-w-[400px] w-full">
+        <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-[16px]">Dodaj nową klasę</h3>
+        <div class="flex flex-col gap-[12px] mb-[20px]">
+          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Nazwa klasy</label>
+          <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+            <input 
+              v-model="newClassName" 
+              @keyup.enter="handleAddClass"
+              class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans']" 
+              placeholder="np. 3A, 5B, Liceum 1..."
+              autofocus
+            />
+          </div>
+        </div>
+        <div v-if="classError" class="text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold mb-[16px]">
+          {{ classError }}
+        </div>
+        <div class="flex gap-[12px] justify-end">
+          <button 
+            type="button" 
+            @click="closeAddClassModal"
+            class="bg-muted border border-border content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-background/70 transition-colors"
+          >
+            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[16px] leading-[24px]">Anuluj</span>
+          </button>
+          <button 
+            type="button" 
+            @click="handleAddClass"
+            :disabled="addingClass || !newClassName.trim()"
+            class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[24px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors disabled:opacity-50"
+          >
+            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ addingClass ? 'Dodawanie...' : 'Dodaj klasę' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
       <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
@@ -307,12 +365,21 @@ const IconShield = createStrokeIcon("IconShield", () => [
 const route = useRoute();
 const router = useRouter();
 const open = ref(false);
-const { state, fetchLessons } = useLessonStore();
+const { state, fetchLessons, fetchUserClasses, addUserClass, setSelectedClass } = useLessonStore();
 const { isDark, toggleTheme } = useTheme();
+
+const SELECTED_CLASS_STORAGE_KEY = "coteach_selected_class_v1";
 
 const displayName = ref("");
 const avatarUrl = ref("");
 const isAdmin = ref(false);
+
+// Class selection state - use local ref for v-model binding, but sync with store
+const selectedClass = ref("");
+const showAddClassModal = ref(false);
+const newClassName = ref("");
+const classError = ref("");
+const addingClass = ref(false);
 
 const presentationHref = computed(() => {
   const id = state.lesson?.id || state.lessons[0]?.id;
@@ -411,6 +478,7 @@ async function loadHeaderUser() {
     displayName.value = "";
     avatarUrl.value = "";
     isAdmin.value = false;
+    selectedClass.value = "";
     return;
   }
 
@@ -422,12 +490,39 @@ async function loadHeaderUser() {
   isAdmin.value = profile?.admin === true;
 }
 
+function loadSelectedClassFromStorage() {
+  if (typeof window === "undefined") return "";
+  try {
+    const stored = window.localStorage.getItem(SELECTED_CLASS_STORAGE_KEY);
+    return stored || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveSelectedClassToStorage(classId) {
+  if (typeof window === "undefined") return;
+  try {
+    if (classId) {
+      window.localStorage.setItem(SELECTED_CLASS_STORAGE_KEY, classId);
+    } else {
+      window.localStorage.removeItem(SELECTED_CLASS_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors (private mode/quota).
+  }
+}
+
 let authSub = null;
 
 onMounted(async () => {
-  await Promise.allSettled([fetchLessons(), loadHeaderUser()]);
+  // Load previously selected class
+  selectedClass.value = loadSelectedClassFromStorage();
+  
+  await Promise.allSettled([fetchLessons(), loadHeaderUser(), fetchUserClasses()]);
   const { data } = supabase.auth.onAuthStateChange(() => {
     void loadHeaderUser();
+    void fetchUserClasses();
   });
   authSub = data.subscription;
 });
@@ -436,10 +531,47 @@ onUnmounted(() => {
   authSub?.unsubscribe();
 });
 
+// Watcher na zmianę wybranej klasy
+watch(selectedClass, (newValue) => {
+  if (newValue === "add-new") {
+    showAddClassModal.value = true;
+    selectedClass.value = "";
+  } else {
+    // Update store and localStorage
+    setSelectedClass(newValue);
+    saveSelectedClassToStorage(newValue);
+  }
+});
+
 watch(
   () => route.path,
   () => {
     if (route.path === "/dashboard" || route.path === "/profile") void loadHeaderUser();
   }
 );
+
+function closeAddClassModal() {
+  showAddClassModal.value = false;
+  newClassName.value = "";
+  classError.value = "";
+}
+
+async function handleAddClass() {
+  try {
+    classError.value = "";
+    if (!newClassName.value.trim()) {
+      classError.value = "Wpisz nazwę klasy";
+      return;
+    }
+
+    addingClass.value = true;
+    const newClass = await addUserClass(newClassName.value);
+    selectedClass.value = newClass.id;
+    closeAddClassModal();
+  } catch (err) {
+    classError.value = err.message || "Nie udało się dodać klasy";
+  } finally {
+    addingClass.value = false;
+  }
+}
 </script>
