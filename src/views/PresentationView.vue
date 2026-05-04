@@ -81,64 +81,82 @@
         </div>
       </div>
 
-      <div v-else :class="['flex-1 overflow-hidden p-4 sm:p-6 lg:p-8 transition-colors duration-700', activeTheme.wrapperClass]">
-        <div :class="['relative mx-auto h-full max-h-full w-full max-w-7xl rounded-[2.5rem] p-6 shadow-2xl sm:p-10 lg:p-14 overflow-hidden ring-1 ring-white/10 transition-all duration-700', activeTheme.panelClass]">
-          <!-- Dekoracyjne miękkie poświaty w tle -->
-          <div class="absolute -top-[30%] -left-[20%] w-[70%] h-[70%] rounded-full bg-white/10 blur-[120px] mix-blend-overlay pointer-events-none"></div>
-          <div class="absolute -bottom-[30%] -right-[20%] w-[70%] h-[70%] rounded-full bg-white/10 blur-[120px] mix-blend-overlay pointer-events-none"></div>
+      <div v-else :class="['flex-1 overflow-hidden transition-colors duration-700', activeTheme.wrapperClass]">
+        <div :class="['relative mx-auto h-full max-h-full w-full max-w-full overflow-hidden transition-all duration-700', activeTheme.panelClass]">
           
           <div class="relative z-10 flex h-full min-h-0 flex-col">
+            <!-- Title Slide Layout -->
             <template v-if="current.type === 'title'">
-              <div class="flex h-full flex-col items-center justify-center text-center p-8">
-                <h1 class="text-[clamp(3rem,8vh,6rem)] font-black text-white drop-shadow-2xl leading-tight mb-6">{{ current.title }}</h1>
-                <p v-if="current.subtitle" class="text-[clamp(1.5rem,4vh,2.5rem)] font-bold text-white/90 drop-shadow-lg">{{ current.subtitle }}</p>
-                <p v-if="current.summary" class="mt-8 max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] text-white/95 font-medium leading-relaxed drop-shadow-sm">{{ current.summary }}</p>
+              <div class="flex h-full flex-col lg:flex-row">
+                <div :class="['w-full lg:w-[55%] flex flex-col justify-center p-12 lg:p-20', activeTheme.accentClass]">
+                  <h1 :class="['text-[clamp(2.5rem,7vh,5rem)] font-black leading-[1.1] mb-8', activeTheme.titleClass]">{{ current.title }}</h1>
+                  <p v-if="current.subtitle" :class="['text-[clamp(1.2rem,3vh,2rem)] font-bold opacity-80', activeTheme.textClass]">{{ current.subtitle }}</p>
+                  <p v-if="current.summary" :class="['mt-10 text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-70', activeTheme.textClass]">{{ current.summary }}</p>
+                </div>
+                <div class="flex-1 bg-white flex items-center justify-center p-12">
+                  <div class="w-full h-full max-h-[500px] bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center border border-black/5">
+                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                    <div v-else class="flex flex-col items-center opacity-20">
+                      <svg class="w-24 h-24 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span class="font-bold uppercase tracking-widest text-sm">Ilustracja</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </template>
 
-            <template v-else-if="current.type === 'summary'">
-              <div class="flex h-full flex-col items-center justify-center text-center p-8">
-                <div class="inline-flex h-24 w-24 items-center justify-center rounded-full bg-white/20 mb-8 shadow-xl backdrop-blur-md">
-                  <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <!-- Summary/Agenda Slide Layout -->
+            <template v-else-if="current.type === 'summary' || current.type === 'agenda'">
+              <div class="flex h-full flex-col">
+                <div class="flex-1 bg-white p-12 lg:p-20 flex flex-col justify-center text-center">
+                  <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-black mb-8', activeTheme.titleClass]">{{ current.title || 'Podsumowanie' }}</h2>
+                  <p :class="['mx-auto max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] font-medium leading-relaxed', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
-                <h2 class="text-[clamp(2.5rem,6vh,5rem)] font-black text-white drop-shadow-2xl leading-tight mb-6">{{ current.title || 'Podsumowanie' }}</h2>
-                <p class="max-w-4xl text-[clamp(1.2rem,3vh,2rem)] text-white/95 font-medium leading-relaxed drop-shadow-sm">{{ current.summary }}</p>
+                <div :class="['h-[35%] w-full flex items-center justify-center p-10', activeTheme.accentClass]">
+                  <div class="w-full max-w-2xl h-full bg-white rounded-sm overflow-hidden border border-black/5 flex items-center justify-center">
+                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                    <div v-else class="flex items-center gap-4 opacity-10">
+                      <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      <span class="font-bold uppercase tracking-widest text-xs">Materiał poglądowy</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </template>
 
             <template v-else>
-              <div v-if="current.type === 'practice'" class="flex h-full flex-col">
-                <div class="mb-6 shrink-0">
-                  <h1 class="text-white text-[clamp(2.2rem,5.5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
-                  <p v-if="current.subtitle" class="mt-3 text-[clamp(1.15rem,2.8vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
+              <!-- Practice/General Slide with Split Layout -->
+              <div v-if="slideIndex % 2 === 0" class="flex h-full flex-col lg:flex-row">
+                <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-12 lg:p-16', activeTheme.accentClass]">
+                  <p v-if="current.type === 'practice'" class="mb-4 text-sm font-bold text-blue-600 uppercase tracking-widest">Ćwiczenie praktyczne</p>
+                  <h2 :class="['text-[clamp(2rem,5vh,3.5rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
+                  <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
+                  <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
-                <div class="min-h-0 flex-1 overflow-y-auto pr-3 custom-scrollbar">
-                  <div class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                    <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-emerald-400/90 uppercase tracking-widest">Ćwiczenie praktyczne</p>
-                    <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
+                <div class="flex-1 bg-white flex items-center justify-center p-12">
+                   <div class="w-full h-full bg-gray-50 rounded-sm overflow-hidden flex items-center justify-center border border-black/5 relative group">
+                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                    <div v-else class="flex flex-col items-center opacity-10">
+                      <svg class="w-20 h-20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Układ poziomy (Lewa-Prawa) -->
-              <div v-else-if="slideIndex % 2 === 0" class="flex h-full flex-col lg:flex-row gap-6 lg:gap-10 items-center">
-                <div class="w-full lg:w-2/5 shrink-0">
-                  <h1 class="text-white text-[clamp(2.5rem,5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
-                  <p v-if="current.subtitle" class="mt-4 text-[clamp(1.3rem,2.5vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
-                </div>
-                <div class="flex-1 w-full h-full min-h-0 overflow-y-auto custom-scrollbar p-6 lg:p-10 rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl flex flex-col justify-center">
-                  <p class="whitespace-pre-wrap text-[clamp(1.2rem,2.8vh,1.9rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
-                </div>
-              </div>
-
-              <!-- Układ pionowy (Góra-Dół) -->
+              <!-- Top-Down Split Layout -->
               <div v-else class="flex h-full flex-col">
-                <div class="mb-6 shrink-0 text-center">
-                  <h1 class="text-white text-[clamp(2.5rem,5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
-                  <p v-if="current.subtitle" class="mt-3 text-[clamp(1.3rem,2.5vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
+                <div class="flex-1 bg-white p-12 lg:p-16 flex flex-col justify-center text-center">
+                   <h2 :class="['text-[clamp(2.2rem,5.5vh,4rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
+                   <p v-if="current.subtitle" :class="['mx-auto max-w-3xl text-[clamp(1.2rem,2.8vh,1.6rem)] font-bold opacity-60 mb-6', activeTheme.textClass]">{{ current.subtitle }}</p>
+                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 lg:p-10 rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl flex flex-col items-center justify-center text-center">
-                  <p class="max-w-5xl whitespace-pre-wrap text-[clamp(1.2rem,2.8vh,1.9rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
+                <div :class="['h-[40%] w-full flex items-center justify-center p-12', activeTheme.accentClass]">
+                  <div class="w-full max-w-3xl h-full bg-white rounded-sm overflow-hidden border border-black/5 flex items-center justify-center shadow-sm">
+                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                    <div v-else class="opacity-5">
+                      <svg class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </template>
@@ -147,7 +165,7 @@
       </div>
 
       <div v-if="!isPilot" class="border-t border-white/10 bg-black/35 px-4 py-3 sm:px-6">
-        <div class="mx-auto flex w-full max-w-6xl items-center justify-between">
+        <div class="mx-auto flex w-full max-w-full items-center justify-between">
           <button
             :disabled="slideIndex === 0"
             @click="slideIndex -= 1"
@@ -305,7 +323,7 @@
             </button>
             <div 
               v-if="selectedSourceId === item.id" 
-              class="absolute -top-1.5 -right-1.5 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+              class="absolute -top-1.5 -right-1.5 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"
             >
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7"/></svg>
             </div>
@@ -344,7 +362,7 @@
       </div>
 
       <div class="bg-card border border-border content-stretch flex flex-col items-start justify-center p-[20px] sm:p-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full mb-7">
-        <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-emerald-300 bg-emerald-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-emerald-800">
+        <div v-if="generationMessage" class="mb-4 rounded-[10px] border border-blue-300 bg-blue-50 px-4 py-3 text-[14px] font-['Plus_Jakarta_Sans'] text-blue-800">
           {{ generationMessage }}
         </div>
         <div class="flex flex-col sm:flex-row items-center justify-between gap-6 w-full">
@@ -430,8 +448,11 @@ const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationTheme = ref({
-  wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
-  panelClass: "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl"
+  wrapperClass: "bg-[#f3f4f6]",
+  panelClass: "bg-white border-none shadow-none rounded-none",
+  titleClass: "text-[#102a63]",
+  textClass: "text-[#454652]",
+  accentClass: "bg-[#f0f1f4]"
 });
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "" });
@@ -691,7 +712,8 @@ async function startGeneratedPresentation() {
         title: String(slide.title || "").trim(),
         subtitle: String(slide.subtitle || "").trim(),
         summary: String(slide.summary || "").trim(),
-        details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : []
+        details: Array.isArray(slide.details) ? slide.details.map((item) => String(item || "").trim()).filter(Boolean) : [],
+        imageUrl: slide.imageUrl || ""
       }))
       .filter((slide) => slide.title || slide.summary || slide.details.length);
 
@@ -774,30 +796,37 @@ function openPresentationWindow() {
 function resolvePresentationTheme(title, slides) {
   const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
   
-  const basePanel = "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl";
+  const basePanel = "bg-white border-none shadow-none rounded-none";
+  const defaultTheme = {
+    wrapperClass: "bg-[#f3f4f6]",
+    panelClass: basePanel,
+    titleClass: "text-[#102a63]",
+    textClass: "text-[#454652]",
+    accentClass: "bg-[#f0f1f4]"
+  };
 
   if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil|ziemi|zwierz)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700",
-      panelClass: basePanel
+      ...defaultTheme,
+      accentClass: "bg-blue-50",
+      titleClass: "text-blue-900",
     };
   }
   if (/(histori|wojn|pa[nń]stw|kr[oó]l|staro|średniowie|wiek|wojsk)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-orange-500 via-red-600 to-rose-700",
-      panelClass: basePanel
+      ...defaultTheme,
+      accentClass: "bg-rose-50",
+      titleClass: "text-rose-900",
     };
   }
   if (/(matemat|fizy|chem|technicz|algorytm|program|kod|licz|równan)/.test(text)) {
     return {
-      wrapperClass: "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700",
-      panelClass: basePanel
+      ...defaultTheme,
+      accentClass: "bg-indigo-50",
+      titleClass: "text-indigo-900",
     };
   }
-  return {
-    wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
-    panelClass: basePanel
-  };
+  return defaultTheme;
 }
 </script>
 
