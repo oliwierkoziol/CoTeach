@@ -107,46 +107,38 @@
             </template>
 
             <template v-else>
-              <div class="mb-6 shrink-0">
-                <h1 class="text-white text-[clamp(2.2rem,5.5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
-                <p v-if="current.subtitle" class="mt-3 text-[clamp(1.15rem,2.8vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
-              </div>
-
-              <div class="mb-6 flex flex-wrap gap-3 shrink-0">
-                <span v-for="k in currentDetailChips" :key="k" class="rounded-full bg-white/20 border border-white/30 backdrop-blur-md px-4 py-1.5 text-[clamp(0.85rem,1.8vh,1.1rem)] font-bold text-white shadow-sm tracking-wide">{{ k }}</span>
-              </div>
-
-              <div class="min-h-0 flex-1 overflow-y-auto pr-3 custom-scrollbar">
-                <div v-if="isComparisonLayout" class="grid h-auto min-h-full grid-cols-2 gap-6">
-                  <div class="p-8 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                    <p class="mb-4 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Aspekt A</p>
-                    <p class="text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/95 leading-relaxed break-words font-medium">{{ comparisonLeft }}</p>
-                  </div>
-                  <div class="p-8 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                    <p class="mb-4 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Aspekt B</p>
-                    <p class="text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/95 leading-relaxed break-words font-medium">{{ comparisonRight }}</p>
+              <div v-if="current.type === 'practice'" class="flex h-full flex-col">
+                <div class="mb-6 shrink-0">
+                  <h1 class="text-white text-[clamp(2.2rem,5.5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
+                  <p v-if="current.subtitle" class="mt-3 text-[clamp(1.15rem,2.8vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
+                </div>
+                <div class="min-h-0 flex-1 overflow-y-auto pr-3 custom-scrollbar">
+                  <div class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
+                    <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-emerald-400/90 uppercase tracking-widest">Ćwiczenie praktyczne</p>
+                    <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
                   </div>
                 </div>
+              </div>
 
-                <div v-else-if="isAgendaLayout" class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                  <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white/50 uppercase tracking-widest">Agenda slajdu</p>
-                  <ul class="space-y-4">
-                    <li v-for="(item, i) in currentDetailChips.slice(0, 6)" :key="`${i}-${item}`" class="flex gap-4 text-[clamp(1.2rem,2.6vh,1.8rem)] text-white/95 leading-snug break-words items-start font-medium">
-                      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-white shadow-inner">{{ i + 1 }}</span>
-                      <span class="pt-1.5">{{ item }}</span>
-                    </li>
-                  </ul>
-                  <div class="mt-8 h-px w-1/4 bg-white/20"></div>
-                  <p class="mt-6 text-[clamp(1.1rem,2.4vh,1.75rem)] text-white/90 leading-relaxed break-words">{{ currentMainText }}</p>
+              <!-- Układ poziomy (Lewa-Prawa) -->
+              <div v-else-if="slideIndex % 2 === 0" class="flex h-full flex-col lg:flex-row gap-6 lg:gap-10 items-center">
+                <div class="w-full lg:w-2/5 shrink-0">
+                  <h1 class="text-white text-[clamp(2.5rem,5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
+                  <p v-if="current.subtitle" class="mt-4 text-[clamp(1.3rem,2.5vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
                 </div>
-
-                <div v-else-if="isPracticeLayout" class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                  <p class="mb-6 text-[clamp(1rem,2.2vh,1.4rem)] font-bold text-emerald-400/90 uppercase tracking-widest">Ćwiczenie praktyczne</p>
-                  <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 break-words font-medium">{{ currentMainText }}</p>
+                <div class="flex-1 w-full h-full min-h-0 overflow-y-auto custom-scrollbar p-6 lg:p-10 rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl flex flex-col justify-center">
+                  <p class="whitespace-pre-wrap text-[clamp(1.2rem,2.8vh,1.9rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
                 </div>
+              </div>
 
-                <div v-else class="h-auto min-h-full p-8 md:p-10 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-xl">
-                  <p class="whitespace-pre-wrap text-[clamp(1.25rem,2.8vh,2rem)] leading-relaxed text-white/95 break-words font-medium">{{ currentMainText }}</p>
+              <!-- Układ pionowy (Góra-Dół) -->
+              <div v-else class="flex h-full flex-col">
+                <div class="mb-6 shrink-0 text-center">
+                  <h1 class="text-white text-[clamp(2.5rem,5vh,4.5rem)] font-extrabold leading-tight tracking-tight drop-shadow-md">{{ current.title }}</h1>
+                  <p v-if="current.subtitle" class="mt-3 text-[clamp(1.3rem,2.5vh,1.8rem)] font-medium text-white/90 drop-shadow-sm">{{ current.subtitle }}</p>
+                </div>
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 lg:p-10 rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl flex flex-col items-center justify-center text-center">
+                  <p class="max-w-5xl whitespace-pre-wrap text-[clamp(1.2rem,2.8vh,1.9rem)] leading-relaxed text-white/95 font-medium">{{ currentMainText }}</p>
                 </div>
               </div>
             </template>

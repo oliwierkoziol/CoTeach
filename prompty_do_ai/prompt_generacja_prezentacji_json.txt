@@ -19,11 +19,10 @@ Wymagania:
 {
   "slides": [
     {
-      "type": "title|agenda|concept|example|comparison|practice|summary|next_steps",
+      "type": "title|concept|example|practice|summary",
       "title": "Tytuł slajdu (maks. 8-10 słów)",
       "subtitle": "Krótki podtytuł (opcjonalnie)",
-      "summary": "Merytoryczny paragraf wyjaśniający dany koncept. Składa się z 2-4 zdań. Pilnuj by tekst nie był na tyle długi, aby odpowiedź urwała się w połowie.",
-      "details": ["jasny punkt 1", "konkretny punkt 2", "rozwinięty punkt 3"]
+      "summary": "Merytoryczny blok tekstu. Pisz wyczerpująco, stosuj 3-5 zdań, ale absolutnie unikaj ucinania w połowie. Bez żadnych wypunktowań czy tablic."
     }
   ]
 }
