@@ -317,27 +317,59 @@
         </div>
       </div>
 
-      <div class="bg-card border border-border content-stretch flex flex-col gap-[12px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
-        <div class="mb-1 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
-            Ustawienia prezentacji
-          </h3>
-        </div>
-        <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
-          <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Zakres treści</label>
-          <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-            <select
-              v-model="presentationScope"
-              :disabled="presentationSource === 'note'"
-              class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
-            >
-              <option value="full" class="dark:bg-card dark:text-foreground">Cała lekcja/notatka</option>
-              <option value="pending" class="dark:bg-card dark:text-foreground">Tylko nieomówione punkty</option>
-            </select>
-            <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
-              <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
-                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-              </svg>
+      <div class="bg-card border border-border content-stretch flex flex-col gap-[20px] items-start pb-[24px] pt-[20px] px-[20px] sm:px-[32px] relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full">
+        <div class="flex w-full flex-col gap-6">
+          <!-- Zakres treści -->
+          <div class="flex flex-col gap-3">
+            <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
+              Ustawienia treści
+            </h3>
+            <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full max-w-md">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[13px] uppercase tracking-wider">Zakres materiału</label>
+              <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
+                <select
+                  v-model="presentationScope"
+                  :disabled="presentationSource === 'note'"
+                  class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer disabled:cursor-not-allowed disabled:text-muted-foreground"
+                >
+                  <option value="full" class="dark:bg-card dark:text-foreground">Cała lekcja/notatka</option>
+                  <option value="pending" class="dark:bg-card dark:text-foreground">Tylko nieomówione punkty</option>
+                </select>
+                <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
+                  <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                    <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Styl wizualny -->
+          <div class="flex flex-col gap-3">
+            <h3 class="font-['Manrope'] font-extrabold text-foreground text-[18px] leading-[28px] flex items-center gap-2">
+              Styl wizualny
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 w-full">
+              <button 
+                v-for="theme in availableThemes" 
+                :key="theme.id"
+                type="button"
+                @click="selectedThemeId = theme.id"
+                :class="[
+                  'group relative flex flex-col items-center p-2 rounded-xl border-2 transition-all text-center',
+                  selectedThemeId === theme.id ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/30'
+                ]"
+              >
+                <div :class="['h-12 w-full rounded-lg mb-2 shadow-inner relative overflow-hidden', theme.previewClass]">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2/3 h-1/2 bg-white/10 backdrop-blur-sm rounded border border-white/20"></div>
+                  </div>
+                </div>
+                <p class="font-bold text-[11px] leading-tight truncate w-full px-1">{{ theme.name }}</p>
+                <div v-if="selectedThemeId === theme.id" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary text-primary-foreground rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                  <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="5"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -431,8 +463,62 @@ const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationTheme = ref({
   wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
-  panelClass: "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl"
+  panelClass: "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl",
+  isLight: false
 });
+
+const selectedThemeId = ref("auto");
+
+const availableThemes = [
+  { 
+    id: "auto", 
+    name: "Automatyczny", 
+    description: "AI dopasuje styl do treści",
+    previewClass: "bg-gradient-to-br from-gray-700 via-gray-800 to-black"
+  },
+  { 
+    id: "modern", 
+    name: "Nowoczesny", 
+    description: "Vibrant fiolet i indigo",
+    previewClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700"
+  },
+  { 
+    id: "nature", 
+    name: "Natura", 
+    description: "Ekologiczna zieleń",
+    previewClass: "bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700"
+  },
+  { 
+    id: "science", 
+    name: "Nauka", 
+    description: "Techniczny błękit",
+    previewClass: "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700"
+  },
+  { 
+    id: "history", 
+    name: "Historia", 
+    description: "Klasyczna czerwień",
+    previewClass: "bg-gradient-to-br from-orange-500 via-red-600 to-rose-700"
+  },
+  { 
+    id: "space", 
+    name: "Głęboki Kosmos", 
+    description: "Ciemny i tajemniczy",
+    previewClass: "bg-[#05070f] bg-[radial-gradient(circle_at_50%_50%,rgba(30,58,138,0.3)_0%,rgba(5,7,15,1)_100%)]"
+  },
+  { 
+    id: "midnight", 
+    name: "Północ", 
+    description: "Elegancka czerń i granat",
+    previewClass: "bg-gradient-to-br from-[#020617] via-[#1e1b4b] to-[#312e81]"
+  },
+  { 
+    id: "sunset", 
+    name: "Zachód Słońca", 
+    description: "Ciepłe, energetyczne barwy",
+    previewClass: "bg-gradient-to-br from-[#f43f5e] via-[#fb923c] to-[#facc15]"
+  }
+];
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "" });
 const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
@@ -657,7 +743,8 @@ function startPresentation(currentSlides, skipReview = false) {
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(
     buildPresentationTitle(),
-    currentSlides
+    currentSlides,
+    selectedThemeId.value
   );
   isReviewing.value = !skipReview;
   isPresenting.value = skipReview;
@@ -736,7 +823,7 @@ function tryOpenRequestedPresentation() {
 
   slides.value = storedSlides;
   slideIndex.value = 0;
-  presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides);
+  presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides, selectedThemeId.value);
   
   if (shouldSkipReview) {
     isPresenting.value = true;
@@ -771,11 +858,33 @@ function openPresentationWindow() {
   isPilot.value = true;
 }
 
-function resolvePresentationTheme(title, slides) {
-  const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
-  
+function resolvePresentationTheme(title, slides, requestedThemeId = "auto") {
   const basePanel = "bg-white/10 border border-white/20 backdrop-blur-[60px] shadow-2xl rounded-3xl";
 
+  if (requestedThemeId !== "auto") {
+    switch (requestedThemeId) {
+      case "modern":
+        return { wrapperClass: "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700", panelClass: basePanel };
+      case "nature":
+        return { wrapperClass: "bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700", panelClass: basePanel };
+      case "history":
+        return { wrapperClass: "bg-gradient-to-br from-orange-500 via-red-600 to-rose-700", panelClass: basePanel };
+      case "science":
+        return { wrapperClass: "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700", panelClass: basePanel };
+      case "space":
+        return { 
+          wrapperClass: "bg-[#05070f] bg-[radial-gradient(circle_at_50%_50%,rgba(30,58,138,0.3)_0%,rgba(5,7,15,1)_100%)]", 
+          panelClass: "bg-white/5 border border-white/10 backdrop-blur-[40px] shadow-2xl rounded-[3rem]" 
+        };
+      case "midnight":
+        return { wrapperClass: "bg-gradient-to-br from-[#020617] via-[#1e1b4b] to-[#312e81]", panelClass: basePanel };
+      case "sunset":
+        return { wrapperClass: "bg-gradient-to-br from-[#f43f5e] via-[#fb923c] to-[#facc15]", panelClass: "bg-black/20 border border-white/20 backdrop-blur-[40px] shadow-2xl rounded-[3rem]" };
+    }
+  }
+
+  const text = `${title || ""} ${Array.isArray(slides) ? slides.map((s) => `${s.title || ""} ${s.summary || ""}`).join(" ") : ""}`.toLowerCase();
+  
   if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil|ziemi|zwierz)/.test(text)) {
     return {
       wrapperClass: "bg-gradient-to-br from-emerald-500 via-teal-600 to-green-700",
