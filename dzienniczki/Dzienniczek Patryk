@@ -5,12 +5,49 @@
 - dodanie rejestracji i logowania do CoTeach
 
 
-10 kwietnia
+10 Kwietnia
 usprawnienie logowania oraz rejestracji
 dodanie zakładki profilu
 dodanie panelu administratora 
 
-13 kwietnia 
+13 Kwietnia
 poprawki wyglądu 
 dodanie opcji pobrania notatki w pdf 
 poprawa połączenia z bazą
+
+14 Kwietnia
+Dodanie opcji zalogowania się jako konto służbowe
+Zmienia wyglądu rejestracji i logowania
+
+16 Kwietnia 
+Poprawa działania panelu organizacji 
+Poprawa wygladu panelu organizacji 
+
+17 Kwietnia
+Dodanie opcji logowania za pomocą Google 
+I dodanie jego funkcjonalność
+
+20 Kwietnia 
+Kolejny dzień naprawiania panelu organizacji 
+Dodanie nowych opcji
+
+21 Kwietnia
+Próba naprawy prezentacji oraz pobierania z bazy danych 
+Naprawa defaultowego Id przyznawanego użytkownikom 
+
+23 Kwietnia 
+Zmiana przekierowania użytkownika po zrobieniu notatki
+
+24 Kwietnia 
+Dodanie guzika do profilu, który nadaje użutkownikowi licencje
+
+27 Kwietnia 
+Poprawa wyglądu archiwum i dodanie nowych funkcji 
+
+28 Kwietnia
+Dodanie szybkiego tutorialu do aplikacji
+
+30 Kwietnia
+
+1 Maj 
+Rozpoczęcie pracy na filtrowaniem notatek, lekcji oraz prezentacji w archiwum i możliwość na wyborem klasy i jej dodania 
