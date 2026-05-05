@@ -765,7 +765,7 @@ function buildPresentationTitle() {
       ? selectedNote.value?.subject || selectedNote.value?.title
       : selectedLesson.value?.subject || selectedLesson.value?.title) || "Prezentacja";
   const scopeLabel = effectivePresentationScope.value === "full" ? "całość" : "nieomówione punkty";
-  return `${subject} - ${scopeLabel} (${new Date().toLocaleDateString("pl-PL")})`;
+  return `${subject} - ${scopeLabel}`;
 }
 
 function savePresentationSnapshot(currentSlides) {
