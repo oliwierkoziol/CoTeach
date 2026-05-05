@@ -316,7 +316,14 @@
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Liczba slajdów</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.slideCount || 0 }}</div>
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.slideCount || 0 }} slajdów</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Styl wizualny</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
+                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ styleLabels[selectedPresentation.style] || "Automatyczny" }}</div>
               </div>
             </div>
 
@@ -401,6 +408,14 @@ import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/p
 import archiveIcon from "../assets/archive.svg";
 import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
+
+const styleLabels = {
+  auto: "Automatyczny",
+  academic: "Akademicki",
+  creative: "Kreatywny",
+  minimalist: "Minimalistyczny",
+  fun: "Dla dzieci"
+};
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
