@@ -227,31 +227,40 @@
     <div class="col-span-12 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 mb-7">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <!-- Tabs -->
-          <div class="flex gap-2 bg-[#e0e3e6] rounded-lg p-1 w-fit">
-            <button
-              @click="activeTab = 'ask'"
-              :class="activeTab === 'ask' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
-              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Zapytaj mnie
-            </button>
-            <button
-              @click="activeTab = 'equation'"
-              :class="activeTab === 'equation' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
-              class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-              Rozwiąż równanie
-            </button>
+          <div class="flex flex-col md:flex-row md:items-center gap-6">
+            <div class="flex gap-2 bg-[#e0e3e6] rounded-lg p-1 w-fit">
+              <button
+                @click="activeTab = 'ask'"
+                :class="activeTab === 'ask' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+                class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Zapytaj mnie
+              </button>
+              <button
+                @click="activeTab = 'equation'"
+                :class="activeTab === 'equation' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
+                class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                Rozwiąż równanie
+              </button>
+            </div>
+
+            <p v-if="!aiQuery && !aiResponse && !aiError && !aiLoading" class="font-['Inter'] text-[#6B7280] text-[14px] opacity-70">
+              {{ activeTab === 'ask' 
+                  ? 'Możesz zapytać o wszystko: przykłady lekcji, pomysły na zadania czy wyjaśnienie pojęć.' 
+                  : 'Wpisz równanie matematyczne lub wzór, aby otrzymać rozwiązanie krok po kroku.' }}
+            </p>
           </div>
+          
 
           <!-- Options & Actions -->
           <div class="flex items-center justify-between">
             <button
               v-if="aiQuery || aiResponse || aiError"
               @click="clearAI"
-              class="text-sm font-semibold text-[#6B7280] hover:text-[#191c1e] transition-colors"
+              class="px-4 py-2 bg-[#e6e8eb] text-[#0059BB] font-['Inter'] font-semibold text-[14px] rounded-md transition-colors hover:bg-[#d0d3d6]"
             >
               Wyczyść
             </button>
@@ -338,15 +347,6 @@
               </div>
             </div>
 
-            <!-- Placeholder -->
-            <div v-if="!aiQuery && !aiResponse && !aiError && !aiLoading" class="text-center py-10 opacity-60">
-              <p class="font-['Inter'] text-[#6B7280] text-[14px]">
-                {{ activeTab === 'ask' 
-                    ? 'Możesz zapytać o wszystko: przykłady lekcji, pomysły na zadania czy wyjaśnienie pojęć.' 
-                    : 'Wpisz równanie matematyczne lub wzór, aby otrzymać rozwiązanie krok po kroku.' }}
-              </p>
-            </div>
-          </div>
         </div>
 
         <!-- Fraction Builder Modal -->
@@ -499,6 +499,7 @@
           </div>
         </div>
     </div>
+    </div>
 
     <!-- Bottom Section -->
     <div class="grid grid-cols-12 gap-8">
@@ -563,8 +564,8 @@
             {{ isFinalizingLesson ? "Przetwarzanie..." : "Zakończ i archiwizuj" }}
           </span>
         </button>
+        </div>
       </div>
-    </div>
     </div>
   </div>
 </template>
