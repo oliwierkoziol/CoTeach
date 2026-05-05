@@ -71,11 +71,11 @@
                 Bezpieczeństwo
               </button>
               <button
-                v-if="userProfile.admin"
+                v-if="userProfile.organization"
                 type="button"
                 class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-all"
                 :class="activeProfileSection === 'organization' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
-                @click="openOrganizationPanel"
+                @click="activeProfileSection = 'organization'"
               >
                 Organizacja
               </button>
@@ -552,7 +552,9 @@ const userProfile = ref({
   full_name: "",
   email: "",
   created_at: "",
-  avatar_url: ""
+  avatar_url: "",
+  admin: false,
+  organization: false
 });
 
 const authUserId = ref("");
@@ -668,26 +670,28 @@ const loadUserProfile = async () => {
   void loadLicenseStatus(token);
   void loadBillingSummary(token);
 
-  const { data: row, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  const { data: profile, error } = await supabase.from("profiles").select("full_name, avatar_url, admin, organization").eq("id", user.id).maybeSingle();
 
   if (error) {
     errorMessage.value = "Błąd wczytywania profilu: " + error.message;
     return;
   }
 
-  if (row) {
-    const effectiveEmail = row.email || user.email || "";
-    const effectiveName = row.full_name || user.user_metadata?.full_name || "";
+  if (profile) {
+    const effectiveEmail = profile.email || user.email || "";
+    const effectiveName = profile.full_name || user.user_metadata?.full_name || "";
     userProfile.value.email = effectiveEmail;
     authEmail.value = effectiveEmail;
     newEmail.value = effectiveEmail;
     userProfile.value.full_name = effectiveName;
-    userProfile.value.avatar_url = row.avatar_url || "";
-    if (row.avatar_url) avatarUrl.value = row.avatar_url;
+    userProfile.value.admin = profile.admin === true;
+    userProfile.value.organization = profile.organization === true;
+    userProfile.value.avatar_url = profile.avatar_url || "";
+    if (profile.avatar_url) avatarUrl.value = profile.avatar_url;
     else avatarUrl.value = "";
 
     // Backfill missing full_name in profiles when we only have it in auth metadata.
-    if (!row.full_name && effectiveName) {
+    if (!profile.full_name && effectiveName) {
       await supabase.from("profiles").upsert(
         {
           id: user.id,

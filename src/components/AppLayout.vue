@@ -197,13 +197,12 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
           </RouterLink>
           
           <!-- Organizacja -->
-          <!-- <RouterLink v-if="isAdmin" to="/organization" custom v-slot="{ href, navigate, isActive }">
+          <RouterLink v-if="isOrganization" to="/organization" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <img :src="organisationIcon" alt="" class="h-[18px] w-[18px] shrink-0" />
               <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Organizacja</p>
             </a>
-          
-          </RouterLink> -->
+          </RouterLink>
           <!-- Panel admina -->
           <RouterLink v-if="isAdmin" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
@@ -370,6 +369,7 @@ const SELECTED_CLASS_STORAGE_KEY = "coteach_selected_class_v1";
 const displayName = ref("");
 const avatarUrl = ref("");
 const isAdmin = ref(false);
+const isOrganization = ref(false);
 
 // Class selection state - use local ref for v-model binding, but sync with store
 const selectedClass = ref("");
@@ -479,12 +479,13 @@ async function loadHeaderUser() {
     return;
   }
 
-  const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url, admin").eq("id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url, admin, organization").eq("id", user.id).maybeSingle();
 
   const name = String(profile?.full_name || user.user_metadata?.full_name || "").trim();
   displayName.value = name || user.email?.split("@")[0] || "Użytkownik";
   avatarUrl.value = profile?.avatar_url || "";
   isAdmin.value = profile?.admin === true;
+  isOrganization.value = profile?.organization === true;
 }
 
 function loadSelectedClassFromStorage() {
