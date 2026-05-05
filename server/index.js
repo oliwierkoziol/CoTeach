@@ -349,11 +349,11 @@ async function isRequestAdmin(req) {
   if (!user) return false;
   const { data, error } = await supabase
     .from("profiles")
-    .select("admin")
+    .select("admin, organization")
     .eq("id", user.id)
     .maybeSingle();
   if (error) return false;
-  return data?.admin === true;
+  return data?.admin === true || data?.organization === true;
 }
 
 async function resolveAdminSchoolContext(req, res) {
@@ -369,7 +369,7 @@ async function resolveAdminSchoolContext(req, res) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("school_id, admin")
+    .select("school_id, admin, organization")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -378,7 +378,7 @@ async function resolveAdminSchoolContext(req, res) {
     return null;
   }
 
-  if (profile?.admin !== true) {
+  if (profile?.admin !== true && profile?.organization !== true) {
     res.status(403).json({ error: "Brak uprawnień administratora." });
     return null;
   }
@@ -3162,6 +3162,9 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
 
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
+  if (adminSchool.schoolId === defaultSchoolId) {
+    return res.json({ rows: [], hasDefaultSchool: true });
+  }
 
   const sortByRaw = String(req.query.sortBy || "total").trim();
   const directionRaw = String(req.query.direction || "desc").trim().toLowerCase();
@@ -3176,6 +3179,7 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
       .select("id, teacher_id, full_name, email, school_id")
       .eq("school_id", adminSchool.schoolId);
     for (const profile of data || []) {
+      if (profile.id === adminSchool.userId) continue;
       const teacherId = String(profile.teacher_id || "").trim();
       if (!teacherId) continue;
       teacherMeta.set(teacherId, {
@@ -3201,6 +3205,22 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
   }
 
   const grouped = new Map();
+  for (const [teacherId, meta] of teacherMeta.entries()) {
+    grouped.set(teacherId, {
+      teacherId,
+      userId: meta.userId,
+      fullName: meta.fullName,
+      email: meta.email,
+      base: 0,
+      margin: 0,
+      total: 0,
+      notes: 0,
+      live: 0,
+      presentation: 0,
+      other: 0,
+      billed: 0
+    });
+  }
   for (const event of costEvents) {
     const teacherId = String(event.teacherId || "").trim();
     if (!teacherId) continue;

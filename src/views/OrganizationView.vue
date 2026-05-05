@@ -121,6 +121,7 @@
                 <th class="px-3 py-2 font-medium">Koszt dostawcy</th>
                 <th class="px-3 py-2 font-medium">Koszt platformy</th>
                 <th class="px-3 py-2 font-medium">Razem</th>
+                <th class="px-3 py-2 font-medium text-right">Akcje</th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +133,16 @@
                 <td class="px-3 py-3 text-muted-foreground">{{ formatCurrencyPLN(row.base) }}</td>
                 <td class="px-3 py-3 text-muted-foreground">{{ formatCurrencyPLN(row.margin) }}</td>
                 <td class="px-3 py-3 font-semibold text-foreground">{{ formatCurrencyPLN(row.total) }}</td>
+                <td class="px-3 py-3 text-right">
+                  <button
+                    type="button"
+                    class="rounded-xl px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-900/20"
+                    :disabled="isDeletingTeacher"
+                    @click="deleteOrganizationTeacher(row)"
+                  >
+                    Usuń
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -165,6 +176,7 @@ const showOrgBusinessPassword = ref(false);
 const isCreatingOrgBusinessUser = ref(false);
 const orgTeacherCosts = ref([]);
 const isLoadingOrgTeacherCosts = ref(false);
+const isDeletingTeacher = ref(false);
 
 function formatCurrencyPLN(value) {
   return `${Number(value || 0).toFixed(2)} PLN`;
@@ -271,6 +283,37 @@ async function loadOrganizationTeacherCosts() {
     organizationError.value = error.message || "Nie udało się pobrać kosztów nauczycieli.";
   } finally {
     isLoadingOrgTeacherCosts.value = false;
+  }
+}
+
+async function deleteOrganizationTeacher(teacher) {
+  if (!teacher.userId) {
+    organizationError.value = "Konto nie ma przypisanego User ID i nie może być usunięte.";
+    return;
+  }
+
+  const confirmed = window.confirm(`Czy na pewno chcesz trwale usunąć konto użytkownika ${teacher.fullName || teacher.email || 'Nieznany'}? Ta akcja jest nieodwracalna.`);
+  if (!confirmed) return;
+
+  isDeletingTeacher.value = true;
+  organizationError.value = "";
+  successMessage.value = "";
+
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/api/admin/users/${teacher.userId}`, {
+      method: "DELETE",
+      headers,
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się usunąć użytkownika.");
+    
+    successMessage.value = "Pomyślnie usunięto konto nauczyciela.";
+    await loadOrganizationTeacherCosts();
+  } catch (error) {
+    organizationError.value = error.message || "Nie udało się usunąć konta.";
+  } finally {
+    isDeletingTeacher.value = false;
   }
 }
 
