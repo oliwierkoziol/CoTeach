@@ -37,8 +37,8 @@ Wymagania:
 4) Liczba slajdów: [MAX_SLAJDOW]. Upewnij się, że generowany JSON nie jest zbyt długi i zdążysz go w pełni domknąć przed limitem tokenów. Żadne zdanie na ostatnim slajdzie nie może zostać niedokończone!
 5) Treść, język i słownictwo MUSZĄ być rygorystycznie dostosowane do grupy [KLASA]. Jeśli [KLASA] to np. "1 klasa podstawówki" lub przedszkole - używaj BARDZO PROSTYCH, potocznych słów, niezwykle krótkich zdań i przyjaznego, bajkowego tonu. Dla starszych klas i dorosłych używaj języka naukowego. To najważniejszy priorytet!
 6) Treść czerpana GŁÓWNIE z dostarczonej notatki, a w drugiej kolejności z planu lekcji.
-7) Jeśli zakres to "tylko nieomówione punkty", koncentruj się wyłącznie na tych fragmentach, które nie zostały jeszcze omówione.
-8) Używaj tylko i wyłącznie informacji z dostarczonego planu i notatki.
+7) Jeśli zakres to "tylko nieomówione punkty", MASZ ABSOLUTNY ZAKAZ generowania slajdów na tematy, które nie znajdują się w przekazanym Planie Lekcji (JSON). Skup się wyłącznie na tych konkretnych zagadnieniach. Ignoruj części notatki, które dotyczą już omówionych tematów (nieobecnych w planie).
+8) Używaj tylko i wyłącznie informacji z dostarczonego planu i notatki, które są bezpośrednio związane z celami prezentacji określonymi w punkcie 7.
 9) Zamiast pojedynczych słów używaj pełnych, zrozumiałych zdań, dopasowanych do [KLASA]. Znajdź idealny środek między merytorycznością a byciem zbyt rozwlekłym.
 10) Pierwszy slajd musi bezwzględnie mieć "type": "title" (zawierający temat lekcji i ewentualny podtytuł, bez details). Ostatni slajd musi mieć "type": "summary" (jako wielkie podsumowanie i zakończenie prezentacji).
 11) Zero obrazów, zero pól wizualnych. Prezentacja w 100% tekstowa.
