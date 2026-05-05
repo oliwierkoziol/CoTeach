@@ -15,6 +15,7 @@ const router = createRouter({
     { path: "/live-lesson/:lessonId?", component: () => import("../views/LiveLessonView.vue") },
     { path: "/presentation/:lessonId?", component: () => import("../views/PresentationView.vue") },
     { path: "/archive", component: () => import("../views/ArchiveView.vue") },
+    { path: "/quiz/:lessonId?", component: () => import("../views/QuizView.vue") },
     { path: "/organization", component: () => import("../views/OrganizationView.vue") },
     // { path: "/admin", component: () => import("../views/AdminView.vue") },
     { path: "/admin/dashboard", component: () => import("../views/SpecialAdminView.vue") },

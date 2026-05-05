@@ -222,6 +222,11 @@ async function handleRegister() {
   const schoolId = null;
   const emailConfirmRedirect = `${window.location.origin}/login`;
 
+  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
+    errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
+    return;
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
     password: password.value,
@@ -280,6 +285,10 @@ async function handleBusinessRegister() {
 
   if (!organizationName) {
     errorMessage.value = "Podaj nazwę organizacji.";
+    return;
+  }
+  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
+    errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
     return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {

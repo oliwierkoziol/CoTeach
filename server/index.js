@@ -88,6 +88,10 @@ const PRESENTATION_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_prezentacji_json.txt"),
   "utf8"
 );
+const QUIZ_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_sprawdzianu_json.txt"),
+  "utf8"
+);
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
@@ -1724,6 +1728,78 @@ async function generatePresentationWithLLM({
   }
 }
 
+async function generateQuizWithLLM({
+  lessonTitle,
+  lessonSubject,
+  classLevel,
+  noteContent,
+  plan,
+  numClosed = 5,
+  numOpen = 2,
+  context = {}
+}) {
+  const safeNote = String(noteContent || "").trim();
+  const safePlan = Array.isArray(plan) ? plan : [];
+  if (!safeNote && !safePlan.length) return { title: "Sprawdzian", questions: [] };
+
+  const prompt = QUIZ_PROMPT_TEMPLATE
+    .replace("[TEMAT]", String(lessonTitle || "Bez tytułu"))
+    .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
+    .replace("[KLASA]", String(classLevel || "Nie podano"))
+    .replace("[ILOSC_ZAMKNIETYCH]", String(numClosed))
+    .replace("[ILOSC_OTWARTYCH]", String(numOpen))
+    .replace("[TRESC_ZRODLOWA]", (safeNote + "\n" + JSON.stringify(safePlan)).slice(0, 35000));
+
+  try {
+    const out = await callOpenRouter({
+      model: OPENROUTER_PRESENTATION_MODEL, // Używamy tego samego wydajnego modelu
+      parts: [{ text: prompt }],
+      maxTokens: 12000,
+      temperature: 0.2
+    });
+
+    const parsed = parseJsonFromModel(out.text);
+    const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
+    
+    recordCostFromBase({
+      lessonId: context.lessonId || null,
+      schoolId: context.schoolId || null,
+      teacherId: context.teacherId || null,
+      provider: "openrouter",
+      model: out.model,
+      feature: "quiz_generation",
+      category: "quiz",
+      baseAmountPLN: estimateOpenRouterBaseUsdCost({
+        model: out.model,
+        promptTokens: out.promptTokens,
+        completionTokens: out.completionTokens
+      }) * USD_TO_PLN,
+      providerCostUsd: estimateOpenRouterBaseUsdCost({
+        model: out.model,
+        promptTokens: out.promptTokens,
+        completionTokens: out.completionTokens
+      }),
+      promptTokens: out.promptTokens,
+      completionTokens: out.completionTokens,
+      totalTokens: out.totalTokens,
+      latencyMs: out.latencyMs
+    });
+
+    return {
+      title: parsed?.title || `Sprawdzian: ${lessonTitle}`,
+      questions: questions.map(q => ({
+        ...q,
+        id: q.id || randomUUID(),
+        points: Number(q.points || (q.type === 'closed' ? 1 : 3))
+      }))
+    };
+  } catch (error) {
+    console.error("Quiz generation error:", error);
+    return { title: "Błąd generowania", questions: [] };
+  }
+}
+
+
 async function generatePlanWithLLM(rawText, context = {}) {
   if (!rawText?.trim()) return [];
 
@@ -2555,6 +2631,68 @@ app.post("/api/presentations/generate", async (req, res) => {
     return res.json({ presentation });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Nie udało się wygenerować prezentacji." });
+  }
+});
+
+app.post("/api/quizzes/generate", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Generowanie sprawdzianów AI")) return;
+
+    const lessonId = String(req.body?.lessonId || "").trim();
+    const noteId = String(req.body?.noteId || "").trim();
+    const classLevel = String(req.body?.classLevel || "").trim();
+    const numClosed = Number(req.body?.numClosed || 5);
+    const numOpen = Number(req.body?.numOpen || 2);
+
+    let lesson = null;
+    if (lessonId) {
+      lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+      if (!lesson) return;
+    }
+
+    let note = null;
+    if (noteId) {
+      const candidate = db.notes.get(noteId);
+      if (candidate && (String(candidate.teacherId) === String(teacher.teacherId))) {
+        note = candidate;
+      }
+    }
+
+    const noteContent = String(
+      note?.content ||
+      lesson?.sourceFiles?.[lesson.sourceFiles.length - 1]?.extractedText ||
+      ""
+    ).trim();
+
+    const quizData = await generateQuizWithLLM({
+      lessonTitle: lesson?.title || note?.title || "Sprawdzian",
+      lessonSubject: lesson?.subject || note?.subject || "",
+      classLevel: classLevel || note?.classLevel || "",
+      noteContent,
+      plan: lesson?.plan || [],
+      numClosed,
+      numOpen,
+      context: {
+        lessonId: lesson?.id || null,
+        schoolId: teacher.schoolId,
+        teacherId: teacher.teacherId
+      }
+    });
+
+    const quiz = {
+      id: randomUUID(),
+      lessonId: lesson?.id || null,
+      noteId: note?.id || null,
+      title: quizData.title,
+      questions: quizData.questions,
+      createdAt: new Date().toISOString()
+    };
+
+    return res.json({ quiz });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || "Nie udało się wygenerować sprawdzianu." });
   }
 });
 
