@@ -11,7 +11,9 @@
           Załóż konto i od razu planuj lekcje.
         </h2>
       </div>
-      <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-muted-foreground">Ten sam układ: panel nawigacji po lewej po zalogowaniu.</p>
+      <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-muted-foreground">
+        Zarejestruj się i zyskaj więcej czasu na to, co w nauczaniu najważniejsze. CoTeach zautomatyzuje Twoje przygotowania do lekcji.
+      </p>
     </div>
 
     <div class="flex items-center justify-center px-4 py-12 sm:px-8 relative z-10">
