@@ -1769,77 +1769,55 @@ async function generatePlanWithLLM(rawText, context = {}) {
 
 // Fuzzy matching function for Polish language variations
 function polishFuzzyMatch(spoken, keyword) {
+  if (!spoken || !keyword) return false;
+
   const normalizeFuzzy = (text) => {
-    let normalized = text.toLowerCase()
-      // Remove common Polish grammatical endings
-      .replace(/(ski|ska|skie|scy|skiej|skim|ską|skimi|skim)$/g, '')  // przymiotniki -ski
-      .replace(/(czny|czna|czne|czni|cznej|cznym|czną|cznymi|cznym)$/g, '')  // -czny
-      .replace(/(owy|owa|owe|owi|owej|owym|ową|owymi|owym)$/g, '')  // -owy
-      .replace(/(ski|ska|skie|scy|skiej|skim|skimi)$/g, '')  // przymiotniki -ski
-      .replace(/(czny|czna|czne|czni|cznej|cznym|cznymi)$/g, '')  // -czny
-      .replace(/(owy|owa|owe|owi|owej|owym|owymi)$/g, '')  // -owy
-      .replace(/(ny|na|ne|nym|ną|nym|nymi|nym)$/g, '')  // -ny
-      .replace(/(ty|ta|te|tym|tą|tymi|tym|to|temu|tę|tą)$/g, '')  // -ty (przymiotniki męskie)
-      .replace(/(y|a|e|ym|ą|ymi|ym|o|om|ę|ą|i|u|ów|em|ach|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '') // podstawowe końcówki
-      .replace(/(iz|izm|izm|izma|izmy|izmów|izmie)$/g, '')  // -izm
-      .replace(/(ika|iki|iki|ikę|iką|ikami|ik)$/g, '')  // -ika
-      .replace(/(cia|cie|cia|cje|cji|cją|cjami|cję)$/g, '')  // -cja
-      .replace(/(ika|iki|iki|ikami|ik)$/g, '')  // -ika
-      .replace(/(cia|cie|cia|cje|cji|cjami)$/g, '')  // -cja
-      .replace(/(stwo|stwa|stwie|stwu|stwem|stwami)$/g, '')  // -stwo
-      .replace(/(ot|ota|ocie|ocie|otę|otą|otami|ot)$/g, '')  // -ota
-      .replace(/(ość|ości|ością|ościom|ościach)$/g, '')  // -ość
-      .replace(/(nik|nika|niku|niku|nikiem|nikami|nik)$/g, '')  // -nik
-      .replace(/(ot|ota|ocie|otami|ot)$/g, '')  // -ota
-      .replace(/(osc|osci|oscia|osciom|osciach)$/g, '')  // -osc
-      .replace(/(nik|nika|niku|nikiem|nikami|nik)$/g, '')  // -nik
-      .replace(/(ca|cy|cem|cami|cę|cą|cą)$/g, '')  // -ca
-      .replace(/(ar|ara|arem|arami|arzy|arze)$/g, '')  // -ar
-      .replace(/(er|era|erem|erami|erzy|erze)$/g, '')  // -er
-      .replace(/(or|ora|orem|orami|orzy|orze)$/g, '')  // -or
-      // Verbal/Noun derivations (e.g. -enie, -eń -> -en)
-      .replace(/(enie|enia|eniu|eniom|eniami|eniach|en)$/g, '')
-      // Math and science specific endings
-      .replace(/(ia|ie|ii|ię|ią|ium)$/g, '')  // -ia, -ie (geometria, równania)
-      .replace(/(cja|cje|cji|cją|cjami|cję|cjach|cje)$/g, '')  // -cja (reakcja, pochodna)
-      .replace(/(ka|ki|kie|ki|kę|ką|kami|ką)$/g, '')  // -ka (matematyka)
-      .replace(/(ta|te|ty|tę|tą|tami|tom)$/g, '')  // -ta (jednostka)
-      .replace(/(na|ne|ni|nę|ną|nami|nom)$/g, '')  // -na (funkcja)
-      .replace(/(ga|ge|gi|gę|gą|gami|gom)$/g, '')  // -ga (jednostka)
-      .replace(/(ra|re|ri|rę|rą|rami|rom)$/g, '')  // -ra (jednostka)
-      .replace(/(da|de|di|dę|dą|dam|dom)$/g, '')  // -da (jednostka)
-      .replace(/(ia|ie|ii|ium)$/g, '')  // -ia, -ie (geometria, równania)
-      .replace(/(ka|ki|kie|kami)$/g, '')  // -ka (matematyka)
-      .replace(/(ta|te|ty|tami|tom)$/g, '')  // -ta (jednostka)
-      .replace(/(na|ne|ni|nami|nom)$/g, '')  // -na (funkcja)
-      // Physics and chemistry specific
-      .replace(/(ma|me|mi|mę|mą|mami|mom)$/g, '')  // -ma (jednostka)
-      .replace(/(la|le|li|lę|lą|lami|lom)$/g, '')  // -la (jednostka)
-      .replace(/(wa|we|wi|wę|wą|wami|wom)$/g, '')  // -wa (jednostka)
-      // History and geography specific
-      .replace(/(ża|że|żi|żę|żą|żami|żom)$/g, '')  // -ża (jednostka)
-      .replace(/(za|ze|zi|zę|zą|zami|zom)$/g, '')  // -za (jednostka)
-      .replace(/(ma|me|mi|mami|mom)$/g, '')  // -ma (jednostka)
-      .replace(/(la|le|li|lami|lom)$/g, '')  // -la (jednostka)
-      .replace(/(wa|we|wi|wami|wom)$/g, '')  // -wa (jednostka)
-      // Generic endings - MUST BE LAST
-      .replace(/(y|a|e|ym|ymi|o|om|i|u|ow|em|ach|ami|ego|emu|ej|as|os|is|es|us)$/g, '')
-      // Remove double letters and normalize common patterns
-      .replace(/([a-z])\1{2,}/g, '$1')  // Reduce triple+ letters to single
-      .replace(/([^aeiouyąęó])ie([a-z])/g, '$1e$2')  // Polish ie → e
-      .replace(/([^aeiouyaeo])ie([a-z])/g, '$1e$2')  // Polish ie → e
-      .replace(/rz/g, 'ż')
-      .replace(/ó/g, 'u')
+    let normalized = String(text || "").toLowerCase()
+      // 1. Normalize Polish diacritics & digraphs first
+      .replace(/ą/g, 'a')
+      .replace(/ć/g, 'c')
+      .replace(/ę/g, 'e')
+      .replace(/ł/g, 'l')
+      .replace(/ń/g, 'n')
+      .replace(/ó/g, 'o')
+      .replace(/ś/g, 's')
+      .replace(/[źż]/g, 'z')
+      .replace(/rz/g, 'z')
       .replace(/ch/g, 'h')
+      
+      // 2. Suffix removal (using literal characters BEFORE they are normalized to #)
+      .replace(/(zacja|zacji|zacje|zacjah|zacjami)$/g, 'zac')
+      .replace(/(nictwo|nictwa|nictwie|nictwu|nictwem|nictwami)$/g, 'nic')
+      .replace(/(owy|owa|owe|owi|owej|owym|owa|owymi|owym|owego|owemu|owydh)$/g, '')
+      .replace(/(ski|ska|skie|scy|skiej|skim|ska|skimi|skim|skih)$/g, '')
+      .replace(/(czny|czna|czne|czni|cznej|cznym|czna|cznymi|cznym|cznych)$/g, '')
+      .replace(/(enie|enia|eniu|eniom|eniami|eniach|enie)$/g, '')
+      .replace(/(osc|osci|oscia|osciom|osciach)$/g, '')
+      .replace(/(y|a|e|ym|a|ymi|ym|o|om|e|a|i|u|ow|em|ah|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '')
+      
+      // 3. Normalize remaining stem (vowel shifts, mobile 'e', double letters)
+      .replace(/[aeou]/g, '#')
+      .replace(/([a-z])\1+/g, '$1')
+      .replace(/#k$/g, 'k')
+      .replace(/#k([bcćdfghjklłmnpqrstvwxzżź])/g, 'k$1')
       .trim();
     return normalized;
   };
 
-  const spokenNormalized = normalizeFuzzy(spoken);
-  const keywordNormalized = normalizeFuzzy(keyword);
+  const s = normalizeFuzzy(spoken);
+  const k = normalizeFuzzy(keyword);
 
-  return spokenNormalized === keywordNormalized;
+  // Direct match of stems
+  if (s === k && s.length > 0) return true;
+  
+  // Prefix match for longer words (helps with complex inflections)
+  if (s.length >= 4 && k.length >= 4) {
+    if (s.startsWith(k) || k.startsWith(s)) return true;
+  }
+
+  return false;
 }
+
 
 async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
   const transcript = (transcripts || []).map((item) => item.text).join(" ").slice(0, 25000);
@@ -1892,10 +1870,15 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
     // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
 
 
-    // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
-    const MIN_KEYWORDS_REQUIRED = 3;
-    if (foundKeywords.length >= MIN_KEYWORDS_REQUIRED || item.status === "discussed") {
-      console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords:`, foundKeywords);
+    // REQUIREMENT: Dynamic keyword threshold
+    // If only 1-2 keywords, require 1. If more, require ~35% but at least 1 and max 3.
+    let minKeywordsRequired = 1;
+    if (keywords.length > 2) {
+      minKeywordsRequired = Math.max(1, Math.min(3, Math.ceil(keywords.length * 0.35)));
+    }
+
+    if (foundKeywords.length >= minKeywordsRequired || item.status === "discussed") {
+      console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
       return {
         ...item,
         status: "discussed",
@@ -1904,7 +1887,7 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       };
     } else if (foundKeywords.length > 0) {
       // Partial coverage if some keywords found but not enough
-      console.log(`[Coverage] Point "${item.title}" partially discussed. Found ${foundKeywords.length}/${keywords.length} keywords (min: ${MIN_KEYWORDS_REQUIRED}):`, foundKeywords);
+      console.log(`[Coverage] Point "${item.title}" partially discussed. Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
       return {
         ...item,
         status: "skipped",
