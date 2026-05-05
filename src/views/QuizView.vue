@@ -319,9 +319,10 @@ async function handleGenerateQuiz() {
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+    // Używamy tej samej logiki co w useLessonStore
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
     
-    const response = await fetch(`${API_URL}/api/quizzes/generate`, {
+    const response = await fetch(`${API_BASE}/api/quizzes/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -335,13 +336,15 @@ async function handleGenerateQuiz() {
       })
     });
 
-    if (!response.ok) throw new Error("Failed to generate quiz");
-    
     const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Błąd serwera");
+    }
+    
     quiz.value = data.quiz;
   } catch (error) {
     console.error(error);
-    alert("Wystąpił błąd podczas generowania sprawdzianu.");
+    alert(`Wystąpił błąd: ${error.message}. Upewnij się, że masz aktywną licencję i serwer backendowy jest zaktualizowany.`);
   } finally {
     isGenerating.value = false;
   }
@@ -353,9 +356,9 @@ async function handleSaveHomework() {
   
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
     
-    const response = await fetch(`${API_URL}/api/lessons/${selectedLessonId.value}/homework`, {
+    const response = await fetch(`${API_BASE}/api/lessons/${selectedLessonId.value}/homework`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
