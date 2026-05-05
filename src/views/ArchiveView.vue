@@ -87,6 +87,7 @@
                     {{ lesson.finalNote?.title || lesson.title }}
                   </h3>
                   <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                    <span v-if="lesson.class_name" class="font-semibold text-[#0c3dfe]">{{ lesson.class_name }} • </span>
                     {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }} •
                     <span class="font-semibold text-[#0053db]">
                       Omówione punkty: {{ discussed(lesson) }}/{{ lesson.plan?.length || 0 }}
@@ -119,6 +120,7 @@
                   {{ note.title || "Bez tytułu" }}
                 </h3>
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  <span v-if="note.class_name" class="font-semibold text-[#0c3dfe]">{{ note.class_name }} • </span>
                   {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
                 </p>
               </div>
@@ -418,7 +420,6 @@ const editSubject = ref("");
 const editDate = ref("");
 const isQrModalOpen = ref(false);
 const userClasses = ref([]);
-const selectedClass = ref("all");
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
@@ -438,8 +439,8 @@ async function loadUserClasses() {
 const filteredLessons = computed(() => {
   let archivedLessons = state.lessons;
   
-  if (selectedClass.value !== 'all') {
-    archivedLessons = archivedLessons.filter(l => l.classLevel === selectedClass.value);
+  if (state.selectedClass) {
+    archivedLessons = archivedLessons.filter(l => l.class_name === state.selectedClassName);
   }
 
   const q = searchQuery.value.toLowerCase().trim();
@@ -454,8 +455,8 @@ const filteredLessons = computed(() => {
 const filteredNotes = computed(() => {
   let notes = Array.isArray(state.notes) ? state.notes : [];
 
-  if (selectedClass.value !== 'all') {
-    notes = notes.filter(n => n.classLevel === selectedClass.value);
+  if (state.selectedClass) {
+    notes = notes.filter(n => n.class_name === state.selectedClassName);
   }
 
   const q = searchQuery.value.toLowerCase().trim();

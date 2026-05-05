@@ -543,6 +543,17 @@ watch(selectedClass, (newValue) => {
   }
 });
 
+// Watcher na zmianę userClasses - ensure selectedClassName is set when classes load
+watch(
+  () => state.userClasses,
+  () => {
+    if (selectedClass.value && state.userClasses.length > 0) {
+      // Re-trigger setSelectedClass to ensure selectedClassName is properly set
+      setSelectedClass(selectedClass.value);
+    }
+  }
+);
+
 watch(
   () => route.path,
   () => {

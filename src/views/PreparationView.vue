@@ -287,7 +287,7 @@ async function handleGenerate() {
       date: normalizedDate,
       length: lessonLengthMinutes,
       rawText: "",
-      class_name: selectedNote.value?.class_name || state.selectedClassName || null
+      class_name: state.selectedClassName || selectedNote.value?.class_name || null
     });
     
     await uploadLessonMaterial(created.id, {
@@ -338,7 +338,7 @@ async function handleAudioLesson(event) {
       date: normalizedDate,
       length: Math.round(parsedLessonMinutes),
       rawText: "",
-      class_name: selectedNote.value?.class_name || state.selectedClassName || null
+      class_name: state.selectedClassName || selectedNote.value?.class_name || null
     });
 
     await uploadLessonMaterial(created.id, { rawText: extractedRawText, file: null });

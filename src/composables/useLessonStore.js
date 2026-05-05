@@ -92,6 +92,8 @@ const state = reactive({
   lessons: [],
   notes: [],
   userClasses: [],
+  selectedClass: "",
+  selectedClassName: "",
   error: "",
   info: "",
   isInitialLoadDone: false,
@@ -158,6 +160,16 @@ export function clearLessonStoreAuthCache() {
 }
 
 export function useLessonStore() {
+  function setSelectedClass(classId) {
+    state.selectedClass = classId || "";
+    if (classId) {
+      const cls = state.userClasses.find(c => c.id === classId);
+      state.selectedClassName = cls ? cls.class_name : "";
+    } else {
+      state.selectedClassName = "";
+    }
+  }
+
   function hydrateLessonFromCache(lessonId) {
     const cachedLesson = readLessonCache(lessonId);
     if (!cachedLesson) return null;
@@ -498,6 +510,7 @@ export function useLessonStore() {
     deleteTeacherNote,
     fetchTeacherNotes,
     fetchUserClasses,
-    addUserClass
+    addUserClass,
+    setSelectedClass
   };
 }
