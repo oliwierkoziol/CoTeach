@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isPresenting" class="fixed inset-0 z-[120] bg-[#05070f] text-white">
+  <div v-if="isPresenting" class="presentation-view fixed inset-0 z-[120] bg-[#05070f] text-white">
     <div class="flex h-full flex-col">
       <div class="flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 sm:px-6">
         <button
@@ -185,8 +185,8 @@
     </div>
   </div>
 
-  <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-[#f7f9fc]/95 px-6">
-    <div class="relative w-full max-w-lg overflow-hidden rounded-[32px] bg-white p-10 shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.1)]">
+  <div v-else-if="isGenerating" class="fixed inset-0 z-[110] flex items-center justify-center bg-background/95 px-6">
+    <div class="relative w-full max-w-lg overflow-hidden rounded-[32px] bg-card p-10 shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.1)]">
       <div class="relative flex flex-col items-center text-center">
         <!-- Reverted to Old Throbber -->
         <div class="mx-auto mb-8 h-12 w-12 animate-spin rounded-full border-4 border-[#d8e0ff] border-t-[#0c3dfe]" />

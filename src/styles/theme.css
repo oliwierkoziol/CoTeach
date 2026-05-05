@@ -379,3 +379,49 @@
     opacity: 0;
   }
 }
+
+/* Presentation View - Force Light Mode even in Dark Mode */
+.dark .app-shell .presentation-view .bg-white,
+.dark .app-shell .presentation-view.bg-white {
+  background-color: white !important;
+}
+
+.dark .app-shell .presentation-view .bg-gray-50,
+.dark .app-shell .presentation-view.bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+.dark .app-shell .presentation-view .bg-\[\#f7f9fc\],
+.dark .app-shell .presentation-view.bg-\[\#f7f9fc\] {
+  background-color: #f7f9fc !important;
+}
+
+.dark .app-shell .presentation-view .bg-\[\#f3f4f6\],
+.dark .app-shell .presentation-view.bg-\[\#f3f4f6\] {
+  background-color: #f3f4f6 !important;
+}
+
+.dark .app-shell .presentation-view .bg-\[\#f0f1f4\],
+.dark .app-shell .presentation-view.bg-\[\#f0f1f4\] {
+  background-color: #f0f1f4 !important;
+}
+
+.dark .app-shell .presentation-view .text-\[\#191c1e\] {
+  color: #191c1e !important;
+}
+
+.dark .app-shell .presentation-view .text-\[\#454652\] {
+  color: #454652 !important;
+}
+
+.dark .app-shell .presentation-view .text-\[\#454652\]\/80 {
+  color: rgba(69, 70, 82, 0.8) !important;
+}
+
+.dark .app-shell .presentation-view .border-black\/10 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .app-shell .presentation-view .bg-black\/5 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
