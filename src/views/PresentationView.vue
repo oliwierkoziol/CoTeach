@@ -532,8 +532,8 @@ const availableStyles = [
   },
   {
     id: "minimalist",
-    name: "Minimalistyczny",
-    description: "Czysty i konkretny, przyciemniony",
+    name: "Przyciemniony",
+    description: "Czysty i łatwy dla oczu",
     preview: {
       wrapper: "bg-[oklch(0.18_0.026_265)]",
       accent: "bg-[oklch(0.26_0.024_265)]",
