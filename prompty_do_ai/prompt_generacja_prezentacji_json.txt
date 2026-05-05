@@ -34,7 +34,7 @@ Wymagania:
     }
   ]
 }
-4) Liczba slajdów to zazwyczaj od 3 do 5. Upewnij się, że generowany JSON nie jest zbyt długi i zdążysz go w pełni domknąć przed limitem tokenów. Żadne zdanie na ostatnim slajdzie nie może zostać niedokończone!
+4) Liczba slajdów: [MAX_SLAJDOW]. Upewnij się, że generowany JSON nie jest zbyt długi i zdążysz go w pełni domknąć przed limitem tokenów. Żadne zdanie na ostatnim slajdzie nie może zostać niedokończone!
 5) Treść, język i słownictwo MUSZĄ być rygorystycznie dostosowane do grupy [KLASA]. Jeśli [KLASA] to np. "1 klasa podstawówki" lub przedszkole - używaj BARDZO PROSTYCH, potocznych słów, niezwykle krótkich zdań i przyjaznego, bajkowego tonu. Dla starszych klas i dorosłych używaj języka naukowego. To najważniejszy priorytet!
 6) Treść czerpana GŁÓWNIE z dostarczonej notatki, a w drugiej kolejności z planu lekcji.
 7) Jeśli zakres to "tylko nieomówione punkty", koncentruj się wyłącznie na tych fragmentach, które nie zostały jeszcze omówione.

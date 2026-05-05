@@ -355,6 +355,7 @@
                 v-model="maxSlidesSelection"
                 class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer"
               >
+                <option value="auto" class="dark:bg-card dark:text-foreground">Automatyczna (polecane)</option>
                 <option :value="5" class="dark:bg-card dark:text-foreground">5 slajdów (Krótka)</option>
                 <option :value="10" class="dark:bg-card dark:text-foreground">10 slajdów (Średnia)</option>
                 <option :value="15" class="dark:bg-card dark:text-foreground">15 slajdów (Długa)</option>
@@ -564,7 +565,7 @@ const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationStyle = ref("auto");
-const maxSlidesSelection = ref(5);
+const maxSlidesSelection = ref("auto");
 const presentationTheme = ref({
   wrapperClass: "bg-[#f3f4f6]",
   panelClass: "bg-white border-none shadow-none rounded-none",
@@ -620,6 +621,7 @@ const preparedSlides = computed(() => {
   return plan.filter((point) => point.status !== "discussed");
 });
 const plannedSlideCount = computed(() => {
+  if (maxSlidesSelection.value === "auto") return "Decyduje AI";
   if (presentationSource.value === "note") return maxSlidesSelection.value;
   return effectivePresentationScope.value === "full" ? maxSlidesSelection.value : Math.min(preparedSlides.value.length, maxSlidesSelection.value) || maxSlidesSelection.value;
 });

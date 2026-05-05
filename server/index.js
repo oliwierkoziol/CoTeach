@@ -1625,7 +1625,16 @@ async function generatePresentationWithLLM({
   maxSlides = 8,
   context = {}
 }) {
-  const safeMaxSlides = Math.max(4, Math.min(Number(maxSlides || 8), 15));
+  let promptMaxSlidesStr = "";
+  let sliceMaxSlides = 8;
+  if (maxSlides === "auto") {
+    promptMaxSlidesStr = "Zdecyduj automatycznie o optymalnej liczbie (od 5 do 30 slajdów)";
+    sliceMaxSlides = 30;
+  } else {
+    sliceMaxSlides = Math.max(4, Math.min(Number(maxSlides || 8), 30));
+    promptMaxSlidesStr = `MASZ BEZWZGLĘDNY NAKAZ WYGENEROWANIA DOKŁADNIE ${sliceMaxSlides - 1} SLAJDÓW. Jeśli treść jest krótka, rozbuduj ją o przykłady i ćwiczenia, aby osiągnąć ten limit.`;
+  }
+
   const safeScope = scope === "full" ? "full" : "pending";
   const safeNote = String(noteContent || "").trim();
   const safePlan = Array.isArray(plan) ? plan : [];
@@ -1637,7 +1646,7 @@ async function generatePresentationWithLLM({
     .replace("[KLASA]", String(classLevel || "Nie podano"))
     .replace("[STYL_PREZENTACJI]", String(style || "auto"))
     .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
-    .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
+    .replace("[MAX_SLAJDOW]", promptMaxSlidesStr)
     .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
     .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
 
@@ -1650,8 +1659,21 @@ async function generatePresentationWithLLM({
     });
     const parsed = parseJsonFromModel(out.text);
     const slidesRaw = Array.isArray(parsed?.slides) ? parsed.slides : Array.isArray(parsed) ? parsed : [];
-    const slides = slidesRaw.slice(0, safeMaxSlides).map((slide, index) => normalizePresentationSlide(slide, index));
-    if (!slides.length) {
+    
+    // Obetnij ewentualny nadmiar zostawiając miejsce na slajd końcowy
+    let slides = slidesRaw.slice(0, maxSlides === "auto" ? 30 : sliceMaxSlides - 1).map((slide, index) => normalizePresentationSlide(slide, index));
+    
+    // Zawsze dodajemy slajd końcowy z logo/podziękowaniem na sam koniec
+    slides.push({
+      id: randomUUID(),
+      type: "summary",
+      title: "Dziękuję za uwagę",
+      subtitle: "Prezentacja wygenerowana przez sztuczną inteligencję",
+      summary: "Materiał został przygotowany przy wsparciu innowacyjnej platformy edukacyjnej CoTeach.pl",
+      details: ["CoTeach.pl to innowacyjne narzędzie dla nauczycieli", "Zaoszczędź czas na przygotowaniu lekcji"]
+    });
+
+    if (slides.length <= 1) {
       throw new Error("Empty slides");
     }
 
@@ -2466,7 +2488,8 @@ app.post("/api/presentations/generate", async (req, res) => {
     const classLevel = String(req.body?.classLevel || "").trim();
     const style = String(req.body?.style || "auto").trim();
     const scope = String(req.body?.scope || "pending").trim() === "full" ? "full" : "pending";
-    const maxSlides = Number(req.body?.maxSlides || 8);
+    const maxSlidesRaw = req.body?.maxSlides;
+    const maxSlides = maxSlidesRaw === "auto" ? "auto" : Number(maxSlidesRaw || 8);
 
     let lesson = null;
     if (lessonId) {
