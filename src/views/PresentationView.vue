@@ -839,7 +839,7 @@ async function startGeneratedPresentation() {
       classLevel: selectedClassLevel.value || "",
       style: presentationStyle.value,
       scope: effectivePresentationScope.value,
-      maxSlides: maxSlidesSelection.value,
+      maxSlides: typeof plannedSlideCount.value === 'number' ? plannedSlideCount.value : maxSlidesSelection.value,
       class_name: state.selectedClassName || null
     });
     const generatedSlides = (generated?.slides || [])

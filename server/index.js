@@ -1635,8 +1635,12 @@ async function generatePresentationWithLLM({
     promptMaxSlidesStr = "Zdecyduj automatycznie o optymalnej liczbie (od 5 do 30 slajdów)";
     sliceMaxSlides = 30;
   } else {
-    sliceMaxSlides = Math.max(4, Math.min(Number(maxSlides || 8), 30));
-    promptMaxSlidesStr = `MASZ BEZWZGLĘDNY NAKAZ WYGENEROWANIA DOKŁADNIE ${sliceMaxSlides - 1} SLAJDÓW. Jeśli treść jest krótka, rozbuduj ją o przykłady i ćwiczenia, aby osiągnąć ten limit.`;
+    sliceMaxSlides = Math.max(scope === "pending" ? 3 : 4, Math.min(Number(maxSlides || 8), 30));
+    if (scope === "pending") {
+      promptMaxSlidesStr = `Wygeneruj strukturę dla nieomówionych punktów (celuj w ok. ${sliceMaxSlides - 1} slajdów, ale nie dodawaj treści spoza zakresu na siłę).`;
+    } else {
+      promptMaxSlidesStr = `MASZ BEZWZGLĘDNY NAKAZ WYGENEROWANIA DOKŁADNIE ${sliceMaxSlides - 1} SLAJDÓW. Jeśli treść jest krótka, rozbuduj ją o przykłady i ćwiczenia, aby osiągnąć ten limit.`;
+    }
   }
 
   const safeScope = scope === "full" ? "full" : "pending";

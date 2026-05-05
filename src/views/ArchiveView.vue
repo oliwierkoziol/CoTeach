@@ -418,13 +418,14 @@ const styleLabels = {
 };
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
+const ARCHIVE_ACTIVE_TAB_KEY = "coteach:archive-active-tab";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
 const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
 const textPreviewBody = ref("");
-const activeTab = ref("lessons");
+const activeTab = ref(localStorage.getItem(ARCHIVE_ACTIVE_TAB_KEY) || "lessons");
 const searchQuery = ref("");
 const selected = ref(null);
 const selectedNote = ref(null);
@@ -661,6 +662,7 @@ function editSelectedPresentation() {
 }
 
 watch(activeTab, async (tab) => {
+  localStorage.setItem(ARCHIVE_ACTIVE_TAB_KEY, tab);
   searchQuery.value = "";
   if (tab === "lessons" && filteredLessons.value.length && !selected.value) {
     selectLesson(filteredLessons.value[0]);
