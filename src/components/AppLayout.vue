@@ -397,13 +397,15 @@ const presentationHref = computed(() => {
 const isPresentationActive = computed(() => route.path === "/presentation" || route.path.startsWith("/presentation/"));
 
 const currentLiveLesson = computed(() => {
-  const lessons = Array.isArray(state.lessons) ? state.lessons : [];
-  const liveFromList =
-    lessons
-    .filter((lesson) => lesson?.status === "live")
+  const lessons = Array.isArray(state.lessons) ? [...state.lessons] : [];
+  // Include the active lesson object if it's not already in the list
+  if (state.lesson && !lessons.find(l => l.id === state.lesson.id)) {
+    lessons.push(state.lesson);
+  }
+
+  return lessons
+    .filter((lesson) => lesson?.status === "live" && (!state.selectedClassName || lesson.class_name === state.selectedClassName))
     .sort((a, b) => new Date(b?.startedAt || 0).getTime() - new Date(a?.startedAt || 0).getTime())[0] || null;
-  if (liveFromList) return liveFromList;
-  return state.lesson?.status === "live" ? state.lesson : null;
 });
 
 const startLessonCta = computed(() => {

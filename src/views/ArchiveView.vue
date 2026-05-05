@@ -425,7 +425,7 @@ const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
 const textPreviewBody = ref("");
-const activeTab = ref(localStorage.getItem(ARCHIVE_ACTIVE_TAB_KEY) || "lessons");
+const activeTab = ref(router.currentRoute.value.query.tab || localStorage.getItem(ARCHIVE_ACTIVE_TAB_KEY) || "lessons");
 const searchQuery = ref("");
 const selected = ref(null);
 const selectedNote = ref(null);
@@ -442,6 +442,12 @@ onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
   await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
+
+  // Prioritize route query tab on mount
+  if (router.currentRoute.value.query.tab) {
+    activeTab.value = router.currentRoute.value.query.tab;
+  }
+
   if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
 });

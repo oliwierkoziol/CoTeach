@@ -464,6 +464,7 @@
 import { computed, onMounted, ref, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
+import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/presentationHistoryStorage";
 import archiveIcon from "../assets/archive.svg";
@@ -488,6 +489,8 @@ const presentationHistory = ref([]);
 const isReviewing = ref(false);
 const isPilot = ref(false);
 const syncChannel = ref(null);
+const router = useRouter();
+const originatingLessonId = ref(null);
 const selectedPresentation = ref(null);
 const presentationSource = ref("lesson");
 const selectedLessonId = ref("");
@@ -680,33 +683,30 @@ onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes()]);
 
   const routeLessonId = String(route.params.lessonId || "").trim();
-  if (routeLessonId) {
-    const inList = (Array.isArray(state.lessons) ? state.lessons : []).some((lesson) => lesson.id === routeLessonId);
-    if (!inList && state.lesson?.id !== routeLessonId) {
-      await fetchLesson(routeLessonId);
-    }
-  }
 
-  const lessons = Array.isArray(state.lessons) ? state.lessons : [];
-  let initialLesson = null;
+  // Only pre-select a lesson if a lessonId is provided in the route.
+  // Otherwise, selectedLessonId should remain empty by default,
+  // requiring explicit selection by the user.
   if (routeLessonId) {
-    initialLesson = lessons.find((lesson) => lesson.id === routeLessonId) || null;
+    let initialLesson = (Array.isArray(state.lessons) ? state.lessons : []).find((lesson) => lesson.id === routeLessonId) || null;
     if (!initialLesson && state.lesson?.id === routeLessonId) {
-      initialLesson = state.lesson;
+      initialLesson = state.lesson; // Use the currently active lesson if it matches route
     }
-  }
-  if (!initialLesson) {
-    initialLesson = state.lesson?.id ? lessons.find((lesson) => lesson.id === state.lesson.id) : null;
-  }
-  if (!initialLesson) {
-    initialLesson = lessons[0] || null;
+    if (!initialLesson) {
+      // If not found in current list or state, try to fetch it
+      await fetchLesson(routeLessonId);
+      initialLesson = state.lesson; // state.lesson will be updated by fetchLesson
+    }
+    selectedLessonId.value = initialLesson?.id || "";
+    state.lesson = initialLesson; // Ensure state.lesson is set for consistency
+  } else {
+    selectedLessonId.value = ""; // No lesson pre-selected if not in route
+    state.lesson = null; // Clear state.lesson if no route lessonId
   }
 
-  selectedLessonId.value = initialLesson?.id || "";
   if (availableNotes.value.length > 0) {
     selectedNoteId.value = availableNotes.value[0].id;
   }
-  state.lesson = initialLesson;
   loadPresentationHistory();
   tryOpenRequestedPresentation();
 
@@ -797,7 +797,8 @@ function savePresentationSnapshot(currentSlides) {
     createdAt,
     createdAtLabel: new Date(createdAt).toLocaleString("pl-PL"),
     slideCount: currentSlides.length,
-    slides: currentSlides,
+    slides: currentSlides, // Store slides directly
+    originatingLessonId: (presentationSource.value === "lesson" && selectedLesson.value?.id) ? selectedLesson.value.id : null,
     style: presentationStyle.value,
     ownerId: String(historyOwnerId.value || "").trim() || undefined,
     class_name: state.selectedClassName || null
@@ -813,7 +814,7 @@ function startPresentation(currentSlides, skipReview = false, style = "auto") {
   presentationTheme.value = resolvePresentationTheme(
     buildPresentationTitle(),
     currentSlides,
-    style
+    style,
   );
   isReviewing.value = !skipReview;
   isPresenting.value = skipReview;
@@ -863,6 +864,7 @@ async function startGeneratedPresentation() {
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
     startPresentation(generatedSlides, route.query.generate === "1", presentationStyle.value);
+    originatingLessonId.value = (presentationSource.value === "lesson" && selectedLesson.value?.id) ? selectedLesson.value.id : null;
   } catch (error) {
     generationMessage.value = error?.message
       ? `Nie udało się wygenerować prezentacji: ${error.message}`
@@ -890,6 +892,7 @@ function tryOpenRequestedPresentation() {
   if (!requested) return;
   
   selectedPresentation.value = requested;
+  originatingLessonId.value = requested.originatingLessonId || null; // Set originatingLessonId from history
   const storedSlides = Array.isArray(requested?.slides) ? requested.slides : [];
   if (!storedSlides.length) return;
 
@@ -910,7 +913,14 @@ function exitPresentation() {
   if (isPilot.value && syncChannel.value) {
     syncChannel.value.postMessage({ type: 'CLOSE_WINDOW' });
   }
+  if (originatingLessonId.value) {
+    router.push({ name: 'live-lesson', params: { lessonId: originatingLessonId.value } });
+  } else {
+    router.push({ path: '/archive', query: { tab: 'presentations' } });
+  }
+  // Reset local state after navigation is initiated, as this component will be unmounted.
   isPresenting.value = false;
+  isReviewing.value = false;
   isPilot.value = false;
 }
 
