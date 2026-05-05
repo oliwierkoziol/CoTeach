@@ -59,7 +59,7 @@
           <!-- Create new button -->
           <RouterLink to="/notes" type="button" :class="[
             'bg-[#0c3dfe] text-center text-white font-[\'Plus_Jakarta_Sans\'] font-semibold text-[16px] px-6 py-2.5 rounded-lg transition-colors hover:bg-[#0a34d4] shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] w-full sm:w-auto',
-            !state.notes || state.notes.length === 0 ? 'sound-wave-btn' : ''
+            !filteredNotes || filteredNotes.length === 0 ? 'sound-wave-btn' : ''
           ]">
             Utwórz nową
           </RouterLink>
@@ -68,7 +68,7 @@
         <div class="flex flex-wrap gap-4 items-center w-full">
           <!-- Map over state.notes -->
           <button 
-            v-for="note in state.notes" 
+            v-for="note in filteredNotes" 
             :key="note.id"
             @click="selectedNoteId = note.id"
             :class="[
@@ -93,7 +93,7 @@
             </div>
           </button>
   
-          <p v-if="!state.notes.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
+          <p v-if="!filteredNotes.length" class="text-sm font-['Plus_Jakarta_Sans'] text-muted-foreground w-full">
             Brak dostępnych notatek. Utwórz nową klikając przycisk.
           </p>
         </div>
@@ -227,6 +227,14 @@ const sourceNote = computed(() => {
   const files = Array.isArray(lesson.value?.sourceFiles) ? lesson.value.sourceFiles : [];
   const latest = [...files].reverse().find((item) => String(item?.extractedText || "").trim());
   return String(latest?.extractedText || "").trim();
+});
+
+const filteredNotes = computed(() => {
+  let notes = Array.isArray(state.notes) ? state.notes : [];
+  if (state.selectedClass) {
+    notes = notes.filter(n => n.class_name === state.selectedClassName);
+  }
+  return notes;
 });
 
 const selectedNote = computed(() => state.notes.find((note) => note.id === selectedNoteId.value) || null);

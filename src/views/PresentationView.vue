@@ -567,9 +567,21 @@ const presentationTheme = ref({
 });
 
 const current = computed(() => slides.value[slideIndex.value] || { type: "concept", title: "", subtitle: "", details: [], summary: "" });
-const availableLessons = computed(() => (Array.isArray(state.lessons) ? state.lessons : []));
+const availableLessons = computed(() => {
+  let lessons = Array.isArray(state.lessons) ? state.lessons : [];
+  if (state.selectedClass) {
+    lessons = lessons.filter(l => l.class_name === state.selectedClassName);
+  }
+  return lessons;
+});
 const hasLessons = computed(() => availableLessons.value.length > 0);
-const availableNotes = computed(() => (Array.isArray(state.notes) ? state.notes : []));
+const availableNotes = computed(() => {
+  let notes = Array.isArray(state.notes) ? state.notes : [];
+  if (state.selectedClass) {
+    notes = notes.filter(n => n.class_name === state.selectedClassName);
+  }
+  return notes;
+});
 const selectedLesson = computed(() => availableLessons.value.find((lesson) => lesson.id === selectedLessonId.value) || null);
 const selectedNote = computed(() => availableNotes.value.find((note) => note.id === selectedNoteId.value) || null);
 const sourceItems = computed(() => {
@@ -778,7 +790,8 @@ function savePresentationSnapshot(currentSlides) {
     slideCount: currentSlides.length,
     slides: currentSlides,
     style: presentationStyle.value,
-    ownerId: String(historyOwnerId.value || "").trim() || undefined
+    ownerId: String(historyOwnerId.value || "").trim() || undefined,
+    class_name: state.selectedClassName || null
   };
   presentationHistory.value.unshift(item);
   persistPresentationHistory();

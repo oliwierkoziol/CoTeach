@@ -158,7 +158,6 @@ const displayName = ref("użytkowniku");
 const summaryError = ref("");
 
 const userClasses = ref([]);
-const selectedClass = ref("all");
 
 async function loadUserData() {
   const {
@@ -207,8 +206,8 @@ watch(() => state.userClasses, (newClasses) => {
 
 
 const filteredLessons = computed(() => {
-  if (selectedClass.value === "all") return state.lessons;
-  return state.lessons.filter(l => l.classLevel === selectedClass.value);
+  if (!state.selectedClass) return state.lessons;
+  return state.lessons.filter(l => l.class_name === state.selectedClassName);
 });
 
 const lessonsCount = computed(() => filteredLessons.value.length);
