@@ -145,8 +145,8 @@
               dźwięku w czasie rzeczywistym.
             </div>
           </div>
-
-        div>
+          </div>
+        </div>
 
       <!-- Microphone Settings -->
       <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 space-y-6">
