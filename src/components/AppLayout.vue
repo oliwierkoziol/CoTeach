@@ -224,7 +224,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
     </aside>
 
     <!-- Modal dodawania nowej klasy -->
-    <div v-if="showAddClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div v-if="showAddClassModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div class="bg-white rounded-[12px] shadow-lg p-[24px] max-w-[400px] w-full">
         <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-[16px]">Dodaj nową klasę</h3>
         <div class="flex flex-col gap-[12px] mb-[20px]">
@@ -540,6 +540,12 @@ watch(selectedClass, (newValue) => {
     // Update store and localStorage
     setSelectedClass(newValue);
     saveSelectedClassToStorage(newValue);
+  }
+});
+
+watch(showAddClassModal, (isOpen) => {
+  if (typeof document !== "undefined") {
+    document.body.style.overflow = isOpen ? "hidden" : "";
   }
 });
 
