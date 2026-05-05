@@ -137,7 +137,7 @@ async function api(path, options = {}) {
       headers
     });
   } catch (err) {
-    throw new Error("Błąd połączenia z serwerem API. Upewnij się, że backend jest uruchomiony na porcie 3001.");
+    throw new Error(`Błąd połączenia z serwerem API (${API_BASE}). Sprawdź status serwera.`);
   }
 
   const data = await response.json().catch(() => ({}));
