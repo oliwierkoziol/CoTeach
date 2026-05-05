@@ -17,12 +17,31 @@
         <!-- Selection Column -->
         <div class="col-span-12 lg:col-span-4 space-y-6">
           <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6">
+            
+            <!-- Tabs -->
+            <div class="flex p-1 bg-[#f2f4f7] rounded-lg mb-6">
+              <button 
+                @click="activeTab = 'quiz'"
+                class="flex-1 py-2 text-sm font-bold rounded-md transition-all"
+                :class="activeTab === 'quiz' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+              >
+                Sprawdzian
+              </button>
+              <button 
+                @click="activeTab = 'homework'"
+                class="flex-1 py-2 text-sm font-bold rounded-md transition-all"
+                :class="activeTab === 'homework' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+              >
+                Zadanie Domowe
+              </button>
+            </div>
+
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-3">Wybierz lekcję źródłową</label>
-            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
                 v-for="lesson in state.lessons"
                 :key="lesson.id"
-                @click="selectedLessonId = lesson.id"
+                @click="handleSelectLesson(lesson)"
                 class="p-4 rounded-xl border transition-all cursor-pointer"
                 :class="selectedLessonId === lesson.id ? 'border-[#0c3dfe] bg-[#f0f4ff]' : 'border-[#e0e3e6] hover:bg-gray-50'"
               >
@@ -31,7 +50,8 @@
               </div>
             </div>
 
-            <div class="mt-6 space-y-4">
+            <!-- Quiz Settings -->
+            <div v-if="activeTab === 'quiz'" class="mt-6 space-y-4">
               <div class="flex gap-4">
                 <div class="flex-1">
                   <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Pytania zamknięte</label>
@@ -51,12 +71,31 @@
                 {{ isGenerating ? 'Generowanie...' : 'Generuj Sprawdzian' }}
               </button>
             </div>
+
+            <!-- Homework Settings -->
+            <div v-else class="mt-6 space-y-4">
+              <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Treść zadania (np. strona, numer zadania)</label>
+              <textarea 
+                v-model="homeworkText" 
+                rows="4"
+                placeholder="np. Zadania 1-5 ze strony 120 w podręczniku. Termin: środa."
+                class="w-full bg-[#f2f4f7] rounded-lg p-3 outline-none font-medium text-sm resize-none"
+              ></textarea>
+              <button
+                @click="handleSaveHomework"
+                :disabled="isSavingHomework || !selectedLessonId"
+                class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+              >
+                {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz i udostępnij zadanie' }}
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Preview / Editor Column -->
         <div class="col-span-12 lg:col-span-8">
-          <div v-if="quiz" class="space-y-6">
+          <!-- Quiz Preview -->
+          <div v-if="activeTab === 'quiz' && quiz" class="space-y-6">
             <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
               <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
               <button @click="printQuiz" class="bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition">
@@ -95,10 +134,31 @@
             </div>
           </div>
 
+          <!-- Homework Preview / QR -->
+          <div v-else-if="activeTab === 'homework' && homeworkSaved" class="bg-white rounded-2xl shadow-xl p-10 text-center flex flex-col items-center">
+            <div class="size-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
+              <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-900 mb-2">Zadanie zostało zapisane!</h2>
+            <p class="text-gray-500 mb-8 max-w-sm">Uczniowie mogą teraz zobaczyć to zadanie po wejściu w link do notatki lub skanując poniższy kod QR.</p>
+            
+            <div class="bg-gray-50 p-6 rounded-3xl border border-dashed border-gray-200 mb-8">
+              <img :src="homeworkQrUrl" alt="QR" class="size-48 mx-auto mb-4" />
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Skanuj aby zobaczyć zadanie</p>
+            </div>
+
+            <div class="w-full max-w-md space-y-3">
+              <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <input :value="homeworkShareUrl" readonly class="bg-transparent border-none outline-none flex-1 text-xs text-blue-600 font-medium" />
+                <button @click="copyLink" class="text-xs font-bold text-gray-500 hover:text-primary">Kopiuj</button>
+              </div>
+            </div>
+          </div>
+
           <div v-else-if="!isGenerating" class="h-full flex flex-col items-center justify-center py-20 text-center opacity-40">
             <img src="../assets/archive.svg" class="h-20 w-20 mb-4" />
-            <h3 class="text-xl font-bold">Wybierz lekcję i wygeneruj sprawdzian</h3>
-            <p>Sprawdzian pojawi się w tym miejscu.</p>
+            <h3 class="text-xl font-bold">{{ activeTab === 'quiz' ? 'Wybierz lekcję i wygeneruj sprawdzian' : 'Wybierz lekcję i zadaj zadanie domowe' }}</h3>
+            <p>Treść pojawi się w tym miejscu.</p>
           </div>
         </div>
       </div>
@@ -172,17 +232,33 @@ const { state, fetchLessons } = useLessonStore();
 const route = useRoute();
 
 const selectedLessonId = ref(route.params.lessonId || "");
+const activeTab = ref("quiz");
 const numClosed = ref(5);
 const numOpen = ref(2);
 const isGenerating = ref(false);
 const quiz = ref(null);
 
+// Homework state
+const homeworkText = ref("");
+const isSavingHomework = ref(false);
+const homeworkSaved = ref(false);
+const homeworkShareUrl = ref("");
+const homeworkQrUrl = ref("");
+
 onMounted(async () => {
   await fetchLessons();
   if (!selectedLessonId.value && state.lessons.length > 0) {
-    selectedLessonId.value = state.lessons[0].id;
+    handleSelectLesson(state.lessons[0]);
   }
 });
+
+function handleSelectLesson(lesson) {
+  selectedLessonId.value = lesson.id;
+  homeworkText.value = lesson.homework || "";
+  homeworkSaved.value = false;
+  homeworkShareUrl.value = "";
+  homeworkQrUrl.value = "";
+}
 
 async function handleGenerateQuiz() {
   if (!selectedLessonId.value) return;
@@ -217,6 +293,47 @@ async function handleGenerateQuiz() {
   } finally {
     isGenerating.value = false;
   }
+}
+
+async function handleSaveHomework() {
+  if (!selectedLessonId.value) return;
+  isSavingHomework.value = true;
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+    
+    const response = await fetch(`${API_URL}/api/lessons/${selectedLessonId.value}/homework`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token}`
+      },
+      body: JSON.stringify({ homework: homeworkText.value })
+    });
+
+    if (!response.ok) throw new Error("Failed to save homework");
+    
+    const data = await response.json();
+    homeworkShareUrl.value = data.shareUrl;
+    homeworkQrUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data.shareUrl)}`;
+    homeworkSaved.value = true;
+    
+    // Update local state
+    const lesson = state.lessons.find(l => l.id === selectedLessonId.value);
+    if (lesson) lesson.homework = homeworkText.value;
+    
+  } catch (error) {
+    console.error(error);
+    alert("Błąd podczas zapisywania zadania.");
+  } finally {
+    isSavingHomework.value = false;
+  }
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(homeworkShareUrl.value);
+  alert("Link skopiowany!");
 }
 
 function printQuiz() {

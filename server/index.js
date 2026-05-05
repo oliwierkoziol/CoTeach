@@ -2700,6 +2700,29 @@ app.post("/api/quizzes/generate", async (req, res) => {
   }
 });
 
+app.post("/api/lessons/:lessonId/homework", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const lessonId = req.params.lessonId;
+    const homework = String(req.body?.homework || "").trim();
+
+    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    if (!lesson) return;
+
+    lesson.homework = homework;
+    lesson.updatedAt = new Date().toISOString();
+    
+    db.lessons.set(lessonId, lesson);
+    await persistLessonSafe(lesson);
+
+    const shareUrl = `${PUBLIC_APP_URL}/share/${lessonId}?type=homework`;
+    return res.json({ success: true, shareUrl });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 app.post("/api/insights/live-lesson-summary", async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
