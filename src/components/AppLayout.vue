@@ -19,23 +19,23 @@
             <img src="/logo.svg" alt="Logo" class="h-10 w-full object-cover object-left logo sm:h-12" />
           </div>
         </RouterLink>
-      </div>
 
-      <!-- Moja Klasa Dropdown -->
-      <div class="flex-1 flex items-center justify-center px-4 hidden sm:flex">
-        <div class="w-full max-w-[250px] bg-[#e0e3e6] dark:bg-input-background h-[40px] relative rounded-[8px] flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-          <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-3 appearance-none text-[14px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
-            <option value="" class="dark:bg-card dark:text-foreground">Wybierz klasę...</option>
-            <option value="add-new" class="dark:bg-card dark:text-foreground">+ Dodaj swoją klasę</option>
-            <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id" class="dark:bg-card dark:text-foreground">{{ classItem.class_name }}</option>
-          </select>
-          <div class="absolute right-[8px] flex gap-1 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
-            <svg class="w-[18px] h-[16px]" fill="currentColor" viewBox="0 0 22 18">
-              <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
-            </svg>
-            <svg class="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24">
-              <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-            </svg>
+        <!-- Moja Klasa Dropdown -->
+        <div class="flex items-center hidden sm:flex ml-2 w-[220px]">
+          <div class="w-full bg-[#e0e3e6] dark:bg-input-background h-[40px] relative rounded-[8px] flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+            <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full px-3 appearance-none text-[14px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
+              <option value="" class="dark:bg-card dark:text-foreground">Wybierz klasę...</option>
+              <option value="add-new" class="dark:bg-card dark:text-foreground">+ Dodaj swoją klasę</option>
+              <option v-for="classItem in state.userClasses" :key="classItem.id" :value="classItem.id" class="dark:bg-card dark:text-foreground">{{ classItem.class_name }}</option>
+            </select>
+            <div class="absolute right-[8px] flex gap-1 pointer-events-none items-center text-[#222E75] dark:text-muted-foreground opacity-40">
+              <svg class="w-[18px] h-[16px]" fill="currentColor" viewBox="0 0 22 18">
+                <path d="M11 0L0 5L11 10L22 5L11 0ZM11 12.5L2.3 8.5L0 9.5L11 14.5L22 9.5L19.7 8.5L11 12.5Z" />
+              </svg>
+              <svg class="w-[14px] h-[14px]" fill="none" viewBox="0 0 24 24">
+                <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>
