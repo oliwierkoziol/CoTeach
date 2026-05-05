@@ -348,6 +348,26 @@
             </div>
           </div>
 
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Liczba slajdów</label>
+            <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
+              <select
+                v-model="maxSlidesSelection"
+                class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer"
+              >
+                <option :value="5" class="dark:bg-card dark:text-foreground">5 slajdów (Krótka)</option>
+                <option :value="10" class="dark:bg-card dark:text-foreground">10 slajdów (Średnia)</option>
+                <option :value="15" class="dark:bg-card dark:text-foreground">15 slajdów (Długa)</option>
+                <option :value="20" class="dark:bg-card dark:text-foreground">20 slajdów (Maksymalna)</option>
+              </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <div class="content-stretch flex flex-col gap-[12px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2 mt-4">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px] mb-2">Styl prezentacji</label>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
@@ -544,6 +564,7 @@ const presentationScope = ref("pending");
 const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationStyle = ref("auto");
+const maxSlidesSelection = ref(5);
 const presentationTheme = ref({
   wrapperClass: "bg-[#f3f4f6]",
   panelClass: "bg-white border-none shadow-none rounded-none",
@@ -599,8 +620,8 @@ const preparedSlides = computed(() => {
   return plan.filter((point) => point.status !== "discussed");
 });
 const plannedSlideCount = computed(() => {
-  if (presentationSource.value === "note") return 5;
-  return preparedSlides.value.length;
+  if (presentationSource.value === "note") return maxSlidesSelection.value;
+  return effectivePresentationScope.value === "full" ? maxSlidesSelection.value : Math.min(preparedSlides.value.length, maxSlidesSelection.value) || maxSlidesSelection.value;
 });
 const canGenerate = computed(() => {
   if (presentationSource.value === "note") return Boolean(selectedNote.value?.id);
@@ -816,7 +837,7 @@ async function startGeneratedPresentation() {
       classLevel: selectedClassLevel.value || "",
       style: presentationStyle.value,
       scope: effectivePresentationScope.value,
-      maxSlides: 5,
+      maxSlides: maxSlidesSelection.value,
       class_name: state.selectedClassName || null
     });
     const generatedSlides = (generated?.slides || [])

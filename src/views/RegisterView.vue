@@ -12,7 +12,7 @@
         </h2>
       </div>
       <p class="relative font-['Plus_Jakarta_Sans'] text-sm font-medium text-muted-foreground">
-        Zarejestruj się i zyskaj więcej czasu na to, co w nauczaniu najważniejsze. CoTeach zautomatyzuje Twoje przygotowania do lekcji.
+        Zarejestruj się i zyskaj więcej czasu na to, co w nauczaniu najważniejsze. Ty prowadź lekcję, my zajmiemy się resztą.
       </p>
     </div>
 
