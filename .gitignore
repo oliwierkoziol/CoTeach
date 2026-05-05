@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 # Supabase schema generated for local setup only
 supabase/schema.sql
 /.claude
+
+.vercel

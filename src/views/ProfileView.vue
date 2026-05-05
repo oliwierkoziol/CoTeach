@@ -241,25 +241,12 @@
             <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Bezpieczeństwo</h2>
             <p class="mt-1 text-sm text-[#454652]">Ustawienia krytyczne konta.</p>
             <div class="mt-6 space-y-6">
-              <div class="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4">
-                <label class="block text-sm font-semibold text-amber-900 mb-2">Zablokuj moje konto</label>
-                <p class="text-sm text-amber-800">
-                  Po zablokowaniu nie zalogujesz się ponownie, dopóki administrator nie odblokuje konta.
-                </p>
-                <button
-                  type="button"
-                  class="mt-3 w-full sm:w-auto rounded-2xl bg-amber-600 px-6 py-3 text-white font-semibold hover:bg-amber-700 transition disabled:opacity-50"
-                  :disabled="isBlockingAccount"
-                  @click="handleSelfBlockAccount"
-                >
-                  {{ isBlockingAccount ? "Blokowanie konta..." : "Zablokuj moje konto" }}
-                </button>
-              </div>
+
 
               <div class="rounded-2xl border border-red-200 bg-red-50/70 p-4">
                 <label class="block text-sm font-semibold text-red-800 mb-2">Usuń konto</label>
                 <p class="text-sm text-red-700">
-                  Usunięcie konta jest trwałe i nie można go cofnąć.
+                  Usunięcie konta jest trwałe i nie można go cofnąć. Pamiętaj, że koszty za aktywne licencje lub subskrypcje nie podlegają zwrotowi w przypadku usunięcia konta.
                 </p>
                 <button
                   type="button"
@@ -576,7 +563,7 @@ const isUploading = ref(false);
 const isSavingName = ref(false);
 const isSavingEmail = ref(false);
 const isDeletingAccount = ref(false);
-const isBlockingAccount = ref(false);
+
 const showEmailEditor = ref(false);
 const showEmailValue = ref(false);
 const showDeleteConfirm = ref(false);
@@ -1202,44 +1189,7 @@ async function handleLogout() {
   router.push("/login");
 }
 
-async function handleSelfBlockAccount() {
-  if (isBlockingAccount.value) return;
-  const confirmed = window.confirm(
-    "Na pewno chcesz zablokować swoje konto? Po tej operacji tylko administrator będzie mógł je odblokować."
-  );
-  if (!confirmed) return;
 
-  isBlockingAccount.value = true;
-  errorMessage.value = "";
-  successMessage.value = "";
-
-  try {
-    const {
-      data: { session }
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) throw new Error("Brak aktywnej sesji. Zaloguj się ponownie.");
-
-    const response = await fetch(`${API_BASE}/api/account/block`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ blocked: true })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data?.error || "Nie udało się zablokować konta.");
-
-    await supabase.auth.signOut({ scope: "local" });
-    clearLessonStoreAuthCache();
-    await router.replace({ path: "/login", query: { blocked: "1" } });
-  } catch (error) {
-    errorMessage.value = error?.message || "Nie udało się zablokować konta.";
-  } finally {
-    isBlockingAccount.value = false;
-  }
-}
 
 function cancelDeleteConfirm() {
   if (isDeletingAccount.value) return;
@@ -1268,7 +1218,7 @@ async function handleDeleteAccount() {
   }
 
   const confirmed = window.confirm(
-    "Czy na pewno chcesz usunąć konto? Ta operacja usunie profil i dane konta bez możliwości cofnięcia."
+    "Czy na pewno chcesz usunąć konto? Ta operacja usunie profil i dane konta bez możliwości cofnięcia. Pamiętaj, że koszty za aktywne licencje lub subskrypcje nie zostaną zwrócone."
   );
   if (!confirmed) return;
 

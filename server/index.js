@@ -9,7 +9,10 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { toFile } from "openai/uploads";
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config();
+if (fs.existsSync(path.resolve(process.cwd(), ".env.local"))) {
+  dotenv.config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
+}
 
 const app = express();
 
