@@ -360,6 +360,12 @@ async function handleLogin() {
     return;
   }
 
+  if (data.session.user.user_metadata?.account_type === "business") {
+    await supabase.auth.signOut({ scope: "local" });
+    errorMessage.value = "To jest konto służbowe. Użyj zakładki logowania Służbowe.";
+    return;
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("blocked")
@@ -418,6 +424,8 @@ async function handleBusinessLogin() {
     return;
   }
 
+  const isBusinessAccount = data.session.user.user_metadata?.account_type === "business";
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("blocked, email, organisation")
@@ -430,9 +438,9 @@ async function handleBusinessLogin() {
     return;
   }
 
-  if (profile?.organisation !== true) {
+  if (!isBusinessAccount && profile?.organisation !== true) {
     await supabase.auth.signOut({ scope: "local" });
-    errorMessage.value = "To nie jest konto organizacji. Użyj logowania dla konta indywidualnego.";
+    errorMessage.value = "To nie jest konto służbowe ani konto organizacji. Użyj zakładki Indywidualne.";
     return;
   }
 
