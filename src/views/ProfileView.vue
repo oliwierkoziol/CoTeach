@@ -9,7 +9,7 @@
           Mój profil
         </h1>
           <div class="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Zarządzaj swoimi danymi, ustawieniami bezpieczeństwa i billingiem w jednym miejscu.</p>
+          <p class="font-['Plus_Jakarta_Sans'] font-normal text-[#454652] text-[18px] leading-[28px]">Zarządzaj swoimi danymi, ustawieniami bezpieczeństwa i rozliczeniami w jednym miejscu.</p>
         </div>
       </header>
 
@@ -60,7 +60,7 @@
                 :class="activeProfileSection === 'billing' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-[#454652] hover:bg-[#e7e8ee]'"
                 @click="activeProfileSection = 'billing'"
               >
-                Billing
+                Rozliczenia
               </button>
               <button
                 type="button"
@@ -178,7 +178,7 @@
           </section>
 
           <section v-show="activeProfileSection === 'billing'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
-            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Billing</h2>
+            <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Rozliczenia</h2>
             <p class="mt-1 text-sm text-[#454652]">Licencja, płatności i wykorzystanie kosztów.</p>
 
             <div class="mt-6 space-y-6">
