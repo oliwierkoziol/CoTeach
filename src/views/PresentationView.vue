@@ -93,7 +93,7 @@
                   <p v-if="current.subtitle" :class="['text-[clamp(1.2rem,3vh,2rem)] font-bold opacity-80', activeTheme.textClass]">{{ current.subtitle }}</p>
                   <p v-if="current.summary" :class="['mt-10 text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-70', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
-                <div class="flex-1 bg-white flex items-center justify-center p-12">
+                <div :class="['flex-1 flex items-center justify-center p-12', activeTheme.panelClass]">
                   <div class="w-full h-full max-h-[500px] bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center border border-black/5">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
                     <div v-else class="flex flex-col items-center opacity-20">
@@ -108,12 +108,12 @@
             <!-- Summary/Agenda Slide Layout -->
             <template v-else-if="current.type === 'summary' || current.type === 'agenda'">
               <div class="flex h-full flex-col">
-                <div class="flex-1 bg-white p-12 lg:p-20 flex flex-col justify-center text-center">
+                <div :class="['flex-1 p-12 lg:p-20 flex flex-col justify-center text-center', activeTheme.panelClass]">
                   <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-black mb-8', activeTheme.titleClass]">{{ current.title || 'Podsumowanie' }}</h2>
                   <p :class="['mx-auto max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] font-medium leading-relaxed', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
                 <div :class="['h-[35%] w-full flex items-center justify-center p-10', activeTheme.accentClass]">
-                  <div class="w-full max-w-2xl h-full bg-white rounded-sm overflow-hidden border border-black/5 flex items-center justify-center">
+                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden border border-black/5 flex items-center justify-center', activeTheme.panelClass]">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
                     <div v-else class="flex items-center gap-4 opacity-10">
                       <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -133,7 +133,7 @@
                   <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
                   <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
-                <div class="flex-1 bg-white flex items-center justify-center p-12">
+                <div :class="['flex-1 flex items-center justify-center p-12', activeTheme.panelClass]">
                    <div class="w-full h-full bg-gray-50 rounded-sm overflow-hidden flex items-center justify-center border border-black/5 relative group">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
                     <div v-else class="flex flex-col items-center opacity-10">
@@ -145,13 +145,13 @@
 
               <!-- Top-Down Split Layout -->
               <div v-else class="flex h-full flex-col">
-                <div class="flex-1 bg-white p-12 lg:p-16 flex flex-col justify-center text-center">
+                <div :class="['flex-1 p-12 lg:p-16 flex flex-col justify-center text-center', activeTheme.panelClass]">
                    <h2 :class="['text-[clamp(2.2rem,5.5vh,4rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
                    <p v-if="current.subtitle" :class="['mx-auto max-w-3xl text-[clamp(1.2rem,2.8vh,1.6rem)] font-bold opacity-60 mb-6', activeTheme.textClass]">{{ current.subtitle }}</p>
                    <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
                 <div :class="['h-[40%] w-full flex items-center justify-center p-12', activeTheme.accentClass]">
-                  <div class="w-full max-w-3xl h-full bg-white rounded-sm overflow-hidden border border-black/5 flex items-center justify-center shadow-sm">
+                  <div :class="['w-full max-w-3xl h-full rounded-sm overflow-hidden border border-black/5 flex items-center justify-center shadow-sm', activeTheme.panelClass]">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
                     <div v-else class="opacity-5">
                       <svg class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -533,12 +533,12 @@ const availableStyles = [
   {
     id: "minimalist",
     name: "Minimalistyczny",
-    description: "Czysty i konkretny",
+    description: "Czysty i konkretny, przyciemniony",
     preview: {
-      wrapper: "bg-white border border-gray-100",
-      accent: "bg-gray-50",
-      title: "bg-black",
-      text: "bg-gray-400"
+      wrapper: "bg-[oklch(0.18_0.026_265)]",
+      accent: "bg-[oklch(0.26_0.024_265)]",
+      title: "bg-[oklch(0.93_0.02_95)]",
+      text: "bg-[oklch(0.72_0.018_95)]"
     }
   },
   {
@@ -941,11 +941,11 @@ function resolvePresentationTheme(title, slides, style = "auto") {
   }
   if (style === "minimalist") {
     return {
-      wrapperClass: "bg-[#ffffff]",
-      panelClass: basePanel,
-      titleClass: "text-[#000000] tracking-tighter",
-      textClass: "text-[#171717]",
-      accentClass: "bg-neutral-50"
+      wrapperClass: "bg-[oklch(0.18_0.026_265)]",
+      panelClass: "bg-[oklch(0.22_0.028_265)] border-none shadow-none rounded-none",
+      titleClass: "text-[oklch(0.93_0.02_95)] tracking-tighter",
+      textClass: "text-[oklch(0.72_0.018_95)]",
+      accentClass: "bg-[oklch(0.26_0.024_265)]"
     };
   }
   if (style === "fun") {
@@ -962,22 +962,22 @@ function resolvePresentationTheme(title, slides, style = "auto") {
   if (/(fotosyntez|biolog|natura|ro[sl]in|ekologi|las|chlorofil|ziemi|zwierz)/.test(text)) {
     return {
       ...defaultTheme,
-      accentClass: "bg-blue-50",
-      titleClass: "text-blue-900",
+      accentClass: "bg-[#eff6ff]",
+      titleClass: "text-[#1e3a8a]",
     };
   }
   if (/(histori|wojn|pa[nń]stw|kr[oó]l|staro|średniowie|wiek|wojsk)/.test(text)) {
     return {
       ...defaultTheme,
-      accentClass: "bg-rose-50",
-      titleClass: "text-rose-900",
+      accentClass: "bg-[#fff1f2]",
+      titleClass: "text-[#881337]",
     };
   }
   if (/(matemat|fizy|chem|technicz|algorytm|program|kod|licz|równan)/.test(text)) {
     return {
       ...defaultTheme,
-      accentClass: "bg-indigo-50",
-      titleClass: "text-indigo-900",
+      accentClass: "bg-[#eef2ff]",
+      titleClass: "text-[#1e1b4b]",
     };
   }
   return defaultTheme;

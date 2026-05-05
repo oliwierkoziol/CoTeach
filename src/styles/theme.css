@@ -422,6 +422,25 @@
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
-.dark .app-shell .presentation-view .bg-black\/5 {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-}
+/* Ensure minimalist style (app-dark colors) stays dark even in light mode */
+.presentation-view .bg-\[oklch\(0\.18_0\.026_265\)\] {
+  background-color: oklch(0.18 0.026 265) !important;
+}
+
+.presentation-view .bg-\[oklch\(0\.22_0\.028_265\)\] {
+  background-color: oklch(0.22 0.028 265) !important;
+}
+
+.presentation-view .text-\[oklch\(0\.93_0\.02_95\)\] {
+  color: oklch(0.93 0.02 95) !important;
+}
+
+.presentation-view .text-\[oklch\(0\.72_0\.018_95\)\] {
+  color: oklch(0.72 0.018 95) !important;
+}
+
+.presentation-view .bg-\[oklch\(0\.26_0\.024_265\)\] {
+  background-color: oklch(0.26 0.024 265) !important;
+}
+
+
