@@ -93,13 +93,9 @@
                   <p v-if="current.subtitle" :class="['text-[clamp(1.2rem,3vh,2rem)] font-bold opacity-80', activeTheme.textClass]">{{ current.subtitle }}</p>
                   <p v-if="current.summary" :class="['mt-10 text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-70', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
-                <div :class="['flex-1 flex items-center justify-center p-12', activeTheme.panelClass]">
-                  <div class="w-full h-full max-h-[500px] bg-gray-100 rounded-sm overflow-hidden flex items-center justify-center border border-black/5">
+                <div :class="['flex-1 flex items-center justify-center p-12', current.imageUrl ? activeTheme.panelClass : '']">
+                  <div class="w-full h-full max-h-[500px] rounded-sm overflow-hidden flex items-center justify-center">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
-                    <div v-else class="flex flex-col items-center opacity-20">
-                      <svg class="w-24 h-24 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                      <span class="font-bold uppercase tracking-widest text-sm">Ilustracja</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -113,12 +109,8 @@
                   <p :class="['mx-auto max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] font-medium leading-relaxed', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
                 <div :class="['h-[35%] w-full flex items-center justify-center p-10', activeTheme.accentClass]">
-                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden border border-black/5 flex items-center justify-center', activeTheme.panelClass]">
+                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden flex items-center justify-center', current.imageUrl ? activeTheme.panelClass : '']">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
-                    <div v-else class="flex items-center gap-4 opacity-10">
-                      <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                      <span class="font-bold uppercase tracking-widest text-xs">Materiał poglądowy</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -133,12 +125,9 @@
                   <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
                   <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
-                <div :class="['flex-1 flex items-center justify-center p-12', activeTheme.panelClass]">
-                   <div class="w-full h-full bg-gray-50 rounded-sm overflow-hidden flex items-center justify-center border border-black/5 relative group">
+                <div :class="['flex-1 flex items-center justify-center p-12', current.imageUrl ? activeTheme.panelClass : '']">
+                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
-                    <div v-else class="flex flex-col items-center opacity-10">
-                      <svg class="w-20 h-20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -151,11 +140,8 @@
                    <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
                 </div>
                 <div :class="['h-[40%] w-full flex items-center justify-center p-12', activeTheme.accentClass]">
-                  <div :class="['w-full max-w-3xl h-full rounded-sm overflow-hidden border border-black/5 flex items-center justify-center shadow-sm', activeTheme.panelClass]">
+                  <div :class="['w-full max-w-3xl h-full rounded-sm overflow-hidden flex items-center justify-center', current.imageUrl ? activeTheme.panelClass : '']">
                     <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
-                    <div v-else class="opacity-5">
-                      <svg class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -363,7 +349,7 @@
           </div>
 
           <div class="content-stretch flex flex-col gap-[12px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2 mt-4">
-            <label class="font-['Plus_Jakarta_Sans'] font-bold text-foreground text-[16px] leading-[20px] mb-2">Wybierz styl wizualny</label>
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px] mb-2">Styl prezentacji</label>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
               <button
                 v-for="style in availableStyles"

@@ -147,7 +147,7 @@
                 </h3>
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
                   <span v-if="item.class_name" class="font-semibold text-[#0c3dfe]">{{ item.class_name }} • </span>
-                  {{ item.createdAtLabel || formatDate(item.createdAt) }} • {{ item.slideCount || 0 }} slajdów
+                  {{ item.createdAtLabel || formatDate(item.createdAt) }} • {{ item.slideCount || 0 }} slajdów • {{ styleLabels[item.style] || styleLabels.auto }}
                 </p>
               </div>
             </div>
