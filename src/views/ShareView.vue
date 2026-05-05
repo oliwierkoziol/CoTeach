@@ -46,7 +46,21 @@
 
         <!-- Main Rendered Note Card -->
         <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 md:p-12 overflow-hidden border border-white">
-          <div v-if="isTranscript" class="space-y-6">
+          <div v-if="isHomework" class="space-y-6">
+            <h2 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[32px] mb-6 border-b border-gray-100 pb-4 flex items-center gap-3">
+              <span class="size-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              </span>
+              Zadanie Domowe
+            </h2>
+            <div class="bg-blue-50/50 p-8 rounded-2xl border border-blue-100/50 min-h-[200px]">
+              <p class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[20px] leading-relaxed whitespace-pre-wrap">
+                {{ note.homework || 'Brak treści zadania domowego dla tej lekcji.' }}
+              </p>
+            </div>
+          </div>
+
+          <div v-else-if="isTranscript" class="space-y-6">
             <h2 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[32px] mb-6 border-b border-gray-100 pb-4">
               Zapis przebiegu lekcji
             </h2>
@@ -82,6 +96,7 @@ const route = useRoute();
 const { fetchSharedNote } = useLessonStore();
 
 const isTranscript = computed(() => route.query.type === 'transcript');
+const isHomework = computed(() => route.query.type === 'homework');
 const transcripts = ref([]);
 const startedAt = ref(null);
 
