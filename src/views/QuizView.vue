@@ -36,8 +36,29 @@
               </button>
             </div>
 
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-3">Wybierz lekcję źródłową</label>
-            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <!-- Source Selection Toggle -->
+            <div class="flex items-center justify-between mb-4 px-1">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Źródło treści</label>
+              <div class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                <button 
+                  @click="sourceType = 'lesson'" 
+                  class="px-3 py-1 text-[11px] font-bold rounded-md transition-all"
+                  :class="sourceType === 'lesson' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'"
+                >
+                  Lekcje
+                </button>
+                <button 
+                  @click="sourceType = 'note'" 
+                  class="px-3 py-1 text-[11px] font-bold rounded-md transition-all"
+                  :class="sourceType === 'note' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'"
+                >
+                  Notatki
+                </button>
+              </div>
+            </div>
+
+            <!-- List of Lessons -->
+            <div v-if="sourceType === 'lesson'" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
                 v-for="lesson in state.lessons"
                 :key="lesson.id"
@@ -47,6 +68,26 @@
               >
                 <h4 class="font-bold text-[#191c1e] truncate">{{ lesson.title }}</h4>
                 <p class="text-xs text-[#454652] mt-1">{{ lesson.subject }} • {{ lesson.date }}</p>
+              </div>
+              <div v-if="state.lessons.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                Brak przeprowadzonych lekcji.
+              </div>
+            </div>
+
+            <!-- List of Notes -->
+            <div v-else class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              <div
+                v-for="note in state.notes"
+                :key="note.id"
+                @click="handleSelectNote(note)"
+                class="p-4 rounded-xl border transition-all cursor-pointer"
+                :class="selectedNoteId === note.id ? 'border-[#0c3dfe] bg-[#f0f4ff]' : 'border-[#e0e3e6] hover:bg-gray-50'"
+              >
+                <h4 class="font-bold text-[#191c1e] truncate">{{ note.title }}</h4>
+                <p class="text-xs text-[#454652] mt-1">{{ note.subject }} • {{ note.date }}</p>
+              </div>
+              <div v-if="state.notes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                Brak zapisanych notatek.
               </div>
             </div>
 
@@ -65,7 +106,7 @@
 
               <button
                 @click="handleGenerateQuiz"
-                :disabled="isGenerating || !selectedLessonId"
+                :disabled="isGenerating || (!selectedLessonId && !selectedNoteId)"
                 class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50"
               >
                 {{ isGenerating ? 'Generowanie...' : 'Generuj Sprawdzian' }}
@@ -228,10 +269,12 @@ import { useLessonStore } from "../composables/useLessonStore";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
 
-const { state, fetchLessons } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes } = useLessonStore();
 const route = useRoute();
 
+const sourceType = ref("lesson"); // 'lesson' | 'note'
 const selectedLessonId = ref(route.params.lessonId || "");
+const selectedNoteId = ref("");
 const activeTab = ref("quiz");
 const numClosed = ref(5);
 const numOpen = ref(2);
@@ -246,7 +289,7 @@ const homeworkShareUrl = ref("");
 const homeworkQrUrl = ref("");
 
 onMounted(async () => {
-  await fetchLessons();
+  await Promise.all([fetchLessons(), fetchTeacherNotes()]);
   if (!selectedLessonId.value && state.lessons.length > 0) {
     handleSelectLesson(state.lessons[0]);
   }
@@ -254,14 +297,22 @@ onMounted(async () => {
 
 function handleSelectLesson(lesson) {
   selectedLessonId.value = lesson.id;
+  selectedNoteId.value = "";
   homeworkText.value = lesson.homework || "";
   homeworkSaved.value = false;
   homeworkShareUrl.value = "";
   homeworkQrUrl.value = "";
 }
 
+function handleSelectNote(note) {
+  selectedNoteId.value = note.id;
+  selectedLessonId.value = "";
+  homeworkText.value = ""; // Homework only for lessons
+  homeworkSaved.value = false;
+}
+
 async function handleGenerateQuiz() {
-  if (!selectedLessonId.value) return;
+  if (!selectedLessonId.value && !selectedNoteId.value) return;
   
   isGenerating.value = true;
   quiz.value = null;
@@ -278,6 +329,7 @@ async function handleGenerateQuiz() {
       },
       body: JSON.stringify({
         lessonId: selectedLessonId.value,
+        noteId: selectedNoteId.value,
         numClosed: numClosed.value,
         numOpen: numOpen.value
       })
