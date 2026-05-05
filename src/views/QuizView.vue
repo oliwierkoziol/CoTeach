@@ -2,8 +2,8 @@
   <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
 
-    <!-- Sidebar / Selection -->
-    <div class="p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto no-print">
+    <!-- Sidebar / Selection (Ukrywane przy druku) -->
+    <div class="quiz-ui-container p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto no-print">
       <div class="mb-7">
         <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
           Generator Sprawdzianów
@@ -60,7 +60,7 @@
             <!-- List of Lessons -->
             <div v-if="sourceType === 'lesson'" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
-                v-for="lesson in state.lessons"
+                v-for="lesson in filteredLessons"
                 :key="lesson.id"
                 @click="handleSelectLesson(lesson)"
                 class="p-4 rounded-xl border transition-all cursor-pointer"
@@ -69,15 +69,15 @@
                 <h4 class="font-bold text-[#191c1e] truncate">{{ lesson.title }}</h4>
                 <p class="text-xs text-[#454652] mt-1">{{ lesson.subject }} • {{ lesson.date }}</p>
               </div>
-              <div v-if="state.lessons.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
-                Brak przeprowadzonych lekcji.
+              <div v-if="filteredLessons.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                {{ state.selectedClass ? 'Brak lekcji dla wybranej klasy.' : 'Brak przeprowadzonych lekcji.' }}
               </div>
             </div>
 
             <!-- List of Notes -->
             <div v-else class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
-                v-for="note in state.notes"
+                v-for="note in filteredNotes"
                 :key="note.id"
                 @click="handleSelectNote(note)"
                 class="p-4 rounded-xl border transition-all cursor-pointer"
@@ -86,8 +86,8 @@
                 <h4 class="font-bold text-[#191c1e] truncate">{{ note.title }}</h4>
                 <p class="text-xs text-[#454652] mt-1">{{ note.subject }} • {{ note.date }}</p>
               </div>
-              <div v-if="state.notes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
-                Brak zapisanych notatek.
+              <div v-if="filteredNotes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                {{ state.selectedClass ? 'Brak notatek dla wybranej klasy.' : 'Brak zapisanych notatek.' }}
               </div>
             </div>
 
@@ -139,9 +139,12 @@
           <div v-if="activeTab === 'quiz' && quiz" class="space-y-6">
             <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
               <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
-              <button @click="printQuiz" class="bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition">
-                Drukuj / PDF
+            <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
+              <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
+              <button @click="printQuiz" class="bg-emerald-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
+                Drukuj sprawdzian
               </button>
+            </div>
             </div>
 
             <div v-for="(q, idx) in quiz.questions" :key="q.id" class="bg-white rounded-xl shadow-md p-6 border-l-4" :class="q.type === 'closed' ? 'border-blue-500' : 'border-amber-500'">
@@ -151,6 +154,11 @@
                     Zadanie {{ idx + 1 }} ({{ q.type === 'closed' ? 'Zamknięte' : 'Otwarte' }})
                   </span>
                   <textarea v-model="q.question" rows="2" class="w-full text-lg font-bold text-foreground bg-transparent border-none outline-none resize-none" />
+                  <!-- Math Preview -->
+                  <div v-if="q.question.includes('$')" class="mt-2 p-2 bg-blue-50/50 rounded border border-blue-100">
+                    <p class="text-[10px] text-blue-400 font-bold uppercase mb-1">Podgląd matematyki:</p>
+                    <div class="text-sm font-normal" v-html="renderMath(q.question)"></div>
+                  </div>
                 </div>
                 <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
                   <input type="number" v-model="q.points" class="w-10 bg-transparent text-center font-bold text-primary outline-none" />
@@ -160,10 +168,14 @@
 
               <!-- Closed Question Options -->
               <div v-if="q.type === 'closed'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div v-for="(opt, oIdx) in q.options" :key="oIdx" class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-transparent" :class="q.correctAnswer === oIdx ? 'border-emerald-200 bg-emerald-50' : ''">
-                  <span class="w-6 h-6 flex items-center justify-center rounded-full bg-white text-xs font-black shadow-sm">{{ ['A','B','C','D'][oIdx] }}</span>
-                  <input v-model="q.options[oIdx]" class="flex-1 bg-transparent border-none outline-none text-sm" />
-                  <input type="radio" :name="'correct-'+q.id" :checked="q.correctAnswer === oIdx" @change="q.correctAnswer = oIdx" class="accent-emerald-600" />
+                <div v-for="(opt, oIdx) in q.options" :key="oIdx" class="flex flex-col gap-1">
+                  <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-transparent" :class="q.correctAnswer === oIdx ? 'border-emerald-200 bg-emerald-50' : ''">
+                    <span class="w-6 h-6 flex items-center justify-center rounded-full bg-white text-xs font-black shadow-sm">{{ ['A','B','C','D'][oIdx] }}</span>
+                    <input v-model="q.options[oIdx]" class="flex-1 bg-transparent border-none outline-none text-sm" />
+                    <input type="radio" :name="'correct-'+q.id" :checked="q.correctAnswer === oIdx" @change="q.correctAnswer = oIdx" class="accent-emerald-600" />
+                  </div>
+                  <!-- Math Preview for Option -->
+                  <div v-if="opt.includes('$')" class="ml-2 text-xs text-blue-500" v-html="renderMath(opt)"></div>
                 </div>
               </div>
 
@@ -223,12 +235,12 @@
           <div class="flex justify-between items-baseline mb-2">
             <h3 class="font-bold">Zadanie {{ idx + 1 }}. (0-{{ q.points }} pkt)</h3>
           </div>
-          <p class="mb-4 text-lg">{{ q.question }}</p>
+          <p class="mb-4 text-lg" v-html="renderMath(q.question)"></p>
 
           <div v-if="q.type === 'closed'" class="grid grid-cols-2 gap-y-3 gap-x-8">
             <div v-for="(opt, oIdx) in q.options" :key="oIdx" class="flex items-center gap-2">
               <span class="w-5 h-5 border border-black flex items-center justify-center text-xs font-bold">{{ ['A','B','C','D'][oIdx] }}</span>
-              <span>{{ opt }}</span>
+              <span v-html="renderMath(opt)"></span>
             </div>
           </div>
           <div v-else class="space-y-4 pt-4">
@@ -250,7 +262,7 @@
               Poprawna: {{ ['A','B','C','D'][q.correctAnswer] }}
             </div>
             <div v-else class="text-sm text-gray-600">
-              <span class="font-bold">Wytyczne:</span> {{ q.answerGuide }}
+              <span class="font-bold">Wytyczne:</span> <span v-html="renderMath(q.answerGuide)"></span>
             </div>
           </div>
         </div>
@@ -264,7 +276,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
@@ -279,6 +291,7 @@ const activeTab = ref("quiz");
 const numClosed = ref(5);
 const numOpen = ref(2);
 const isGenerating = ref(false);
+const isExporting = ref(false);
 const quiz = ref(null);
 
 // Homework state
@@ -287,6 +300,44 @@ const isSavingHomework = ref(false);
 const homeworkSaved = ref(false);
 const homeworkShareUrl = ref("");
 const homeworkQrUrl = ref("");
+
+const filteredLessons = computed(() => {
+  if (!state.selectedClass || !state.selectedClassName) return state.lessons;
+  return state.lessons.filter(l => 
+    l.class_id === state.selectedClass || 
+    l.class_name === state.selectedClassName ||
+    l.classLevel === state.selectedClassName
+  );
+});
+
+const filteredNotes = computed(() => {
+  if (!state.selectedClass || !state.selectedClassName) return state.notes;
+  return state.notes.filter(n => 
+    n.class_id === state.selectedClass || 
+    n.class_name === state.selectedClassName ||
+    n.classLevel === state.selectedClassName
+  );
+});
+
+function renderMath(text) {
+  if (!text) return "";
+  const str = String(text);
+  if (typeof window === 'undefined' || !window.katex) return str;
+  
+  // Wykrywa matematykę w $...$ i podmienia na HTML z katexa
+  return str.replace(/\$(.*?)\$/g, (match, mathExp) => {
+    try {
+      return window.katex.renderToString(mathExp, { 
+        throwOnError: false, 
+        displayMode: false,
+        strict: false
+      });
+    } catch (e) {
+      console.warn("KaTeX error:", e);
+      return match;
+    }
+  });
+}
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes()]);
@@ -386,40 +437,68 @@ async function handleSaveHomework() {
   }
 }
 
+function printQuiz() {
+  window.print();
+}
+
 function copyLink() {
   navigator.clipboard.writeText(homeworkShareUrl.value);
   alert("Link skopiowany!");
 }
-
-function printQuiz() {
-  window.print();
-}
 </script>
 
-<style scoped>
+<style>
+/* Style globalne dla druku - poza scoped, aby na pewno działały */
 @media print {
-  .no-print {
+  .no-print,
+  header,
+  aside,
+  nav,
+  .sidebar,
+  .navbar,
+  .quiz-ui-container {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
+    position: relative !important;
+    background: white !important;
     color: black !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
   .print-only * {
     color: black !important;
+    background-color: transparent !important;
     opacity: 1 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
   .page-break-before {
-    page-break-before: always;
+    page-break-before: always !important;
+    padding-top: 3cm !important; /* Margines od góry dla każdej nowej strony (klucza odpowiedzi) */
   }
+
+  @page {
+    size: auto;
+    margin: 0mm; /* To ukrywa nagłówki i stopki przeglądarki (datę, URL) */
+  }
+
   body {
-    background: white !important;
-    color: black !important;
+    margin: 0;
+  }
+
+  .print-only {
+    padding: 3cm 2cm 2cm 2cm !important; /* Większy margines od góry (3cm) */
   }
 }
+</style>
 
+<style scoped>
 .print-only {
   display: none;
 }

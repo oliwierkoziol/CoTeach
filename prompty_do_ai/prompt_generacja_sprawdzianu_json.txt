@@ -19,7 +19,10 @@ Wymagania techniczne:
 3) Każde pytanie musi mieć przypisaną domyślną liczbę punktów (zamknięte: 1, otwarte: 2-5).
 4) Dla pytań zamkniętych podaj 4 opcje (A, B, C, D) i wskaż poprawną.
 5) Dla pytań otwartych przygotuj "Klucz odpowiedzi" (krótkie wytyczne, co musi się pojawić w odpowiedzi ucznia).
-6) Jeśli zadanie wymaga zapisu matematycznego, używaj czytelnej notacji tekstowej (np. x^2).
+6) Wzory, ułamki i równania (w tym potęgi np. małe 2 u góry) MUSZĄ być zapisane w LaTeX i otoczone pojedynczym znakiem dolara, np. $x^2 + 2x = 0$ albo $\frac{1}{2}$. Używaj LaTeX wszędzie tam, gdzie pojawiają się potęgi, ułamki czy symbole matematyczne.
+7) SFORMUŁOWANIE PYTAŃ: Unikaj zwrotów "na podstawie tekstu", "z powyższego fragmentu", "wnioskując z notatki" itp. Zadania powinny brzmieć jak standardowe pytania egzaminacyjne (np. "Wymień przyczyny...", "Oblicz...", "Wyjaśnij znaczenie..."), a nie jak test czytania ze zrozumieniem, chyba że materiał źródłowy zawiera wyraźny cytat literacki.
+8) ŚCISŁA LICZBA PYTAŃ: Wygeneruj DOKŁADNIE tyle pytań każdego typu, ile wskazano w parametrach ([ILOSC_ZAMKNIETYCH], [ILOSC_OTWARTYCH]). Jeśli parametr wynosi 0, NIE GENERUJ ani jednego pytania tego typu.
+9) BEZPIECZEŃSTWO JSON: Wszystkie backslashe w zapisach LaTeX MUSZĄ być poprawnie escapowane w JSON (np. \\frac zamiast \frac). Pamiętaj o cudzysłowach wewnątrz tekstów.
 
 Struktura JSON:
 {
