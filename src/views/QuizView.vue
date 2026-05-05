@@ -403,12 +403,20 @@ function printQuiz() {
   }
   .print-only {
     display: block !important;
+    color: black !important;
+  }
+  .print-only * {
+    color: black !important;
+    opacity: 1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   .page-break-before {
     page-break-before: always;
   }
   body {
     background: white !important;
+    color: black !important;
   }
 }
 
