@@ -39,7 +39,7 @@ const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL 
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
-const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://localhost:5173";
+const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "http://coteach.pl";
 const SESSION_LIMIT_PLN = Number(process.env.COST_LIMIT_PLN || "3.5");
 const WHISPER_PRICE_PER_MIN_USD = Number(process.env.WHISPER_PRICE_PER_MIN_USD || "0.006");
 const USD_TO_PLN = Number(process.env.USD_TO_PLN || "4.0");
@@ -133,7 +133,7 @@ function seedMemoryDb() {
     key: process.env.DEMO_LICENSE_KEY || "DEMO-LESSON-001",
     maxActiveUsers: 30,
     expiresAt: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
-    demoMode: true
+    demoMode: false
   });
   db.users.set(defaultTeacherId, {
     id: defaultTeacherId,
@@ -453,7 +453,7 @@ async function resolveTeacherContext(req, res) {
           assignedUserId: user.id,
           maxActiveUsers: 1,
           expiresAt: new Date(Date.now() + 7 * DAY_MS).toISOString(),
-          demoMode: true,
+          demoMode: false,
           schoolId: schoolId,
           createdAt: new Date().toISOString()
         };
