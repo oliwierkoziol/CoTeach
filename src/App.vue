@@ -3,15 +3,17 @@
     <div class="flex-1">
       <template v-if="minimalChrome">
         <GuestHeader />
-        <RouterView />
+        <div class="flex-1 flex flex-col min-h-[calc(100vh-64px)]">
+          <RouterView class="flex-1" />
+          <footer class="mt-auto z-50 w-full border-t border-white/10 bg-background/80 backdrop-blur-md px-4 py-3 text-center text-[10px] sm:text-xs text-muted-foreground">
+            &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+          </footer>
+        </div>
       </template>
       <AppLayout v-else :license-warning="showLicenseWarning">
         <RouterView />
       </AppLayout>
     </div>
-    <!-- <footer class="border-t border-border bg-card/70 px-4 py-3 text-center text-xs text-muted-foreground">
-      &copy; LeanMate 2026
-    </footer> -->
   </div>
 </template>
 

@@ -268,15 +268,20 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
       </div>
     </div>
 
-    <main class="min-h-screen min-w-0 overflow-x-clip pt-16 md:pl-[256px]">
-      <div v-if="licenseWarning" class="px-4 pt-4 sm:px-6 lg:px-10">
+    <main class="flex min-h-screen min-w-0 flex-col overflow-x-clip pt-16 md:pl-[256px]">
+      <div v-if="licenseWarning" class="shrink-0 px-4 pt-4 sm:px-6 lg:px-10">
         <div class="rounded-xl mt-5 border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
           Do Twojego konta nie jest przypisana żadna licencja.
         </div>
       </div>
-      <div class="min-h-[calc(100vh-4rem)]">
+      <div class="flex-1">
         <slot />
       </div>
+      
+      <!-- Stopka CoTeach z prawami autorskimi -->
+      <footer class="mt-auto shrink-0 border-t border-border/40 bg-background/50 px-4 py-3 text-center text-[10px] sm:text-xs text-muted-foreground z-10">
+        &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+      </footer>
     </main>
   </div>
 </template>
