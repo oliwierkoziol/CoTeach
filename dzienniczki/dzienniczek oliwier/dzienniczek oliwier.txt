@@ -68,3 +68,16 @@ Dzienniczek - Oliwier Kozioł
 - tworzenie lekcji z pliku audio
 - ulepszyłem system licencji
 - dodałem możliwośc edytowania danych szkoły przez admina
+
+4 Maja
+- naprawiony tryb demo
+- zaktualizono wygląd prezentacji
+- dodano wybór styli do prezentacji
+
+5 Maja
+- Naprawiony moduł tworzenia sprawdzianów
+- dodano mozliwosc przechodzenia miedzy lekcjami roznych klas
+- ostatnie poprawki wszystkich modułów aplikacji
+
+6 Maja
+- prezentacja projektu
