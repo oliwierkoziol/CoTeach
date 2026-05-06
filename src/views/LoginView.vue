@@ -162,9 +162,6 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
-import blockedImage from "../assets/czarek.jpg";
-import blockedSoundUrl from "../../xd.mp3";
-
 const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
 const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
 const BUSINESS_DOMAIN_CACHE_KEY = "businessEmailDomainCache";
@@ -204,39 +201,12 @@ const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_E
 const errorMessage = ref("");
 const infoMessage = ref("");
 let googleAuthSubscription = null;
-let blockedSound = null;
-const shouldShowBlockedImage = computed(() =>
-  String(errorMessage.value || "").toLowerCase().includes("zablokowane")
-);
 
 function resolvePostLoginPath() {
   const redirect = String(route.query.redirect || "").trim();
   if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) return "/dashboard";
   if (redirect === "/login" || redirect === "/register" || redirect === "/reset-password") return "/dashboard";
   return redirect;
-}
-
-function setBlockedError() {
-  errorMessage.value = "To konto jest obecnie zablokowane.";
-  tryPlayBlockedSound();
-}
-
-function tryPlayBlockedSound() {
-  try {
-    if (!blockedSound) {
-      blockedSound = new Audio(blockedSoundUrl);
-      blockedSound.preload = "auto";
-    }
-    blockedSound.currentTime = 0;
-    const playPromise = blockedSound.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        // Browser may block autoplay without a direct user gesture.
-      });
-    }
-  } catch {
-    // Ignore audio errors; login flow should still continue.
-  }
 }
 
 function mapLoginErrorMessage(error, mode = "individual") {
@@ -374,7 +344,7 @@ async function handleLogin() {
 
   if (!profileError && profile?.blocked === true) {
     await supabase.auth.signOut({ scope: "local" });
-    setBlockedError();
+    errorMessage.value = "To konto jest obecnie zablokowane.";
     return;
   }
 
@@ -434,7 +404,7 @@ async function handleBusinessLogin() {
 
   if (!profileError && profile?.blocked === true) {
     await supabase.auth.signOut({ scope: "local" });
-    setBlockedError();
+    errorMessage.value = "To konto jest obecnie zablokowane.";
     return;
   }
 
@@ -562,7 +532,7 @@ onMounted(async () => {
   }
 
   if (String(route.query.blocked || "") === "1") {
-    setBlockedError();
+    errorMessage.value = "To konto jest obecnie zablokowane.";
   }
 
   const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
