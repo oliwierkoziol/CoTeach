@@ -10,7 +10,7 @@
       <div class="grid items-center gap-10 lg:grid-cols-2">
         <div>
           <p class="mb-3 inline-flex items-center rounded-full border border-border bg-card/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            AI dla nauczycieli
+            Asystent AI dla nauczycieli
           </p>
           <h1 class="text-4xl font-black leading-tight sm:text-5xl">
             Prowadź lekcję,
@@ -35,20 +35,7 @@
             </RouterLink>
           </div>
 
-          <div class="mt-8 grid grid-cols-3 gap-3 text-center">
-            <div class="rounded-xl border border-border bg-card/80 p-3">
-              <p class="text-2xl font-extrabold text-foreground">10 min</p>
-              <p class="text-xs text-muted-foreground">start lekcji</p>
-            </div>
-            <div class="rounded-xl border border-border bg-card/80 p-3">
-              <p class="text-2xl font-extrabold text-foreground">Live</p>
-              <p class="text-xs text-muted-foreground">monitoring planu</p>
-            </div>
-            <div class="rounded-xl border border-border bg-card/80 p-3">
-              <p class="text-2xl font-extrabold text-foreground">1 klik</p>
-              <p class="text-xs text-muted-foreground">złota notatka</p>
-            </div>
-          </div>
+         
         </div>
 
         <div class="rounded-3xl border border-border bg-card/90 p-6 shadow-xl shadow-blue-900/5 backdrop-blur">
