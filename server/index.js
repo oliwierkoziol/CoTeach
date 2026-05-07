@@ -2795,6 +2795,79 @@ app.get("/api/quizzes", async (req, res) => {
   }
 });
 
+app.delete("/api/quizzes/:quizId", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const quizId = req.params.quizId;
+    if (db.quizzes) db.quizzes.delete(quizId);
+    if (supabase) {
+      await supabase.from("quizzes").delete().eq("id", quizId).eq("teacher_id", teacher.userId);
+    }
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/quiz-results", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    const { quizId, studentName, totalPoints, maxPoints, results } = req.body;
+    if (!quizId) return res.status(400).json({ error: "quizId is required" });
+
+    const result = {
+      id: randomUUID(),
+      quizId,
+      teacherId: teacher.teacherId,
+      studentName: studentName || "Nieznany uczeń",
+      totalPoints: Number(totalPoints || 0),
+      maxPoints: Number(maxPoints || 0),
+      answersJson: results || [],
+      createdAt: new Date().toISOString()
+    };
+
+    if (supabase) {
+      const { error } = await supabase.from("quiz_results").insert([{
+        id: result.id,
+        quiz_id: quizId,
+        teacher_id: teacher.userId,
+        student_name: result.studentName,
+        total_points: result.totalPoints,
+        max_points: result.maxPoints,
+        answers_json: result.answersJson,
+        created_at: result.createdAt
+      }]);
+      if (error) throw error;
+    }
+
+    return res.status(201).json({ result });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/quiz-results", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    const quizId = req.query.quizId;
+    if (supabase) {
+      let query = supabase.from("quiz_results").select("*").eq("teacher_id", teacher.userId);
+      if (quizId) query = query.eq("quiz_id", quizId);
+      const { data, error } = await query.order("created_at", { ascending: false });
+      if (error) throw error;
+      return res.json({ results: data });
+    }
+    return res.json({ results: [] });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/lessons/:lessonId/homework", async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);

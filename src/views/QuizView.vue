@@ -166,6 +166,25 @@
                   {{ isGrading ? 'Analizowanie pracy...' : 'Wgraj zdjęcie pracy' }}
                 </button>
                 <p class="text-[10px] text-center text-gray-400 mt-2">AI rozpozna pismo ręczne i zasugeruje ocenę.</p>
+
+                <!-- Quiz Key Preview during grading -->
+                <div v-if="selectedGradingQuiz" class="mt-6 pt-4 border-t border-gray-100">
+                  <button 
+                    @click="showKeyPreview = !showKeyPreview" 
+                    class="w-full flex items-center justify-between text-[11px] font-bold text-gray-400 uppercase hover:text-primary transition"
+                  >
+                    <span>Podgląd klucza pytań</span>
+                    <svg :class="showKeyPreview ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  
+                  <div v-if="showKeyPreview" class="mt-3 space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div v-for="(q, idx) in selectedGradingQuiz.questions" :key="q.id" class="p-3 bg-gray-50 rounded-lg text-[11px]">
+                      <p class="font-bold mb-1 text-gray-700">Zadanie {{ idx + 1 }}: {{ q.question }}</p>
+                      <p v-if="q.type === 'closed'" class="text-emerald-600 font-bold">Poprawna: {{ ['A','B','C','D'][q.correctAnswer] }}</p>
+                      <p v-else class="text-amber-600 italic">Klucz: {{ q.answerGuide }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -380,11 +399,12 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
-const { state, fetchLessons, fetchTeacherNotes } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, saveQuizResult } = useLessonStore();
 const route = useRoute();
+const router = useRouter();
 
 const sourceType = ref("lesson"); // 'lesson' | 'note'
 const selectedLessonId = ref(route.params.lessonId || "");
@@ -407,8 +427,13 @@ const homeworkQrUrl = ref("");
 // Grading state
 const savedQuizzes = ref([]);
 const selectedGradingQuizId = ref("");
+const showKeyPreview = ref(false);
 const isGrading = ref(false);
 const gradingResult = ref(null);
+
+const selectedGradingQuiz = computed(() => {
+  return savedQuizzes.value.find(q => q.id === selectedGradingQuizId.value) || null;
+});
 
 const filteredLessons = computed(() => {
   if (!state.selectedClass || !state.selectedClassName) return state.lessons;
@@ -608,9 +633,24 @@ async function handleGradingUpload(event) {
 }
 
 async function saveGradingResult() {
-  // Placeholder for Step 4 of the plan
-  alert("Wynik został zatwierdzony (funkcja zapisu w bazie będzie dostępna wkrótce).");
-  gradingResult.value = null;
+  if (!gradingResult.value || !selectedGradingQuizId.value) return;
+  
+  try {
+    await saveQuizResult({
+      quizId: selectedGradingQuizId.value,
+      studentName: gradingResult.value.studentName,
+      totalPoints: gradingResult.value.totalPoints,
+      maxPoints: gradingResult.value.maxPoints,
+      results: gradingResult.value.results
+    });
+    
+    alert("Wynik został zapisany pomyślnie!");
+    gradingResult.value = null;
+    router.push("/archive?tab=quizzes");
+  } catch (error) {
+    console.error(error);
+    alert("Błąd podczas zapisywania wyniku.");
+  }
 }
 </script>
 

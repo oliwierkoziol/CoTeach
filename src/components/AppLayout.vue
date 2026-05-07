@@ -187,14 +187,14 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
           </RouterLink>
 
           <!-- Sprawdziany -->
-          <!-- <RouterLink to="/quiz" custom v-slot="{ href, navigate, isActive }">
+          <RouterLink to="/quiz" custom v-slot="{ href, navigate, isActive }">
             <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Sprawdziany</p>
             </a>
-          </RouterLink> -->
+          </RouterLink>
 
           <!-- Archiwum -->
           <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">

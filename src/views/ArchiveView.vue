@@ -54,6 +54,19 @@
                 <img :src="presentationIcon" alt="" class="h-4 w-4 shrink-0" :class="activeTab === 'presentations' ? 'brightness-0 invert' : ''" />
                 Prezentacje
               </button>
+              <button
+                type="button"
+                @click="activeTab = 'quizzes'"
+                :class="[
+                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
+                  activeTab === 'quizzes' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                ]"
+              >
+                <svg class="h-4 w-4 shrink-0" :class="activeTab === 'quizzes' ? 'text-white' : 'text-[#4b5563]'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Sprawdziany
+              </button>
             </div>
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-2">
               {{ searchLabel }}
@@ -148,6 +161,36 @@
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
                   <span v-if="item.class_name" class="font-semibold text-[#0c3dfe]">{{ item.class_name }} • </span>
                   {{ item.createdAtLabel || formatDate(item.createdAt) }} • {{ item.slideCount || 0 }} slajdów • {{ styleLabels[item.style] || styleLabels.auto }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quizzes List -->
+          <div v-if="activeTab === 'quizzes' && !filteredQuizzes.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych sprawdzianów.</p>
+          </div>
+
+          <div
+            v-if="activeTab === 'quizzes'"
+            v-for="quiz in filteredQuizzes"
+            :key="quiz.id"
+            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+            :class="selectedQuiz?.id === quiz.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            @click="selectQuiz(quiz)"
+          >
+            <div class="flex w-full items-center gap-4">
+              <div class="size-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  {{ quiz.title || "Sprawdzian" }}
+                </h3>
+                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  {{ formatDate(quiz.createdAt) }} • {{ quiz.questions?.length || 0 }} pytań
                 </p>
               </div>
             </div>
@@ -358,6 +401,47 @@
               Otwórz generator prezentacji
             </button> -->
           </div>
+
+          <!-- Quiz Details -->
+          <div v-else-if="activeTab === 'quizzes' && selectedQuiz" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-6">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Szczegóły sprawdzianu
+              </h3>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                @click="handleDeleteQuiz"
+              >
+                Usuń
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              <button
+                @click="router.push(`/quiz/${selectedQuiz.lessonId || ''}`)"
+                class="w-full rounded-lg bg-[#0c3dfe] text-white font-bold py-3 hover:opacity-90 transition"
+              >
+                Drukuj / Edytuj sprawdzian
+              </button>
+              
+              <div class="border-t border-gray-100 pt-4">
+                <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Wyniki uczniów ({{ quizResults.length }})</h4>
+                <div v-if="quizResults.length === 0" class="text-center py-6 text-sm text-gray-400 italic">
+                  Brak ocenionych prac dla tego sprawdzianu.
+                </div>
+                <div v-else class="space-y-3">
+                  <div v-for="res in quizResults" :key="res.id" class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="font-bold text-sm">{{ res.student_name }}</span>
+                      <span class="font-black text-blue-600">{{ res.total_points }}/{{ res.max_points }}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400">{{ new Date(res.created_at).toLocaleString() }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -420,7 +504,7 @@ const styleLabels = {
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const ARCHIVE_ACTIVE_TAB_KEY = "coteach:archive-active-tab";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
-const { state, fetchLessons, fetchTeacherNotes, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, fetchQuizzes, fetchQuizResults, deleteQuiz, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
@@ -437,9 +521,11 @@ const editSubject = ref("");
 const editDate = ref("");
 const isQrModalOpen = ref(false);
 const userClasses = ref([]);
+const selectedQuiz = ref(null);
+const quizResults = ref([]);
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), fetchTeacherNotes(), loadUserClasses()]);
+  await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), loadUserClasses()]);
   await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
 
@@ -508,15 +594,31 @@ const filteredPresentations = computed(() => {
   });
 });
 
+const filteredQuizzes = computed(() => {
+  let quizzes = state.quizzes || [];
+  
+  if (state.selectedClass) {
+    quizzes = quizzes.filter(q => q.class_name === state.selectedClassName);
+  }
+
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return quizzes;
+  return quizzes.filter((quiz) => {
+    return `${quiz.title || ""}`.toLowerCase().includes(q);
+  });
+});
+
 const searchLabel = computed(() => {
   if (activeTab.value === "notes") return "Szukaj notatek";
   if (activeTab.value === "presentations") return "Szukaj prezentacji";
+  if (activeTab.value === "quizzes") return "Szukaj sprawdzianów";
   return "Szukaj lekcji";
 });
 
 const searchPlaceholder = computed(() => {
   if (activeTab.value === "notes") return "Szukaj według tytułu, przedmiotu albo poziomu...";
   if (activeTab.value === "presentations") return "Szukaj według tytułu lub daty prezentacji...";
+  if (activeTab.value === "quizzes") return "Szukaj według tytułu sprawdzianu...";
   return "Szukaj według przedmiotu, tytułu albo miesiąca...";
 });
 
@@ -667,6 +769,30 @@ function editSelectedPresentation() {
   router.push("/presentation");
 }
 
+async function selectQuiz(quiz) {
+  selectedQuiz.value = quiz;
+  quizResults.value = [];
+  try {
+    const results = await fetchQuizResults(quiz.id);
+    quizResults.value = results;
+  } catch (e) {
+    console.error("Failed to fetch quiz results", e);
+  }
+}
+
+async function handleDeleteQuiz() {
+  if (!selectedQuiz.value?.id) return;
+  const ok = window.confirm("Na pewno usunąć ten sprawdzian? Wyniki uczniów również zostaną usunięte.");
+  if (!ok) return;
+  try {
+    await deleteQuiz(selectedQuiz.value.id);
+    selectedQuiz.value = filteredQuizzes.value[0] || null;
+    if (selectedQuiz.value) selectQuiz(selectedQuiz.value);
+  } catch (e) {
+    alert("Błąd podczas usuwania.");
+  }
+}
+
 watch(activeTab, async (tab) => {
   localStorage.setItem(ARCHIVE_ACTIVE_TAB_KEY, tab);
   searchQuery.value = "";
@@ -681,6 +807,12 @@ watch(activeTab, async (tab) => {
     await refreshPresentationHistory();
     const next = prevId ? filteredPresentations.value.find((p) => p.id === prevId) : null;
     selectedPresentation.value = next || filteredPresentations.value[0] || null;
+  }
+  if (tab === "quizzes") {
+    await fetchQuizzes();
+    if (filteredQuizzes.value.length && !selectedQuiz.value) {
+      selectQuiz(filteredQuizzes.value[0]);
+    }
   }
 });
 </script>

@@ -99,7 +99,9 @@ const state = reactive({
   isInitialLoadDone: false,
   missing: [],
   costInfo: null,
-  shareUrl: ""
+  shareUrl: "",
+  quizzes: [],
+  quizResults: []
 });
 
 let cachedAccessToken = null;
@@ -482,6 +484,43 @@ export function useLessonStore() {
     }
   }
 
+  async function fetchQuizzes() {
+    try {
+      const data = await api("/api/quizzes");
+      state.quizzes = data.quizzes || [];
+      return state.quizzes;
+    } catch (err) {
+      state.error = err.message;
+      return [];
+    }
+  }
+
+  async function fetchQuizResults(quizId = null) {
+    try {
+      const url = quizId ? `/api/quiz-results?quizId=${quizId}` : "/api/quiz-results";
+      const data = await api(url);
+      state.quizResults = data.results || [];
+      return state.quizResults;
+    } catch (err) {
+      state.error = err.message;
+      return [];
+    }
+  }
+
+  async function saveQuizResult(payload) {
+    const data = await api("/api/quiz-results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return data.result;
+  }
+
+  async function deleteQuiz(quizId) {
+    await api(`/api/quizzes/${quizId}`, { method: "DELETE" });
+    state.quizzes = state.quizzes.filter(q => q.id !== quizId);
+  }
+
   return {
     state,
     createLesson,
@@ -511,6 +550,10 @@ export function useLessonStore() {
     fetchTeacherNotes,
     fetchUserClasses,
     addUserClass,
-    setSelectedClass
+    setSelectedClass,
+    fetchQuizzes,
+    fetchQuizResults,
+    saveQuizResult,
+    deleteQuiz
   };
 }

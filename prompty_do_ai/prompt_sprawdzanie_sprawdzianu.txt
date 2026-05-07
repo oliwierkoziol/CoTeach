@@ -4,13 +4,18 @@ DANE WEJŚCIOWE:
 1. Zdjęcie pracy ucznia (załączone).
 2. Klucz odpowiedzi i pytania: [KLUCZ_ODPOWIEDZI]
 
-TWOJE ZADANIE:
+KROK 0 (WALIDACJA):
+Zanim zaczniesz oceniać, sprawdź czy zdjęcie faktycznie przedstawia pracę domową lub sprawdzian dotyczący tematów z klucza odpowiedzi.
+- Jeśli zdjęcie przedstawia coś zupełnie innego (np. krajobraz, jedzenie, pusty arkusz, tekst o innej tematyce), ustaw "totalPoints" na 0 i w "results" dodaj jeden wpis z komentarzem: "PRZESŁANO NIEPRAWIDŁOWY MATERIAŁ: Zdjęcie nie zawiera odpowiedzi na pytania ze sprawdzianu."
+- Bądź bardzo surowy. Jeśli nie widzisz żadnego związku między zdjęciem a pytaniami, nie przyznawaj punktów.
+
+TWOJE ZADANIE (jeśli walidacja przeszła pomyślnie):
 1. Rozpoznaj tekst pisany ręcznie na zdjęciu (OCR).
 2. Dla każdego zadania ze sprawdzianu:
-   - Zidentyfikuj odpowiedź ucznia.
+   - Zidentyfikuj odpowiedź ucznia (nawet jeśli jest nieczytelna lub błędna).
    - Porównaj ją z poprawną odpowiedzią/kluczem.
    - Przyznaj punkty (liczba całkowita lub połówka, np. 0.5, 1, 2.5).
-   - Krótko uzasadnij ocenę (np. "Błąd obliczeniowy w ostatnim kroku", "Poprawna definicja", "Brak odpowiedzi").
+   - Krótko uzasadnij ocenę.
 3. Oblicz sumę punktów.
 
 WYMAGANIA TECHNICZNE:
@@ -21,16 +26,15 @@ WYMAGANIA TECHNICZNE:
 STRUKTURA JSON:
 {
   "studentName": "Imię i Nazwisko (jeśli rozpoznano, inaczej null)",
-  "totalPoints": 7.5,
+  "totalPoints": 0,
   "maxPoints": 10,
   "results": [
     {
       "questionNumber": 1,
-      "recognizedText": "Tekst rozpoznany z pracy ucznia...",
-      "pointsAwarded": 1,
+      "recognizedText": "Tekst rozpoznany...",
+      "pointsAwarded": 0,
       "maxPoints": 1,
       "comment": "Uzasadnienie..."
-    },
-    ...
+    }
   ]
 }

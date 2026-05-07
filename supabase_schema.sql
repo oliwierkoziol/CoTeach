@@ -130,12 +130,12 @@ ALTER TABLE public.quizzes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quiz_results ENABLE ROW LEVEL SECURITY;
 
 -- Clean up existing policies if any
-DROP POLICY IF EXISTS "Users can manage their own profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Teachers can manage their own classes" ON public.classes;
-DROP POLICY IF EXISTS "Teachers can manage their own lessons" ON public.lessons;
-DROP POLICY IF EXISTS "Teachers can manage their own notes" ON public.saved_notes;
-DROP POLICY IF EXISTS "Teachers can manage their own quizzes" ON public.quizzes;
-DROP POLICY IF EXISTS "Teachers can manage their own quiz results" ON public.quiz_results;
+DROP POLICY IF EXISTS "Manage own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Manage own classes" ON public.classes;
+DROP POLICY IF EXISTS "Manage own lessons" ON public.lessons;
+DROP POLICY IF EXISTS "Manage own notes" ON public.saved_notes;
+DROP POLICY IF EXISTS "Manage own quizzes" ON public.quizzes;
+DROP POLICY IF EXISTS "Manage own quiz results" ON public.quiz_results;
 
 -- Policies with robust type handling
 CREATE POLICY "Manage own profile" ON public.profiles 
@@ -155,3 +155,12 @@ CREATE POLICY "Manage own quizzes" ON public.quizzes
 
 CREATE POLICY "Manage own quiz results" ON public.quiz_results 
     FOR ALL USING (teacher_id IN (SELECT teacher_id FROM public.profiles WHERE id::text = auth.uid()::text));
+
+CREATE POLICY "View own usage" ON public.openrouter_usage_events
+    FOR SELECT USING (teacher_id IN (SELECT teacher_id FROM public.profiles WHERE id::text = auth.uid()::text));
+
+CREATE POLICY "View assigned license" ON public.licenses
+    FOR SELECT USING (assigned_user_id = auth.uid() OR school_id IN (SELECT school_id FROM public.profiles WHERE id::text = auth.uid()::text));
+
+CREATE POLICY "View school" ON public.schools
+    FOR SELECT USING (id IN (SELECT school_id FROM public.profiles WHERE id::text = auth.uid()::text));
