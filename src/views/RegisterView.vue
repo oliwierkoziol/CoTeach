@@ -173,6 +173,13 @@
           {{ infoMessage }}
         </div>
 
+        <p class="mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
+          Rejestrując się, akceptujesz nasz 
+          <router-link to="/legal?tab=terms" class="font-bold text-primary hover:underline">Regulamin</router-link> 
+          oraz 
+          <router-link to="/legal?tab=privacy" class="font-bold text-primary hover:underline">Politykę Prywatności (RODO)</router-link>.
+        </p>
+
       </div>
     </div>
   </div>
@@ -207,6 +214,7 @@ async function upsertProfileRow({ id, email, fullName, schoolId, organisation = 
       school_id: schoolId || null,
       organisation: organisation === true,
       teacher_id: teacherId,
+      terms_accepted: false,
       updated_at: new Date().toISOString()
     },
     { onConflict: "id" }

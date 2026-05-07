@@ -279,8 +279,14 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
       </div>
       
       <!-- Stopka CoTeach z prawami autorskimi -->
-      <footer class="mt-auto shrink-0 border-t border-border/40 bg-background/50 px-4 py-3 text-center text-[10px] sm:text-xs text-muted-foreground z-10">
-        &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+      <footer class="mt-auto shrink-0 border-t border-border/40 bg-background/50 px-4 py-3 text-center text-[10px] sm:text-xs text-muted-foreground z-10 flex flex-col items-center gap-1">
+        <div>
+          &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+        </div>
+        <div class="flex gap-4 font-medium">
+          <router-link to="/legal?tab=terms" class="hover:text-primary transition-colors">Regulamin</router-link>
+          <router-link to="/legal?tab=privacy" class="hover:text-primary transition-colors">RODO</router-link>
+        </div>
       </footer>
     </main>
   </div>

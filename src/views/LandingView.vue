@@ -108,6 +108,17 @@
         </div>
       </div>
     </section>
+    <footer class="border-t border-border bg-card/30 px-4 py-8 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-[10px] sm:text-xs text-muted-foreground">
+          &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone.
+        </div>
+        <div class="flex gap-6 text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">
+          <router-link to="/legal?tab=terms" class="hover:text-primary transition-colors">Regulamin</router-link>
+          <router-link to="/legal?tab=privacy" class="hover:text-primary transition-colors">RODO</router-link>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 

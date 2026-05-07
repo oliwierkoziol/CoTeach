@@ -24,7 +24,9 @@ const router = createRouter({
     { path: "/login", component: () => import("../views/LoginView.vue") },
     { path: "/reset-password", component: () => import("../views/ResetPasswordView.vue") },
     { path: "/register", component: () => import("../views/RegisterView.vue") },
-    { path: "/share/:noteId", component: () => import("../views/ShareView.vue") }
+    { path: "/share/:noteId", component: () => import("../views/ShareView.vue") },
+    { path: "/legal", component: () => import("../views/LegalView.vue") },
+    { path: "/terms-agreement", component: () => import("../views/TermsAgreementView.vue") }
   ]
 });
 
@@ -54,6 +56,7 @@ async function getSessionWithTimeout() {
 router.beforeEach(async (to) => {
   if (!supabaseConfigured) return true;
   if (to.path === "/") return true;
+  if (to.path === "/legal") return true;
   if (to.path.startsWith("/share/")) return true;
   if (to.path === "/login" || to.path === "/register" || to.path === "/reset-password") return true;
 
@@ -63,13 +66,23 @@ router.beforeEach(async (to) => {
 
   const { data: profile, error: blockedCheckError } = await supabase
     .from("profiles")
-    .select("blocked, admin, organization")
+    .select("blocked, admin, organization, terms_accepted")
     .eq("id", session.user.id)
     .maybeSingle();
 
   if (!blockedCheckError && profile?.blocked === true) {
     await supabase.auth.signOut({ scope: "local" });
     return { path: "/login", query: { blocked: "1" } };
+  }
+
+  // Enforce terms acceptance
+  if (profile && profile.terms_accepted !== true && to.path !== "/terms-agreement") {
+    return { path: "/terms-agreement" };
+  }
+
+  // Prevent going to terms-agreement if already accepted
+  if (profile && profile.terms_accepted === true && to.path === "/terms-agreement") {
+    return { path: "/dashboard" };
   }
 
   if (to.path.startsWith("/admin") && profile?.admin !== true) {
