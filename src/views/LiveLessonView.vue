@@ -2,7 +2,7 @@
   <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
     <!-- Background Decor -->
     <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
-    <div class="p-12 pt-8 w-full max-w-[1664px] relative z-10">
+    <div class="p-4 pt-6 sm:p-12 sm:pt-8 w-full max-w-[1664px] relative z-10">
     <!-- Header -->
     <div class="mb-7 flex flex-col md:flex-row md:items-start justify-between gap-4">
       <div class="max-w-[1024px]">
@@ -12,17 +12,17 @@
             W TRAKCIE
           </p>
         </div>
-        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
+        <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[24px] sm:text-[36px] tracking-[-0.9px] leading-tight sm:leading-[40px] mb-2">
           Lekcja: {{ state.lesson?.title || 'Brak tytułu' }}
         </h1>
-        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[18px] leading-[28px]">
+        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-sm sm:text-[18px] leading-relaxed sm:leading-[28px]">
           Mowa z mikrofonu jest przetwarzana. Lekcja skończy się po upływie czasu.
         </p>
       </div>
 
       <button
         @click="cancelLessonAndRedirect"
-        class="shrink-0 flex items-center gap-2 px-6 py-3 rounded-[12px] bg-[#9e3f4e]/10 text-[#9e3f4e] font-['Plus_Jakarta_Sans'] font-bold border border-[#9e3f4e]/20 hover:bg-[#9e3f4e]/20 transition-all shadow-sm active:scale-95"
+        class="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-[12px] bg-[#9e3f4e]/10 text-[#9e3f4e] font-['Plus_Jakarta_Sans'] font-bold border border-[#9e3f4e]/20 hover:bg-[#9e3f4e]/20 transition-all shadow-sm active:scale-95 text-sm sm:text-base"
       >
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -32,9 +32,9 @@
     </div>
 
     <!-- Main Grid -->
-    <div class="grid grid-cols-12 gap-8 mb-7">
+    <div class="grid grid-cols-12 gap-6 sm:gap-8 mb-7">
       <!-- Plan lekcji -->
-      <div class="col-span-12 xl:col-span-4 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 flex flex-col h-[497px]">
+      <div class="col-span-12 xl:col-span-4 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-6 flex flex-col h-[400px] sm:h-[497px]">
         <h2 class="font-['Manrope'] font-bold text-[#142588] text-[18px] leading-[28px] mb-2">
           Plan lekcji
         </h2>
@@ -120,7 +120,7 @@
           </div>
         </div>
 
-        <div class="bg-[#f2f4f7] rounded-xl border-l-4 border-[#0059bb] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 h-[445px] overflow-y-auto">
+        <div class="bg-[#f2f4f7] rounded-xl border-l-4 border-[#0059bb] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-4 sm:p-6 h-[350px] sm:h-[445px] overflow-y-auto">
           <p class="font-['Inter'] font-semibold text-[#0059bb] text-[12px] tracking-[1.2px] uppercase mb-3">
             NAPISY LIVE (W TRAKCIE)
           </p>
@@ -149,7 +149,7 @@
         </div>
 
       <!-- Microphone Settings -->
-      <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 space-y-6">
+      <div class="col-span-12 xl:col-span-3 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-8 space-y-6">
         <div class="flex items-center gap-3">
           <!-- Mic Icon -->
           <svg class="w-6 h-[22px]" fill="none" stroke="#142588" viewBox="0 0 24 24" stroke-width="2.5">
@@ -224,15 +224,15 @@
     </div>
 
     <!-- Ask Me Component -->
-    <div class="col-span-12 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 mb-7">
+    <div class="col-span-12 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-8 mb-7">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <!-- Tabs -->
           <div class="flex flex-col md:flex-row md:items-center gap-6">
-            <div class="flex gap-2 bg-[#e0e3e6] rounded-lg p-1 w-fit">
+            <div class="flex gap-1 bg-[#e0e3e6] rounded-lg p-1 w-full sm:w-fit">
               <button
                 @click="activeTab = 'ask'"
                 :class="activeTab === 'ask' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
-                class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+                class="flex-1 sm:flex-none px-3 sm:px-4 py-2 font-['Inter'] font-semibold text-[13px] sm:text-[14px] rounded-md transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Zapytaj mnie
@@ -240,10 +240,10 @@
               <button
                 @click="activeTab = 'equation'"
                 :class="activeTab === 'equation' ? 'bg-white text-[#0059BB] shadow-sm' : 'text-[#6B7280]'"
-                class="px-4 py-2 font-['Inter'] font-semibold text-[14px] rounded-md transition-colors flex items-center gap-2"
+                class="flex-1 sm:flex-none px-3 sm:px-4 py-2 font-['Inter'] font-semibold text-[13px] sm:text-[14px] rounded-md transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                Rozwiąż równanie
+                Równanie
               </button>
             </div>
 
@@ -502,9 +502,9 @@
     </div>
 
     <!-- Bottom Section -->
-    <div class="grid grid-cols-12 gap-8">
+    <div class="grid grid-cols-12 gap-6 sm:gap-8">
       <!-- Progress Tracker -->
-      <div class="col-span-12 lg:col-span-9 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-3">
+      <div class="col-span-12 lg:col-span-9 bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 sm:p-6 space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <!-- Calendar Icon -->
@@ -537,9 +537,9 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="col-span-12 lg:col-span-3 space-y-4 flex flex-col justify-end">
+      <div class="col-span-12 lg:col-span-3 space-y-3 sm:space-y-4 flex flex-col justify-end">
         <button 
-          class="presentation-btn-static w-full bg-[#e6e8eb] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
+          class="presentation-btn-static w-full bg-[#e6e8eb] rounded-[18px] sm:rounded-[24px] py-3.5 sm:py-4 flex items-center justify-center gap-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
           @click="goPresentation"
         >
           <!-- Presentation Icon -->
@@ -552,7 +552,7 @@
         </button>
 
         <button 
-          class="w-full bg-[#7b3400] rounded-[24px] py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#7b3400]"
+          class="w-full bg-[#7b3400] rounded-[18px] sm:rounded-[24px] py-3.5 sm:py-4 flex items-center justify-center gap-2 hover:bg-[#6a2d00] transition-colors shadow-[0_4px_12px_rgba(123,52,0,0.2)] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#7b3400]"
           :disabled="isFinalizingLesson"
           @click="finalizeNow"
         >

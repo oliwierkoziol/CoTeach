@@ -86,6 +86,10 @@ const QUIZ_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_sprawdzianu_json.txt"),
   "utf8"
 );
+const GRADING_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_sprawdzanie_sprawdzianu.txt"),
+  "utf8"
+);
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
@@ -757,6 +761,31 @@ async function persistLesson(lesson) {
   if (!supabase) return;
   const { error } = await supabase.from("lessons").upsert(lessonToRow(lesson), { onConflict: "id" });
   if (error) throw new Error(`Supabase lesson upsert failed: ${error.message}`);
+}
+
+async function loadQuizzesFromSupabase() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from("quizzes").select("*");
+    if (error) throw error;
+    if (data) {
+      db.quizzes = db.quizzes || new Map();
+      data.forEach(q => {
+        db.quizzes.set(q.id, {
+          id: q.id,
+          teacherId: q.teacher_id,
+          lessonId: q.lesson_id,
+          noteId: q.note_id,
+          title: q.title,
+          questions: q.questions,
+          createdAt: q.created_at
+        });
+      });
+      console.log(`[📦] Synchronized ${data.length} quizzes from Supabase.`);
+    }
+  } catch (error) {
+    console.error("Failed to load quizzes from Supabase:", error.message);
+  }
 }
 
 async function persistLessonSafe(lesson) {
@@ -1685,6 +1714,7 @@ async function generateQuizWithLLM({
   plan,
   numClosed = 5,
   numOpen = 2,
+  difficulty = "średni",
   context = {}
 }) {
   const safeNote = String(noteContent || "").trim();
@@ -1697,6 +1727,7 @@ async function generateQuizWithLLM({
     .replace("[KLASA]", String(classLevel || "Nie podano"))
     .replace("[ILOSC_ZAMKNIETYCH]", String(numClosed))
     .replace("[ILOSC_OTWARTYCH]", String(numOpen))
+    .replace("[TRUDNOSC]", String(difficulty))
     .replace("[TRESC_ZRODLOWA]", (safeNote + "\n" + JSON.stringify(safePlan)).slice(0, 35000));
 
   try {
@@ -2627,6 +2658,7 @@ app.post("/api/quizzes/generate", async (req, res) => {
     const classLevel = String(req.body?.classLevel || "").trim();
     const numClosed = Number(req.body?.numClosed || 5);
     const numOpen = Number(req.body?.numOpen || 2);
+    const difficulty = String(req.body?.difficulty || "średni").trim();
 
     let lesson = null;
     if (lessonId) {
@@ -2656,6 +2688,7 @@ app.post("/api/quizzes/generate", async (req, res) => {
       plan: lesson?.plan || [],
       numClosed,
       numOpen,
+      difficulty,
       context: {
         lessonId: lesson?.id || null,
         schoolId: teacher.schoolId,
@@ -2665,6 +2698,8 @@ app.post("/api/quizzes/generate", async (req, res) => {
 
     const quiz = {
       id: randomUUID(),
+      teacherId: teacher.teacherId,
+      schoolId: teacher.schoolId,
       lessonId: lesson?.id || null,
       noteId: note?.id || null,
       title: quizData.title,
@@ -2672,9 +2707,91 @@ app.post("/api/quizzes/generate", async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
+    // Persist quiz
+    db.quizzes = db.quizzes || new Map();
+    db.quizzes.set(quiz.id, quiz);
+    
+    if (supabase) {
+      const { error: saveError } = await supabase
+        .from("quizzes")
+        .upsert([{
+          id: quiz.id,
+          teacher_id: teacher.userId,
+          lesson_id: quiz.lessonId,
+          note_id: quiz.noteId,
+          title: quiz.title,
+          questions: quiz.questions,
+          created_at: quiz.createdAt
+        }]);
+      if (saveError) console.error("Error saving quiz to Supabase:", saveError);
+    }
+
     return res.json({ quiz });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Nie udało się wygenerować sprawdzianu." });
+  }
+});
+
+app.post("/api/quizzes/grade", upload.single("file"), async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    if (!requireActiveLicenseForTeacher(teacher, res, "Ocenianie sprawdzianów AI")) return;
+
+    const quizId = String(req.body?.quizId || "").trim();
+    if (!quizId) return res.status(400).json({ error: "Brak quizId." });
+
+    const quiz = db.quizzes?.get(quizId);
+    if (!quiz) return res.status(404).json({ error: "Sprawdzian nie został znaleziony." });
+
+    if (!req.file) return res.status(400).json({ error: "Brak zdjęcia pracy." });
+
+    const prompt = GRADING_PROMPT_TEMPLATE.replace(
+      "[KLUCZ_ODPOWIEDZI]",
+      JSON.stringify(quiz.questions)
+    );
+
+    const base64Image = req.file.buffer.toString("base64");
+    const mimeType = req.file.mimetype;
+
+    const response = await callOpenRouter({
+      model: OPENROUTER_VISION_MODEL,
+      parts: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Image
+          }
+        }
+      ],
+      maxTokens: 4000
+    });
+
+    const gradingResult = parseJsonFromModel(response.text);
+    if (!gradingResult) throw new Error("Błąd przetwarzania wyniku AI.");
+
+    // Optional: persist result to quiz_results table if needed later
+    
+    return res.json({ gradingResult });
+  } catch (error) {
+    console.error("Grading error:", error);
+    return res.status(500).json({ error: error.message || "Błąd podczas sprawdzania pracy." });
+  }
+});
+
+app.get("/api/quizzes", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    const quizzes = [...(db.quizzes?.values() || [])].filter(
+      q => String(q.teacherId) === String(teacher.teacherId)
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.json({ quizzes });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -4217,6 +4334,7 @@ loadSchoolsFromSupabase()
   .then(() => loadLicensesFromSupabase())
   .then(() => loadFinalNotesFromSupabase())
   .then(() => loadSavedNotesFromSupabase())
+  .then(() => loadQuizzesFromSupabase())
   .then(() => loadCostEventsFromSupabase())
   .catch((error) => {
     console.error(`Persistence bootstrap failed: ${error.message}`);

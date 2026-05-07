@@ -1,6 +1,6 @@
 <template>
   <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] w-full overflow-x-hidden relative">
-    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0" />
+    <div class="fixed bottom-0 right-0 bg-[rgba(20,37,136,0.05)] blur-[60px] rounded-full w-[384px] h-[384px] pointer-events-none z-0"></div>
 
     <!-- Sidebar / Selection (Ukrywane przy druku) -->
     <div class="quiz-ui-container p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto no-print">
@@ -22,17 +22,24 @@
             <div class="flex p-1 bg-[#f2f4f7] rounded-lg mb-6">
               <button 
                 @click="activeTab = 'quiz'"
-                class="flex-1 py-2 text-sm font-bold rounded-md transition-all"
+                class="flex-1 py-2 text-xs font-bold rounded-md transition-all"
                 :class="activeTab === 'quiz' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
               >
-                Sprawdzian
+                Generator
+              </button>
+              <button 
+                @click="activeTab = 'grading'"
+                class="flex-1 py-2 text-xs font-bold rounded-md transition-all"
+                :class="activeTab === 'grading' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+              >
+                Ocenianie
               </button>
               <button 
                 @click="activeTab = 'homework'"
-                class="flex-1 py-2 text-sm font-bold rounded-md transition-all"
+                class="flex-1 py-2 text-xs font-bold rounded-md transition-all"
                 :class="activeTab === 'homework' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
               >
-                Zadanie Domowe
+                Zadanie
               </button>
             </div>
 
@@ -104,6 +111,16 @@
                 </div>
               </div>
 
+              <div>
+                <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Poziom trudności</label>
+                <select v-model="difficulty" class="w-full bg-[#f2f4f7] rounded-lg p-2.5 outline-none font-bold">
+                  <option value="łatwy">Łatwy</option>
+                  <option value="średni">Średni</option>
+                  <option value="trudny">Trudny</option>
+                  <option value="bardzo trudny">Bardzo trudny (olimpiada)</option>
+                </select>
+              </div>
+
               <button
                 @click="handleGenerateQuiz"
                 :disabled="isGenerating || (!selectedLessonId && !selectedNoteId)"
@@ -111,6 +128,45 @@
               >
                 {{ isGenerating ? 'Generowanie...' : 'Generuj Sprawdzian' }}
               </button>
+            </div>
+
+            <!-- Grading Settings -->
+            <div v-else-if="activeTab === 'grading'" class="mt-6 space-y-4">
+              <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Wybierz sprawdzian do oceny</label>
+              <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <div
+                  v-for="q in savedQuizzes"
+                  :key="q.id"
+                  @click="selectedGradingQuizId = q.id"
+                  class="p-3 rounded-xl border transition-all cursor-pointer"
+                  :class="selectedGradingQuizId === q.id ? 'border-[#0c3dfe] bg-[#f0f4ff]' : 'border-[#e0e3e6] hover:bg-gray-50'"
+                >
+                  <h4 class="font-bold text-sm text-[#191c1e] truncate">{{ q.title }}</h4>
+                  <p class="text-[10px] text-[#454652] mt-0.5">{{ new Date(q.createdAt).toLocaleDateString() }} • {{ q.questions.length }} zadań</p>
+                </div>
+                <div v-if="savedQuizzes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                  Brak zapisanych sprawdzianów. Wygeneruj sprawdzian najpierw.
+                </div>
+              </div>
+
+              <div v-if="selectedGradingQuizId" class="pt-4 border-t border-gray-100">
+                <input 
+                  type="file" 
+                  ref="fileInput" 
+                  class="hidden" 
+                  accept="image/*" 
+                  @change="handleGradingUpload"
+                />
+                <button
+                  @click="$refs.fileInput.click()"
+                  :disabled="isGrading"
+                  class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <svg v-if="isGrading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  {{ isGrading ? 'Analizowanie pracy...' : 'Wgraj zdjęcie pracy' }}
+                </button>
+                <p class="text-[10px] text-center text-gray-400 mt-2">AI rozpozna pismo ręczne i zasugeruje ocenę.</p>
+              </div>
             </div>
 
             <!-- Homework Settings -->
@@ -139,12 +195,9 @@
           <div v-if="activeTab === 'quiz' && quiz" class="space-y-6">
             <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
               <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
-            <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
-              <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
               <button @click="printQuiz" class="bg-emerald-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
                 Drukuj sprawdzian
               </button>
-            </div>
             </div>
 
             <div v-for="(q, idx) in quiz.questions" :key="q.id" class="bg-white rounded-xl shadow-md p-6 border-l-4" :class="q.type === 'closed' ? 'border-blue-500' : 'border-amber-500'">
@@ -153,7 +206,7 @@
                   <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gray-100 text-gray-500 mb-2 inline-block">
                     Zadanie {{ idx + 1 }} ({{ q.type === 'closed' ? 'Zamknięte' : 'Otwarte' }})
                   </span>
-                  <textarea v-model="q.question" rows="2" class="w-full text-lg font-bold text-foreground bg-transparent border-none outline-none resize-none" />
+                  <textarea v-model="q.question" rows="2" class="w-full text-lg font-bold text-foreground bg-transparent border-none outline-none resize-none"></textarea>
                   <!-- Math Preview -->
                   <div v-if="q.question.includes('$')" class="mt-2 p-2 bg-blue-50/50 rounded border border-blue-100">
                     <p class="text-[10px] text-blue-400 font-bold uppercase mb-1">Podgląd matematyki:</p>
@@ -208,7 +261,56 @@
             </div>
           </div>
 
-          <div v-else-if="!isGenerating" class="h-full flex flex-col items-center justify-center py-20 text-center opacity-40">
+
+
+          <!-- Grading Preview -->
+          <div v-else-if="activeTab === 'grading' && gradingResult" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-border">
+              <div class="bg-gradient-to-r from-[#0c3dfe] to-[#0059bb] p-6 text-white">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h2 class="text-2xl font-black mb-1">Wynik: {{ gradingResult.studentName || 'Nieznany uczeń' }}</h2>
+                    <p class="opacity-80 text-sm">Sprawdzian oceniony przez AI CoTeach</p>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-4xl font-black">{{ gradingResult.totalPoints }}/{{ gradingResult.maxPoints }}</div>
+                    <div class="text-xs font-bold uppercase tracking-widest opacity-70">Suma punktów</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-6 space-y-4">
+                <div v-for="res in gradingResult.results" :key="res.questionNumber" class="p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                  <div class="flex justify-between items-start mb-3">
+                    <h4 class="font-bold text-gray-900">Zadanie {{ res.questionNumber }}</h4>
+                    <div class="flex items-center gap-2">
+                      <input type="number" step="0.5" v-model="res.pointsAwarded" class="w-12 bg-white border border-gray-200 rounded px-2 py-1 text-center font-bold text-primary" />
+                      <span class="text-xs text-gray-400">/ {{ res.maxPoints }} PKT</span>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Rozpoznany tekst:</p>
+                      <p class="text-sm italic text-gray-600">{{ res.recognizedText || '(brak tekstu)' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Komentarz AI:</p>
+                      <p class="text-sm text-gray-700">{{ res.comment }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3">
+                  <button @click="gradingResult = null" class="px-6 py-2.5 font-bold text-gray-500 hover:text-gray-700 transition">Anuluj</button>
+                  <button @click="saveGradingResult" class="bg-[#0c3dfe] text-white px-8 py-2.5 rounded-xl font-bold hover:opacity-90 transition shadow-lg">
+                    Zatwierdź i zapisz wynik
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="!isGenerating && !isGrading" class="h-full flex flex-col items-center justify-center py-20 text-center opacity-40">
             <img src="../assets/archive.svg" class="h-20 w-20 mb-4" />
             <h3 class="text-xl font-bold">{{ activeTab === 'quiz' ? 'Wybierz lekcję i wygeneruj sprawdzian' : 'Wybierz lekcję i zadaj zadanie domowe' }}</h3>
             <p>Treść pojawi się w tym miejscu.</p>
@@ -290,6 +392,7 @@ const selectedNoteId = ref("");
 const activeTab = ref("quiz");
 const numClosed = ref(5);
 const numOpen = ref(2);
+const difficulty = ref("średni");
 const isGenerating = ref(false);
 const isExporting = ref(false);
 const quiz = ref(null);
@@ -300,6 +403,12 @@ const isSavingHomework = ref(false);
 const homeworkSaved = ref(false);
 const homeworkShareUrl = ref("");
 const homeworkQrUrl = ref("");
+
+// Grading state
+const savedQuizzes = ref([]);
+const selectedGradingQuizId = ref("");
+const isGrading = ref(false);
+const gradingResult = ref(null);
 
 const filteredLessons = computed(() => {
   if (!state.selectedClass || !state.selectedClassName) return state.lessons;
@@ -340,11 +449,25 @@ function renderMath(text) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), fetchTeacherNotes()]);
+  await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchSavedQuizzes()]);
   if (!selectedLessonId.value && state.lessons.length > 0) {
     handleSelectLesson(state.lessons[0]);
   }
 });
+
+async function fetchSavedQuizzes() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    const res = await fetch(`${API_BASE}/api/quizzes`, {
+      headers: { "Authorization": `Bearer ${session?.access_token}` }
+    });
+    const data = await res.json();
+    savedQuizzes.value = data.quizzes || [];
+  } catch (e) {
+    console.error("Failed to fetch quizzes", e);
+  }
+}
 
 function handleSelectLesson(lesson) {
   selectedLessonId.value = lesson.id;
@@ -383,7 +506,8 @@ async function handleGenerateQuiz() {
         lessonId: selectedLessonId.value,
         noteId: selectedNoteId.value,
         numClosed: numClosed.value,
-        numOpen: numOpen.value
+        numOpen: numOpen.value,
+        difficulty: difficulty.value
       })
     });
 
@@ -444,6 +568,49 @@ function printQuiz() {
 function copyLink() {
   navigator.clipboard.writeText(homeworkShareUrl.value);
   alert("Link skopiowany!");
+}
+
+async function handleGradingUpload(event) {
+  const file = event.target.files[0];
+  if (!file || !selectedGradingQuizId.value) return;
+
+  isGrading.value = true;
+  gradingResult.value = null;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("quizId", selectedGradingQuizId.value);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+    const response = await fetch(`${API_BASE}/api/quizzes/grade`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session?.access_token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Błąd serwera");
+    
+    gradingResult.value = data.gradingResult;
+  } catch (error) {
+    console.error(error);
+    alert(`Błąd podczas oceniania: ${error.message}`);
+  } finally {
+    isGrading.value = false;
+    // Reset input
+    event.target.value = "";
+  }
+}
+
+async function saveGradingResult() {
+  // Placeholder for Step 4 of the plan
+  alert("Wynik został zatwierdzony (funkcja zapisu w bazie będzie dostępna wkrótce).");
+  gradingResult.value = null;
 }
 </script>
 

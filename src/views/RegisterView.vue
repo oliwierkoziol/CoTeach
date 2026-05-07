@@ -180,6 +180,11 @@
           <router-link to="/legal?tab=privacy" class="font-bold text-primary hover:underline">Politykę Prywatności (RODO)</router-link>.
         </p>
 
+        <p class="mt-4 text-center text-sm text-muted-foreground">
+          Masz już konto? 
+          <router-link to="/login" class="font-bold text-primary hover:underline">Zaloguj się</router-link>
+        </p>
+
       </div>
     </div>
   </div>

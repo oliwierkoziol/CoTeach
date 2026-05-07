@@ -558,6 +558,7 @@ const isDeletingAccount = ref(false);
 
 const showEmailEditor = ref(false);
 const showEmailValue = ref(false);
+const showDeleteConfirm = ref(false);
 const deleteVerificationCode = ref("");
 const deleteInputCode = ref("");
 const newEmail = ref("");

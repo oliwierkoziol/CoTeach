@@ -152,6 +152,11 @@
           />
         </div>
 
+        <p class="mt-6 text-center text-sm text-muted-foreground">
+          Nie masz jeszcze konta? 
+          <router-link to="/register" class="font-bold text-primary hover:underline">Zarejestruj się za darmo</router-link>
+        </p>
+
       </div>
     </div>
   </div>

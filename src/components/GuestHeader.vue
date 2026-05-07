@@ -53,7 +53,7 @@
       <RouterLink
         v-if="route.path === '/register'"
         to="/login"
-        class="hidden rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground sm:inline-flex"
+        class="inline-flex rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground"
       >
         Logowanie
       </RouterLink>
@@ -67,7 +67,7 @@
       <RouterLink
         v-if="isLanding"
         to="/login"
-        class="hidden rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground sm:inline-flex"
+        class="inline-flex rounded-lg px-3 py-2 font-medium text-muted-foreground transition hover:text-foreground"
       >
         Logowanie
       </RouterLink>
