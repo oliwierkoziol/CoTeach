@@ -246,21 +246,23 @@
                 </button>
 
                 <div v-if="showDeleteConfirm" class="mt-4 rounded-2xl border border-red-200 bg-card p-4">
-                  <p class="text-sm text-red-700">
-                    Wpisz hasło, aby potwierdzić usunięcie konta.
-                  </p>
+                  <div class="mt-4 p-4 rounded-xl bg-muted border border-border text-center">
+                    <p class="text-xs text-muted-foreground mb-2">PRZEPISZ KOD PONIŻEJ:</p>
+                    <p class="text-2xl font-mono font-black tracking-widest text-foreground select-none">
+                      {{ deleteVerificationCode }}
+                    </p>
+                  </div>
                   <input
-                    v-model="deletePassword"
-                    type="password"
-                    autocomplete="current-password"
-                    class="mt-3 w-full rounded-2xl border border-red-200 bg-background px-4 py-3 text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                    placeholder="Podaj hasło"
+                    v-model="deleteInputCode"
+                    type="text"
+                    class="mt-3 w-full rounded-2xl border border-red-200 bg-background px-4 py-3 text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 font-mono text-center"
+                    placeholder="Wpisz powyższy kod"
                   />
                   <div class="mt-3 flex flex-wrap gap-3">
                     <button
                       type="button"
                       class="rounded-2xl bg-red-600 px-6 py-3 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
-                      :disabled="isDeletingAccount || !deletePassword.trim()"
+                      :disabled="isDeletingAccount || deleteInputCode !== deleteVerificationCode"
                       @click="handleDeleteAccount"
                     >
                       {{ isDeletingAccount ? "Usuwanie konta..." : "Potwierdź usunięcie" }}
@@ -556,8 +558,8 @@ const isDeletingAccount = ref(false);
 
 const showEmailEditor = ref(false);
 const showEmailValue = ref(false);
-const showDeleteConfirm = ref(false);
-const deletePassword = ref("");
+const deleteVerificationCode = ref("");
+const deleteInputCode = ref("");
 const newEmail = ref("");
 const showPasswordModal = ref(false);
 const pwCurrent = ref("");
@@ -1182,10 +1184,20 @@ async function handleLogout() {
 
 
 
+function generateDeletionCode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 10; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 function cancelDeleteConfirm() {
   if (isDeletingAccount.value) return;
   showDeleteConfirm.value = false;
-  deletePassword.value = "";
+  deleteVerificationCode.value = "";
+  deleteInputCode.value = "";
 }
 
 function toggleDeleteConfirm() {
@@ -1196,20 +1208,22 @@ function toggleDeleteConfirm() {
   }
   errorMessage.value = "";
   successMessage.value = "";
+  deleteVerificationCode.value = generateDeletionCode();
+  deleteInputCode.value = "";
   showDeleteConfirm.value = true;
 }
 
 async function handleDeleteAccount() {
   if (isDeletingAccount.value) return;
 
-  const password = String(deletePassword.value || "").trim();
-  if (!password) {
-    errorMessage.value = "Podaj hasło, aby usunąć konto.";
+  const input = String(deleteInputCode.value || "").trim();
+  if (input !== deleteVerificationCode.value) {
+    errorMessage.value = "Przepisany kod jest nieprawidłowy.";
     return;
   }
 
   const confirmed = window.confirm(
-    "Czy na pewno chcesz usunąć konto? Ta operacja usunie profil i dane konta bez możliwości cofnięcia. Pamiętaj, że koszty za aktywne licencje lub subskrypcje nie zostaną zwrócone."
+    "Czy na pewno chcesz usunąć konto? Ta operacja usunie profil i dane konta bez możliwości cofnięcia."
   );
   if (!confirmed) return;
 
@@ -1221,43 +1235,26 @@ async function handleDeleteAccount() {
     const {
       data: { session }
     } = await supabase.auth.getSession();
-    const email = userProfile.value.email || session?.user?.email || "";
-    if (!email) {
+    const token = session?.access_token;
+    if (!token) {
       throw new Error("Brak aktywnej sesji. Zaloguj się ponownie i spróbuj jeszcze raz.");
-    }
-
-    const tempClient = createTemporarySupabaseClient();
-    const { data: verificationData, error: passwordError } = await tempClient.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (passwordError) {
-      await tempClient.auth.signOut();
-      throw new Error("Nieprawidłowe hasło.");
-    }
-
-    const verifiedToken = verificationData?.session?.access_token;
-    if (!verifiedToken) {
-      await tempClient.auth.signOut();
-      throw new Error("Nie udało się potwierdzić sesji. Zaloguj się ponownie i spróbuj jeszcze raz.");
     }
 
     const response = await fetch(`${API_BASE}/api/account`, {
       method: "DELETE",
       headers: {
-        Authorization: `Bearer ${verifiedToken}`
+        Authorization: `Bearer ${token}`
       }
     });
 
     const body = await response.json().catch(() => ({}));
-    await tempClient.auth.signOut();
     if (!response.ok) {
       throw new Error(body?.error || "Nie udało się usunąć konta.");
     }
 
     await supabase.auth.signOut({ scope: "local" });
-    deletePassword.value = "";
+    deleteVerificationCode.value = "";
+    deleteInputCode.value = "";
     showDeleteConfirm.value = false;
     router.replace({ path: "/register", query: { deleted: "1" } });
   } catch (error) {

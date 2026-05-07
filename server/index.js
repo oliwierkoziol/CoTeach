@@ -2217,11 +2217,61 @@ app.delete("/api/account", async (req, res) => {
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
   try {
+    // 1. Resolve teacher context to get teacher_id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("teacher_id, school_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const teacherId = profile?.teacher_id;
+    const schoolId = profile?.school_id || defaultSchoolId;
+
+    // 2. Clean up in-memory DB
+    if (teacherId) {
+      // Delete lessons and their costs
+      const lessonsToDelete = [...db.lessons.values()].filter(l => String(l.teacherId) === String(teacherId));
+      for (const lesson of lessonsToDelete) {
+        db.lessons.delete(lesson.id);
+        db.costs.delete(lesson.id);
+      }
+
+      // Filter out cost events
+      db.costEvents = (db.costEvents || []).filter(e => String(e.teacherId) !== String(teacherId));
+    }
+
+    // Delete licenses assigned to this user
+    const licensesToDelete = [...db.licenses.values()].filter(l => l.assignedUserId === user.id);
+    for (const license of licensesToDelete) {
+      db.licenses.delete(license.id);
+    }
+
+    // 3. Clean up Supabase tables
+    if (teacherId) {
+      // Delete lessons (cascades or manual)
+      await supabase.from("lessons").delete().eq("teacher_id", teacherId);
+      // Delete notes
+      await supabase.from("final_notes").delete().eq("teacher_id", teacherId);
+      await supabase.from("saved_notes").delete().eq("teacher_id", teacherId);
+      // Delete classes
+      await supabase.from("classes").delete().eq("teacher_id", user.id);
+      // Delete cost events
+      await supabase.from("openrouter_usage_events").delete().eq("teacher_id", teacherId);
+    }
+
+    // Delete licenses
+    await supabase.from("user_licenses").delete().eq("assigned_user_id", user.id);
+
+    // Delete profile
     await supabase.from("profiles").delete().eq("id", user.id);
-    const { error } = await supabase.auth.admin.deleteUser(user.id);
-    if (error) return res.status(500).json({ error: error.message });
+
+    // 4. Delete Auth User
+    const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+    if (authError) return res.status(500).json({ error: authError.message });
+
     return res.json({ ok: true });
   } catch (error) {
+    console.error("[account-delete]", error);
     return res.status(500).json({ error: error.message || "Failed to delete account." });
   }
 });

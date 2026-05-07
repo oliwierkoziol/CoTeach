@@ -43,20 +43,32 @@
 
             <section>
               <h2 class="text-xl font-bold text-foreground">§3 Zasady korzystania</h2>
+              <div class="text-muted-foreground space-y-4">
+                <p>
+                  Użytkownik zobowiązuje się do korzystania z Serwisu w sposób zgodny z prawem oraz zasadami współżycia społecznego. Zakazane jest dostarczanie treści o charakterze bezprawnym.
+                </p>
+                <p>
+                  <strong>Zakaz tworzenia wielu kont:</strong> Każdy Użytkownik może posiadać tylko jedno konto w Serwisie. Tworzenie tzw. "multikont" w celu wielokrotnego wykorzystania okresu próbnego lub omijania limitów jest surowo zabronione. W przypadku wykrycia takich działań, Serwis zastrzega sobie prawo do natychmiastowego zablokowania dostępu do wszystkich powiązanych kont bez ostrzeżenia.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="text-xl font-bold text-foreground">§4 Okres próbny (Tryb prezentacyjny)</h2>
               <p class="text-muted-foreground">
-                Użytkownik zobowiązuje się do korzystania z Serwisu w sposób zgodny z prawem oraz zasadami współżycia społecznego. Zakazane jest dostarczanie treści o charakterze bezprawnym.
+                Serwis oferuje jednorazowy, 7-dniowy okres próbny (tryb prezentacyjny), który umożliwia zapoznanie się z pełną funkcjonalnością platformy. Po upływie tego okresu, dostęp do funkcji premium zostaje ograniczony do czasu wykupienia subskrypcji.
               </p>
             </section>
 
             <section>
-              <h2 class="text-xl font-bold text-foreground">§4 Prawa autorskie</h2>
+              <h2 class="text-xl font-bold text-foreground">§5 Prawa autorskie</h2>
               <p class="text-muted-foreground">
                 Wszelkie materiały generowane przez AI w ramach Serwisu są przeznaczone do użytku edukacyjnego. Serwis nie rości sobie praw autorskich do treści wprowadzanych przez Użytkownika.
               </p>
             </section>
 
             <section>
-              <h2 class="text-xl font-bold text-foreground">§5 Odpowiedzialność</h2>
+              <h2 class="text-xl font-bold text-foreground">§6 Odpowiedzialność</h2>
               <p class="text-muted-foreground">
                 Serwis dokłada wszelkich starań, aby treści generowane przez AI były poprawne merytorycznie, jednak nie gwarantuje ich bezbłędności. Użytkownik powinien każdorazowo weryfikować materiały przed ich wykorzystaniem na lekcji.
               </p>
@@ -69,7 +81,7 @@
             <section>
               <h2 class="text-xl font-bold text-foreground">1. Administrator Danych</h2>
               <p class="text-muted-foreground">
-                Administratorem Państwa danych osobowych jest CoTeach Sp. z o.o. (w organizacji). W sprawach związanych z ochroną danych można kontaktować się pod adresem e-mail: kontakt@coteach.pl.
+                Administratorem Państwa danych osobowych jest Maksymilian Kosno. W sprawach związanych z ochroną danych można kontaktować się pod adresem e-mail: mkosnoo@gmail.com.
               </p>
             </section>
 
