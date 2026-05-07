@@ -154,7 +154,7 @@
                   type="file" 
                   ref="fileInput" 
                   class="hidden" 
-                  accept="image/*" 
+                  accept="image/*,application/pdf" 
                   @change="handleGradingUpload"
                 />
                 <button
@@ -163,9 +163,9 @@
                   class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <svg v-if="isGrading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  {{ isGrading ? 'Analizowanie pracy...' : 'Wgraj zdjęcie pracy' }}
+                  {{ isGrading ? 'Analizowanie pracy...' : 'Wgraj zdjęcie lub PDF' }}
                 </button>
-                <p class="text-[10px] text-center text-gray-400 mt-2">AI rozpozna pismo ręczne i zasugeruje ocenę.</p>
+                <p class="text-[10px] text-center text-gray-400 mt-2">AI rozpozna pismo ręczne ze zdjęcia lub pliku PDF.</p>
 
                 <!-- Quiz Key Preview during grading -->
                 <div v-if="selectedGradingQuiz" class="mt-6 pt-4 border-t border-gray-100">
@@ -190,16 +190,34 @@
 
             <!-- Homework Settings -->
             <div v-else class="mt-6 space-y-4">
-              <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Treść zadania (np. strona, numer zadania)</label>
+              <!-- Homework Generator Controls -->
+              <div class="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="flex justify-between items-center">
+                  <label class="text-[11px] font-bold text-gray-400 uppercase">Liczba zadań</label>
+                  <span class="text-sm font-black text-primary">{{ numHomeworkTasks }}</span>
+                </div>
+                <input type="range" v-model="numHomeworkTasks" min="1" max="10" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" />
+                
+                <button
+                  @click="handleGenerateHomework"
+                  :disabled="isGeneratingHomework || (!selectedLessonId && !selectedNoteId)"
+                  class="w-full bg-white border-2 border-primary text-primary font-bold py-2.5 rounded-xl hover:bg-primary/5 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <svg v-if="isGeneratingHomework" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  {{ isGeneratingHomework ? 'Generowanie...' : 'Generuj propozycję zadania' }}
+                </button>
+              </div>
+
+              <label class="text-[11px] font-bold text-gray-400 uppercase mb-1 block">Treść zadania (możesz edytować przed wysłaniem)</label>
               <textarea 
                 v-model="homeworkText" 
-                rows="4"
-                placeholder="np. Zadania 1-5 ze strony 120 w podręczniku. Termin: środa."
+                rows="6"
+                placeholder="Wpisz treść zadania lub wygeneruj ją powyżej..."
                 class="w-full bg-[#f2f4f7] rounded-lg p-3 outline-none font-medium text-sm resize-none"
               ></textarea>
               <button
                 @click="handleSaveHomework"
-                :disabled="isSavingHomework || !selectedLessonId"
+                :disabled="isSavingHomework || !selectedLessonId || !homeworkText"
                 class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50"
               >
                 {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz i udostępnij zadanie' }}
@@ -310,11 +328,11 @@
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Rozpoznany tekst:</p>
-                      <p class="text-sm italic text-gray-600">{{ res.recognizedText || '(brak tekstu)' }}</p>
+                      <p class="text-sm italic text-gray-600" v-html="renderMath(res.recognizedText || '(brak tekstu)')"></p>
                     </div>
                     <div>
                       <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Komentarz AI:</p>
-                      <p class="text-sm text-gray-700">{{ res.comment }}</p>
+                      <p class="text-sm text-gray-700" v-html="renderMath(res.comment)"></p>
                     </div>
                   </div>
                 </div>
@@ -397,7 +415,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
@@ -419,6 +437,8 @@ const quiz = ref(null);
 
 // Homework state
 const homeworkText = ref("");
+const numHomeworkTasks = ref(3);
+const isGeneratingHomework = ref(false);
 const isSavingHomework = ref(false);
 const homeworkSaved = ref(false);
 const homeworkShareUrl = ref("");
@@ -433,6 +453,24 @@ const gradingResult = ref(null);
 
 const selectedGradingQuiz = computed(() => {
   return savedQuizzes.value.find(q => q.id === selectedGradingQuizId.value) || null;
+});
+
+// Update total points automatically when individual points change
+watch(() => gradingResult.value?.results, (newResults) => {
+  if (newResults && gradingResult.value) {
+    const total = newResults.reduce((sum, res) => sum + Number(res.pointsAwarded || 0), 0);
+    gradingResult.value.totalPoints = total;
+  }
+}, { deep: true });
+
+// Watch for selection in grading tab to update preview
+watch(selectedGradingQuizId, (newId) => {
+  if (newId) {
+    const q = savedQuizzes.value.find(item => item.id === newId);
+    if (q) {
+      quiz.value = JSON.parse(JSON.stringify(q)); // Deep copy to editor
+    }
+  }
 });
 
 const filteredLessons = computed(() => {
@@ -455,7 +493,11 @@ const filteredNotes = computed(() => {
 
 function renderMath(text) {
   if (!text) return "";
-  const str = String(text);
+  let str = String(text);
+  
+  // Naprawa podwójnych backslashy z JSONa (np. \\frac -> \frac)
+  str = str.replace(/\\\\/g, "\\");
+
   if (typeof window === 'undefined' || !window.katex) return str;
   
   // Wykrywa matematykę w $...$ i podmienia na HTML z katexa
@@ -542,11 +584,48 @@ async function handleGenerateQuiz() {
     }
     
     quiz.value = data.quiz;
+    // Add to saved list immediately so it shows up in Grading tab
+    if (data.quiz) {
+      savedQuizzes.value = [data.quiz, ...savedQuizzes.value];
+    }
   } catch (error) {
     console.error(error);
     alert(`Wystąpił błąd: ${error.message}. Upewnij się, że masz aktywną licencję i serwer backendowy jest zaktualizowany.`);
   } finally {
     isGenerating.value = false;
+  }
+}
+
+async function handleGenerateHomework() {
+  if (!selectedLessonId.value && !selectedNoteId.value) return;
+  isGeneratingHomework.value = true;
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    
+    const response = await fetch(`${API_BASE}/api/homework/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token}`
+      },
+      body: JSON.stringify({ 
+        lessonId: selectedLessonId.value,
+        noteId: selectedNoteId.value,
+        numTasks: numHomeworkTasks.value
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Błąd serwera");
+    
+    homeworkText.value = data.homework;
+  } catch (error) {
+    console.error(error);
+    alert("Błąd podczas generowania zadania.");
+  } finally {
+    isGeneratingHomework.value = false;
   }
 }
 

@@ -90,6 +90,10 @@ const GRADING_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_sprawdzanie_sprawdzianu.txt"),
   "utf8"
 );
+const HOMEWORK_GEN_PROMPT_TEMPLATE = fs.readFileSync(
+  path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_zadania_domowego.txt"),
+  "utf8"
+);
 
 app.use(cors());
 app.use(express.json({ limit: "15mb" }));
@@ -1206,9 +1210,12 @@ function fallbackGeneratePlan(rawText) {
 function partToOpenRouterContent(part) {
   if (part.text) return { type: "text", text: part.text };
   if (part.inlineData?.data && part.inlineData?.mimeType) {
+    // OpenRouter supports PDF via image_url for Gemini models
     return {
       type: "image_url",
-      image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` }
+      image_url: {
+        url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+      }
     };
   }
   return { type: "text", text: "" };
@@ -1641,10 +1648,10 @@ async function generatePresentationWithLLM({
     });
     const parsed = parseJsonFromModel(out.text);
     const slidesRaw = Array.isArray(parsed?.slides) ? parsed.slides : Array.isArray(parsed) ? parsed : [];
-    
+
     // Obetnij ewentualny nadmiar zostawiając miejsce na slajd końcowy
     let slides = slidesRaw.slice(0, maxSlides === "auto" ? 30 : sliceMaxSlides - 1).map((slide, index) => normalizePresentationSlide(slide, index));
-    
+
     // Zawsze dodajemy slajd końcowy z logo/podziękowaniem na sam koniec
     slides.push({
       id: randomUUID(),
@@ -1740,7 +1747,7 @@ async function generateQuizWithLLM({
 
     const parsed = parseJsonFromModel(out.text);
     const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
-    
+
     recordCostFromBase({
       lessonId: context.lessonId || null,
       schoolId: context.schoolId || null,
@@ -1836,7 +1843,7 @@ function polishFuzzyMatch(spoken, keyword) {
       .replace(/[źż]/g, 'z')
       .replace(/rz/g, 'z')
       .replace(/ch/g, 'h')
-      
+
       // 2. Suffix removal (using literal characters BEFORE they are normalized to #)
       .replace(/(zacja|zacji|zacje|zacjah|zacjami)$/g, 'zac')
       .replace(/(nictwo|nictwa|nictwie|nictwu|nictwem|nictwami)$/g, 'nic')
@@ -1846,7 +1853,7 @@ function polishFuzzyMatch(spoken, keyword) {
       .replace(/(enie|enia|eniu|eniom|eniami|eniach|enie)$/g, '')
       .replace(/(osc|osci|oscia|osciom|osciach)$/g, '')
       .replace(/(y|a|e|ym|a|ymi|ym|o|om|e|a|i|u|ow|em|ah|ami|om|ego|emu|ej|as|os|is|es|us)$/g, '')
-      
+
       // 3. Normalize remaining stem (vowel shifts, mobile 'e', double letters)
       .replace(/[aeou]/g, '#')
       .replace(/([a-z])\1+/g, '$1')
@@ -1861,7 +1868,7 @@ function polishFuzzyMatch(spoken, keyword) {
 
   // Direct match of stems
   if (s === k && s.length > 0) return true;
-  
+
   // Prefix match for longer words (helps with complex inflections)
   if (s.length >= 4 && k.length >= 4) {
     if (s.startsWith(k) || k.startsWith(s)) return true;
@@ -1892,12 +1899,12 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       return item; // No keywords, can't determine coverage
     }
 
-   const previouslyFound = new Set(item.foundKeywords || []);
+    const previouslyFound = new Set(item.foundKeywords || []);
     const transcriptWords = normalizedTranscript.split(/\s+/);
-    
+
     const foundKeywords = keywords.filter(keyword => {
       if (previouslyFound.has(keyword)) return true;
-      
+
       const normalizedKeyword = normalize(keyword);
       if (normalizedTranscript.includes(normalizedKeyword)) return true;
 
@@ -2710,7 +2717,7 @@ app.post("/api/quizzes/generate", async (req, res) => {
     // Persist quiz
     db.quizzes = db.quizzes || new Map();
     db.quizzes.set(quiz.id, quiz);
-    
+
     if (supabase) {
       const { error: saveError } = await supabase
         .from("quizzes")
@@ -2741,7 +2748,20 @@ app.post("/api/quizzes/grade", upload.single("file"), async (req, res) => {
     const quizId = String(req.body?.quizId || "").trim();
     if (!quizId) return res.status(400).json({ error: "Brak quizId." });
 
-    const quiz = db.quizzes?.get(quizId);
+    let quiz = db.quizzes?.get(quizId);
+    if (!quiz && supabase) {
+      const { data, error } = await supabase.from("quizzes").select("*").eq("id", quizId).maybeSingle();
+      if (!error && data) {
+        quiz = {
+          id: data.id,
+          teacherId: data.teacher_id, // we might need to handle teacher_id/userId mapping here if needed
+          title: data.title,
+          questions: data.questions,
+          createdAt: data.created_at
+        };
+      }
+    }
+
     if (!quiz) return res.status(404).json({ error: "Sprawdzian nie został znaleziony." });
 
     if (!req.file) return res.status(400).json({ error: "Brak zdjęcia pracy." });
@@ -2772,11 +2792,56 @@ app.post("/api/quizzes/grade", upload.single("file"), async (req, res) => {
     if (!gradingResult) throw new Error("Błąd przetwarzania wyniku AI.");
 
     // Optional: persist result to quiz_results table if needed later
-    
+
     return res.json({ gradingResult });
   } catch (error) {
     console.error("Grading error:", error);
     return res.status(500).json({ error: error.message || "Błąd podczas sprawdzania pracy." });
+  }
+});
+
+app.post("/api/homework/generate", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+
+    const { lessonId, noteId, numTasks } = req.body;
+    let sourceContent = "";
+
+    if (lessonId) {
+      const lesson = db.lessons.get(lessonId);
+      if (lesson?.finalNote?.html) {
+        sourceContent = lesson.finalNote.html;
+      } else if (supabase) {
+        const { data } = await supabase.from("lessons").select("final_note").eq("id", lessonId).maybeSingle();
+        if (data?.final_note?.html) sourceContent = data.final_note.html;
+      }
+    } else if (noteId) {
+      const note = db.notes.get(noteId);
+      if (note?.content) {
+        sourceContent = note.content;
+      } else if (supabase) {
+        const { data } = await supabase.from("saved_notes").select("content").eq("id", noteId).maybeSingle();
+        if (data?.content) sourceContent = data.content;
+      }
+    }
+
+    if (!sourceContent) {
+      return res.status(400).json({ error: "Brak treści źródłowej do generowania zadania." });
+    }
+
+    const prompt = HOMEWORK_GEN_PROMPT_TEMPLATE
+      .replace("[SOURCE_CONTENT]", sourceContent.slice(0, 10000))
+      .replace("[NUM_TASKS]", numTasks || 3);
+
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: prompt }]
+    });
+
+    return res.json({ homework: out.text });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -2785,9 +2850,35 @@ app.get("/api/quizzes", async (req, res) => {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
 
-    const quizzes = [...(db.quizzes?.values() || [])].filter(
-      q => String(q.teacherId) === String(teacher.teacherId)
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    let quizzes = [];
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select(`
+          *,
+          lessons (class_name),
+          saved_notes (class_level)
+        `)
+        .eq("teacher_id", teacher.userId)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        quizzes = data.map(q => ({
+          id: q.id,
+          teacherId: q.teacher_id,
+          lessonId: q.lesson_id,
+          noteId: q.note_id,
+          title: q.title,
+          questions: q.questions,
+          createdAt: q.created_at,
+          class_name: q.lessons?.class_name || q.saved_notes?.class_level || ""
+        }));
+      }
+    } else {
+      quizzes = [...(db.quizzes?.values() || [])].filter(
+        q => String(q.teacherId) === String(teacher.teacherId)
+      ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
 
     return res.json({ quizzes });
   } catch (error) {
@@ -2880,7 +2971,7 @@ app.post("/api/lessons/:lessonId/homework", async (req, res) => {
 
     lesson.homework = homework;
     lesson.updatedAt = new Date().toISOString();
-    
+
     db.lessons.set(lessonId, lesson);
     await persistLessonSafe(lesson);
 
@@ -2963,6 +3054,61 @@ ${finalNoteSnippet || "(brak notatki końcowej)"}`;
     return res.json({ summary: out.text || "Brak treści podsumowania." });
   } catch (error) {
     return res.status(400).json({ error: error.message || "Nie udało się wygenerować podsumowania." });
+  }
+});
+
+app.get("/api/share/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Look for lesson or note
+    const lesson = db.lessons.get(id);
+    if (lesson) {
+      return res.json({
+        finalNote: lesson.finalNote,
+        transcripts: lesson.transcripts || [],
+        startedAt: lesson.startedAt
+      });
+    }
+
+    const note = db.notes.get(id);
+    if (note) {
+      return res.json({
+        finalNote: {
+          title: note.title,
+          subject: note.subject,
+          html: note.content,
+          date: note.date || note.createdAt
+        }
+      });
+    }
+
+    if (supabase) {
+      // Fallback to Supabase if not in memory
+      const { data: lessonDb } = await supabase.from("lessons").select("*").eq("id", id).maybeSingle();
+      if (lessonDb) {
+        return res.json({
+          finalNote: lessonDb.final_note,
+          transcripts: lessonDb.transcripts || [],
+          startedAt: lessonDb.started_at
+        });
+      }
+
+      const { data: noteDb } = await supabase.from("saved_notes").select("*").eq("id", id).maybeSingle();
+      if (noteDb) {
+        return res.json({
+          finalNote: {
+            title: noteDb.title,
+            subject: noteDb.subject,
+            html: noteDb.content,
+            date: noteDb.created_at
+          }
+        });
+      }
+    }
+
+    return res.status(404).json({ error: "Not found" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -3252,7 +3398,7 @@ app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
 app.delete("/api/lessons/:lessonId", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  
+
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
@@ -3261,7 +3407,7 @@ app.delete("/api/lessons/:lessonId", async (req, res) => {
       // Delete associated data first to maintain referential integrity
       await supabase.from("openrouter_usage_events").delete().eq("lesson_id", lesson.id);
       await supabase.from("final_notes").delete().eq("lesson_id", lesson.id);
-      
+
       // Delete the lesson itself
       const { error } = await supabase.from("lessons").delete().eq("id", lesson.id);
       if (error) throw error;
@@ -3302,7 +3448,7 @@ app.delete("/api/lessons/:lessonId/costs", async (req, res) => {
 app.get("/api/share/:noteId", (req, res) => {
   const lesson = [...db.lessons.values()].find((item) => item.finalNote?.id === req.params.noteId);
   if (!lesson?.finalNote) return res.status(404).json({ error: "Not found" });
-  return res.json({ 
+  return res.json({
     finalNote: lesson.finalNote,
     transcripts: lesson.transcripts || [],
     startedAt: lesson.startedAt || null
@@ -4134,7 +4280,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
 
     const transcription = {
       text: transcriptionResponse.text || "",
-      duration: undefined 
+      duration: undefined
     };
 
     console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars)`);

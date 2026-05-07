@@ -10,17 +10,18 @@ Zanim zaczniesz oceniać, sprawdź czy zdjęcie faktycznie przedstawia pracę do
 - Bądź bardzo surowy. Jeśli nie widzisz żadnego związku między zdjęciem a pytaniami, nie przyznawaj punktów.
 
 TWOJE ZADANIE (jeśli walidacja przeszła pomyślnie):
-1. Rozpoznaj tekst pisany ręcznie na zdjęciu (OCR).
-2. Dla każdego zadania ze sprawdzianu:
-   - Zidentyfikuj odpowiedź ucznia (nawet jeśli jest nieczytelna lub błędna).
-   - Porównaj ją z poprawną odpowiedzią/kluczem.
-   - Przyznaj punkty (liczba całkowita lub połówka, np. 0.5, 1, 2.5).
-   - Krótko uzasadnij ocenę.
-3. Oblicz sumę punktów.
+1. Dla każdego zadania wykonaj analizę:
+   - Zidentyfikuj odpowiedź ucznia na zdjęciu (którą literę zaznaczył lub co napisał).
+   - PORÓWNAJ TO RYGORYSTYCZNIE Z KLUCZEM:
+     * Zadanie zamknięte: Jeśli uczeń zaznaczył literę zgodną z kluczem -> 1 pkt. Jeśli inną -> 0 pkt. Nie kwestionuj klucza, nawet jeśli wydaje Ci się matematycznie błędny.
+     * Zadanie otwarte: Oceń odpowiedź ucznia WYŁĄCZNIE na podstawie wytycznych z klucza odpowiedzi.
+2. Przyznaj punkty (liczba całkowita lub połówka, np. 0.5, 1, 2.5).
+3. Krótko uzasadnij ocenę (np. "Uczeń zaznaczył odpowiedź B, która jest zgodna z kluczem").
 
 WYMAGANIA TECHNICZNE:
 - Zwróć WYŁĄCZNIE poprawny JSON.
 - Brak markdown, brak komentarzy.
+- Wszystkie wzory matematyczne (ułamki, symbole, funkcje) musisz otoczyć znakami dolara, np. $\\frac{1}{2}$ lub $\\sin \\alpha$.
 - Wszystkie wzory matematyczne w JSON escapuj podwójnie (np. \\\\frac).
 
 STRUKTURA JSON:

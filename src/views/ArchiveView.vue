@@ -504,7 +504,7 @@ const styleLabels = {
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const ARCHIVE_ACTIVE_TAB_KEY = "coteach:archive-active-tab";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
-const { state, fetchLessons, fetchTeacherNotes, fetchQuizzes, fetchQuizResults, deleteQuiz, updateFinalNote, deleteLesson, deleteTeacherNote } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, fetchQuizzes, fetchQuizResults, deleteQuiz, updateFinalNote, deleteLesson, deleteTeacherNote, fetchUserClasses } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
@@ -520,12 +520,11 @@ const editTitle = ref("");
 const editSubject = ref("");
 const editDate = ref("");
 const isQrModalOpen = ref(false);
-const userClasses = ref([]);
 const selectedQuiz = ref(null);
 const quizResults = ref([]);
 
 onMounted(async () => {
-  await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), loadUserClasses()]);
+  await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), fetchUserClasses()]);
   await refreshPresentationHistory();
   if (filteredLessons.value.length) selectLesson(filteredLessons.value[0]);
 
@@ -538,12 +537,6 @@ onMounted(async () => {
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
 });
 
-async function loadUserClasses() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: profile } = await supabase.from("profiles").select("classes").eq("id", user.id).maybeSingle();
-  if (profile?.classes) userClasses.value = profile.classes;
-}
 
 const filteredLessons = computed(() => {
   let archivedLessons = state.lessons;
@@ -565,13 +558,14 @@ const filteredNotes = computed(() => {
   let notes = Array.isArray(state.notes) ? state.notes : [];
 
   if (state.selectedClass) {
-    notes = notes.filter(n => n.class_name === state.selectedClassName);
+    // Note uses classLevel or class_level
+    notes = notes.filter(n => (n.classLevel === state.selectedClassName || n.class_level === state.selectedClassName));
   }
 
   const q = searchQuery.value.toLowerCase().trim();
   if (!q) return notes;
   return notes.filter((note) => {
-    return `${note.title || ""} ${note.subject || ""} ${note.classLevel || ""}`.toLowerCase().includes(q);
+    return `${note.title || ""} ${note.subject || ""} ${note.classLevel || note.class_level || ""}`.toLowerCase().includes(q);
   });
 });
 
@@ -604,7 +598,7 @@ const filteredQuizzes = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
   if (!q) return quizzes;
   return quizzes.filter((quiz) => {
-    return `${quiz.title || ""}`.toLowerCase().includes(q);
+    return `${quiz.title || ""} ${quiz.class_name || ""}`.toLowerCase().includes(q);
   });
 });
 
