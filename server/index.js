@@ -19,13 +19,7 @@ const app = express();
 const MB = 1024 * 1024;
 const UPLOAD_LIMITS = {
   licensed: { maxUploads: 30, maxFileSizeBytes: 50 * MB },
-  demo: { maxUploads: 8, maxFileSizeBytes: 10 * MB },
   unlicensed: { maxUploads: 3, maxFileSizeBytes: 5 * MB }
-};
-const DEMO_POLICY = {
-  maxLiveMinutes: 25,
-  maxLiveLessons: 10,
-  watermarkText: "[TRYB DEMO] Material wygenerowany w wersji demonstracyjnej CoTeach."
 };
 
 // Hard cap for multipart parsing in memory. Per-user limits are checked in route handlers.
@@ -440,30 +434,8 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
-  // Grant a 30-day trial license upon registration (temporary solution)
-  // We check if the user has NO licenses at all and NO active license in profile
-  if (!profile?.license) {
-    const hasAnyLicense = [...db.licenses.values()].some((l) => l.assignedUserId === user.id);
-    if (!hasAnyLicense) {
-      try {
-        const trialLicenseId = randomUUID();
-        const trialLicense = {
-          id: trialLicenseId,
-          key: `TRIAL-7D-${trialLicenseId.slice(0, 8).toUpperCase()}`,
-          assignedUserId: user.id,
-          maxActiveUsers: 1,
-          expiresAt: new Date(Date.now() + 7 * DAY_MS).toISOString(),
-          demoMode: false,
-          schoolId: schoolId,
-          createdAt: new Date().toISOString()
-        };
-        await persistLicense(trialLicense);
-        db.licenses.set(trialLicense.id, trialLicense);
-      } catch (licenseError) {
-        console.error(`Failed to grant trial license: ${licenseError.message}`);
-      }
-    }
-  }
+  // Trial license is now handled via a dedicated button or during specific flows.
+  // We no longer automatically grant it here to ensure it's a deliberate action.
 
   await syncProfileLicenseStateSafe({ userId: user.id, activeLicense: getActiveUserLicense(user.id), profileSnapshot: profile });
   return { teacherId, userId: user.id, schoolId };
@@ -526,38 +498,11 @@ async function syncProfileLicenseStateSafe(params) {
 function getUserUploadPolicy(userId) {
   const activeLicense = getActiveUserLicense(userId);
   if (!activeLicense) return UPLOAD_LIMITS.unlicensed;
-  return activeLicense.demoMode ? UPLOAD_LIMITS.demo : UPLOAD_LIMITS.licensed;
+  return UPLOAD_LIMITS.licensed;
 }
 
-function enforceDemoLiveLimit(license, lesson, res) {
-  if (!license?.demoMode) return true;
-  const startedAtMs = new Date(lesson?.startedAt || 0).getTime();
-  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return true;
-
-  const limitMs = DEMO_POLICY.maxLiveMinutes * 60 * 1000;
-  const elapsedMs = Math.max(0, Date.now() - startedAtMs);
-  if (elapsedMs <= limitMs) return true;
-
-  return res.status(402).json({
-    code: "DEMO_LIVE_LIMIT_REACHED",
-    error: `Tryb demo pozwala na maksymalnie ${DEMO_POLICY.maxLiveMinutes} minut lekcji live.`,
-    demo: {
-      isDemo: true,
-      maxLiveMinutes: DEMO_POLICY.maxLiveMinutes
-    }
-  });
-}
-
-function applyDemoTextWatermark(text, isDemoLicense) {
-  if (!isDemoLicense) return String(text || "").trim();
-  const clean = String(text || "").trim();
-  return `${DEMO_POLICY.watermarkText}\n\n${clean}`.trim();
-}
-
-function applyDemoHtmlWatermark(html, isDemoLicense) {
-  if (!isDemoLicense) return String(html || "");
-  const banner = `<div style="margin-bottom:12px;padding:10px 12px;border:1px solid #f59e0b;background:#fef3c7;color:#92400e;border-radius:8px;font-size:13px;font-weight:600;">${DEMO_POLICY.watermarkText}</div>`;
-  return `${banner}${String(html || "")}`;
+function applyWatermark(text) {
+  return String(text || "").trim();
 }
 
 function requireActiveLicenseForTeacher(teacher, res, featureName = "Funkcja AI") {
@@ -3799,21 +3744,13 @@ app.get("/api/account/license-status", async (req, res) => {
 
   return res.json({
     hasActiveLicense: Boolean(activeLicense),
-    isDemoLicense: activeLicense?.demoMode === true,
     license: activeLicense
       ? {
         id: activeLicense.id,
         key: activeLicense.key,
         expiresAt: activeLicense.expiresAt,
         maxActiveUsers: activeLicense.maxActiveUsers,
-        demoMode: activeLicense.demoMode === true,
         daysLeft: getRemainingLicenseDays(activeLicense.expiresAt)
-      }
-      : null,
-    demoLimits: activeLicense?.demoMode
-      ? {
-        maxLiveMinutes: DEMO_POLICY.maxLiveMinutes,
-        maxLiveLessons: DEMO_POLICY.maxLiveLessons
       }
       : null,
     uploadPolicy,
@@ -3821,26 +3758,37 @@ app.get("/api/account/license-status", async (req, res) => {
   });
 });
 
-app.patch("/api/account/grant-license", async (req, res) => {
+app.post("/api/account/grant-license", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
   const userId = teacher.userId;
   const schoolId = String(teacher.schoolId || defaultSchoolId).trim() || defaultSchoolId;
+
+  // Check if trial was already used
+  if (supabase) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("trial_used")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profile?.trial_used) {
+      return res.status(403).json({ error: "Okres próbny został już wykorzystany na tym koncie." });
+    }
+  }
+
   const days = 7;
   const maxActiveUsers = 1;
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-  const fallbackLicenseId = randomUUID();
-  const assignedLicense = [...db.licenses.values()].find((license) => license.assignedUserId === userId) || null;
-  const licenseId = assignedLicense?.id || fallbackLicenseId;
-  const existing = db.licenses.get(licenseId) || assignedLicense;
+  const licenseId = randomUUID();
 
   const license = {
     id: licenseId,
-    key: existing?.key || `DEMO-7D-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+    key: `TRIAL-7D-${userId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
     maxActiveUsers,
     expiresAt,
-    demoMode: true,
+    demoMode: false,
     schoolId,
     assignedUserId: userId
   };
@@ -3854,6 +3802,14 @@ app.patch("/api/account/grant-license", async (req, res) => {
     });
     await persistLicense(license);
     db.licenses.set(licenseId, license);
+
+    if (supabase) {
+      await supabase
+        .from("profiles")
+        .update({ trial_used: true, updated_at: new Date().toISOString() })
+        .eq("id", userId);
+    }
+
     await syncProfileLicenseStateSafe({ userId, activeLicense: license });
   } catch (error) {
     console.error("[grant-license-upsert]", { userId, error });
@@ -3866,7 +3822,6 @@ app.patch("/api/account/grant-license", async (req, res) => {
       key: license.key,
       expiresAt: license.expiresAt,
       maxActiveUsers: license.maxActiveUsers,
-      demoMode: license.demoMode === true,
       daysLeft: getRemainingLicenseDays(license.expiresAt)
     }
   });
@@ -3907,7 +3862,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     if (String(lesson.teacherId) !== teacher.teacherId || String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
       return res.status(403).json({ error: "Forbidden" });
     }
-    if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
+    // Demo limit enforcement removed
     if (!req.file?.buffer) {
       return res.status(400).json({ error: "Audio file is required." });
     }
@@ -4110,7 +4065,7 @@ Dla liceum/technikum: Bardzo krótko, zakładając dobrą znajomość tematu.`;
       latencyMs: response.latencyMs
     });
 
-    const finalAnswer = applyDemoTextWatermark(response.text, activeLicense?.demoMode === true);
+    const finalAnswer = response.text;
     return res.json({
       answer: finalAnswer,
       lessonId: lessonId || null,

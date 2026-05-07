@@ -749,14 +749,13 @@ async function handleGrantLicense() {
     grantingSuccess.value = "";
     successMessage.value = "";
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (!user || !token) throw new Error("Błąd sesji użytkownika.");
+    if (!token) throw new Error("Błąd sesji użytkownika.");
 
     const response = await fetch(`${API_BASE}/api/account/grant-license`, {
-      method: "PATCH",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
@@ -766,10 +765,10 @@ async function handleGrantLicense() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Nie udało się nadać licencji.");
 
-    // Odśwież status licencji w widoku
+    // Refresh state
     await loadLicenseStatus(token);
-    grantingSuccess.value = "Sukces! Przyznano licencję na 30 dni.";
-    successMessage.value = "Sukces! Przyznano licencję na 30 dni.";
+    grantingSuccess.value = "Sukces! Przyznano licencję próbną na 7 dni.";
+    successMessage.value = "Sukces! Przyznano licencję próbną na 7 dni.";
   } catch (err) {
     grantingError.value = err.message;
   } finally {

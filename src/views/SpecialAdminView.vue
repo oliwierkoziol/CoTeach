@@ -193,11 +193,8 @@
                     <div class="font-medium">do {{ formatDate(user.license.expiresAt) }}</div>
                     <div class="text-[11px] text-[#767683]">
                       Typ:
-                      <span
-                        :class="user.license.demoMode ? 'text-amber-600' : 'text-green-600'"
-                        class="font-bold"
-                      >
-                        {{ user.license.demoMode ? "Demo" : "Standard" }}
+                      <span class="text-green-600 font-bold">
+                        {{ "Standard" }}
                       </span>
                     </div>
                   </div>
@@ -360,10 +357,6 @@
               </label>
             </div>
 
-            <label class="flex items-center gap-3 p-3 bg-[#f7f9fc] rounded-lg cursor-pointer">
-              <input v-model="licenseDemoMode" type="checkbox" class="h-5 w-5 rounded border-[#e0e3e6] text-[#0c3dfe] focus:ring-[#0c3dfe]" />
-              <span class="text-sm text-[#454652] font-medium">Tryb demo (ograniczenia funkcjonalności)</span>
-            </label>
 
             <div v-if="actionError" class="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">
               {{ actionError }}
@@ -549,7 +542,7 @@ function openModify(user) {
     : 0;
   licenseDays.value = daysLeft;
   licenseMaxUsers.value = Number(user.license?.maxActiveUsers || 1);
-  licenseDemoMode.value = user.license?.demoMode === true;
+  licenseDemoMode.value = false;
   actionError.value = "";
 }
 
@@ -606,7 +599,7 @@ async function saveAllChanges() {
       body: JSON.stringify({
         days: Number(licenseDays.value ?? 0),
         maxActiveUsers: Number(licenseMaxUsers.value || 1),
-        demoMode: licenseDemoMode.value === true
+        demoMode: false
       })
     });
     const licenseData = await readApiPayload(licenseRes);

@@ -24,6 +24,29 @@
     <!-- Tutorial -->
     <DashboardTutorial />
 
+    <!-- Trial Activation Banner -->
+    <div v-if="showTrialBanner" class="mb-8 relative z-10">
+      <div class="bg-gradient-to-r from-[#0053db] to-[#0c3dfe] rounded-2xl p-6 shadow-lg shadow-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <img :src="sparklesIcon" alt="" class="h-6 w-6 brightness-0 invert" />
+          </div>
+          <div>
+            <h3 class="text-white font-bold text-xl">Rozpocznij swój 7-dniowy okres próbny</h3>
+            <p class="text-white/80 text-sm">Zyskaj pełny dostęp do wszystkich funkcji CoTeach za darmo przez tydzień.</p>
+          </div>
+        </div>
+        <button
+          @click="startTrial"
+          :disabled="trialLoading"
+          class="bg-white text-[#0053db] px-8 py-3 rounded-xl font-bold hover:bg-white/90 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
+        >
+          {{ trialLoading ? 'Aktywacja...' : 'Aktywuj okres próbny' }}
+        </button>
+      </div>
+      <p v-if="trialError" class="text-red-500 text-sm mt-2 font-medium">{{ trialError }}</p>
+    </div>
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-full relative z-10">
       <!-- Card 1 -->
@@ -158,6 +181,15 @@ const displayName = ref("użytkowniku");
 const summaryError = ref("");
 
 const userClasses = ref([]);
+const userProfile = ref(null);
+const licenseStatus = ref(null);
+const trialLoading = ref(false);
+const trialError = ref("");
+
+function normalizeBaseUrl(url) {
+  return String(url || "").trim().replace(/\/$/, "");
+}
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
 
 async function loadUserData() {
   const {
@@ -171,15 +203,65 @@ async function loadUserData() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, trial_used")
     .eq("id", user.id)
     .maybeSingle();
 
+  userProfile.value = profile;
   const profileName = String(profile?.full_name || "").trim();
   const metaName = String(user.user_metadata?.full_name || "").trim();
   const fullName = profileName || metaName || user.email?.split("@")[0] || "użytkowniku";
 
   displayName.value = fullName.split(/\s+/)[0];
+
+  // Fetch license status
+  const token = session?.access_token;
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/account/license-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        licenseStatus.value = await res.json();
+      }
+    } catch (e) {
+      console.error("Failed to load license status:", e);
+    }
+  }
+}
+
+const showTrialBanner = computed(() => {
+  return licenseStatus.value && 
+         !licenseStatus.value.hasActiveLicense && 
+         !userProfile.value?.trial_used;
+});
+
+async function startTrial() {
+  trialLoading.value = true;
+  trialError.value = "";
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error("Brak sesji.");
+
+    const res = await fetch(`${API_BASE}/api/account/grant-license`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Nie udało się aktywować okresu próbnego.");
+
+    // Refresh state
+    await loadUserData();
+  } catch (e) {
+    trialError.value = e.message;
+  } finally {
+    trialLoading.value = false;
+  }
 }
 
 onMounted(async () => {

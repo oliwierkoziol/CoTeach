@@ -81,6 +81,12 @@ const error = ref('');
 
 const isReady = computed(() => acceptedTerms.value && acceptedRodo.value);
 
+function normalizeBaseUrl(url) {
+  return String(url || "").trim().replace(/\/$/, "");
+}
+
+const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
+
 async function handleAccept() {
   if (!isReady.value) return;
   
@@ -88,15 +94,33 @@ async function handleAccept() {
   error.value = '';
   
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Brak zalogowanego użytkownika.');
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    const token = session?.access_token;
 
+    if (!user || !token) throw new Error('Brak zalogowanego użytkownika.');
+
+    // 1. Update terms acceptance in profile
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ terms_accepted: true, updated_at: new Date().toISOString() })
       .eq('id', user.id);
 
     if (updateError) throw updateError;
+
+    // 2. Grant 7-day trial license automatically
+    try {
+      await fetch(`${API_BASE}/api/account/grant-license`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+    } catch (trialErr) {
+      console.error('Trial auto-grant failed:', trialErr);
+      // We don't block the user if trial grant fails, they can try again from dashboard
+    }
 
     router.push('/dashboard');
   } catch (err) {

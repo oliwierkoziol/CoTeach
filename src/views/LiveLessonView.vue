@@ -709,8 +709,6 @@ const selectedLessonDurationMinutes = ref(45);
 const activeSessionDurationMinutes = ref(45);
 const lastCoverageRefreshMs = ref(0);
 const coverageRefreshTimer = ref(null);
-const demoMaxLiveMinutes = ref(null);
-const demoMaxLiveLessons = ref(null);
 let apiPingTimer = null;
 let interimScrollTimer = null;
 let handleEscapeKey = null;
@@ -993,7 +991,6 @@ const points = computed(() => state.lesson?.plan || []);
 const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
 const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
 const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
-const isDemoLicense = computed(() => Number.isFinite(Number(demoMaxLiveMinutes.value)) && Number(demoMaxLiveMinutes.value) > 0);
 
 // Watch transcription changes for auto-scroll
 watch(transcription, () => {
@@ -1056,12 +1053,7 @@ watch(interimCaption, () => {
     }, 300); // Scroll every 300ms max while processing
   }
 });
-const availableLessonDurationOptions = computed(() => {
-  if (!isDemoLicense.value) return lessonDurationOptions;
-  const maxMinutes = Number(demoMaxLiveMinutes.value);
-  const filtered = lessonDurationOptions.filter((option) => option.minutes <= maxMinutes);
-  return filtered.length ? filtered : [{ label: `${maxMinutes} min`, minutes: maxMinutes }];
-});
+const availableLessonDurationOptions = computed(() => lessonDurationOptions);
 const elapsedLabel = computed(() => `${Math.floor(elapsedSec.value / 60)}:${String(elapsedSec.value % 60).padStart(2, "0")}`);
 const elapsedMinutes = computed(() => Math.floor(elapsedSec.value / 60));
 const elapsedSecondsRemainder = computed(() => elapsedSec.value % 60);
@@ -1096,10 +1088,7 @@ const lessonProgressPercent = computed(() => {
 
 function resolveLessonDurationMinutes(lesson) {
   const parsedLength = Number(lesson?.length);
-  let minutes = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
-  if (isDemoLicense.value && Number(demoMaxLiveMinutes.value) > 0) {
-    minutes = Math.min(minutes, Number(demoMaxLiveMinutes.value));
-  }
+  const minutes = Number.isFinite(parsedLength) && parsedLength > 0 ? Math.round(parsedLength) : 45;
   return Math.max(1, minutes);
 }
 
@@ -1253,48 +1242,17 @@ async function refreshCoverageThrottled(force = false) {
 }
 
 async function fetchLicenseStatus() {
-  const demoInfoPrefix = "Tryb demo ogranicza czas lekcji live";
   try {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
-    if (!token) {
-      demoMaxLiveMinutes.value = null;
-      if (String(info.value || "").startsWith(demoInfoPrefix)) {
-        info.value = "";
-      }
-      return;
-    }
+    if (!token) return;
 
-    const response = await fetch(`${API_BASE}/api/account/license-status`, {
+    await fetch(`${API_BASE}/api/account/license-status`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      demoMaxLiveMinutes.value = null;
-      if (String(info.value || "").startsWith(demoInfoPrefix)) {
-        info.value = "";
-      }
-      return;
-    }
-
-    const isDemo = payload?.isDemoLicense === true || payload?.license?.demoMode === true;
-    const maxMinutes = Number(payload?.demoLimits?.maxLiveMinutes || 0);
-    demoMaxLiveMinutes.value = isDemo && maxMinutes > 0 ? maxMinutes : null;
-    demoMaxLiveLessons.value = isDemo && payload?.demoLimits?.maxLiveLessons ? payload.demoLimits.maxLiveLessons : null;
-
-    if (!isDemo && String(info.value || "").startsWith(demoInfoPrefix)) {
-      info.value = "";
-    }
-
-    if (isDemo && maxMinutes > 0 && selectedLessonDurationMinutes.value > maxMinutes) {
-      selectedLessonDurationMinutes.value = maxMinutes;
-      info.value = `Tryb demo ogranicza czas lekcji live do ${maxMinutes} minut.`;
-    }
-  } catch {
-    demoMaxLiveMinutes.value = null;
-    if (String(info.value || "").startsWith(demoInfoPrefix)) {
-      info.value = "";
-    }
+    // Demo mode checks removed
+  } catch (e) {
+    console.error("Failed to fetch license status", e);
   }
 }
 
