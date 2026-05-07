@@ -54,9 +54,7 @@
               Zadanie Domowe
             </h2>
             <div class="bg-blue-50/50 p-8 rounded-2xl border border-blue-100/50 min-h-[200px]">
-              <p class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[20px] leading-relaxed whitespace-pre-wrap">
-                {{ note.homework || 'Brak treści zadania domowego dla tej lekcji.' }}
-              </p>
+              <div class="font-['Plus_Jakarta_Sans'] text-[#191c1e] text-[20px] leading-relaxed whitespace-pre-wrap homework-content" v-html="renderedHomework"></div>
             </div>
           </div>
 
@@ -91,6 +89,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLessonStore } from '../composables/useLessonStore';
+import katex from 'katex';
 
 const route = useRoute();
 const { fetchSharedNote } = useLessonStore();
@@ -104,13 +103,30 @@ const note = ref(null);
 const loading = ref(true);
 const error = ref("");
 
+const renderedHomework = computed(() => {
+  const text = note.value?.homework || 'Brak treści zadania domowego dla tej lekcji.';
+  
+  // Replace $...$ with KaTeX
+  return text.replace(/\$([^$]+)\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex, {
+        throwOnError: false,
+        displayMode: false
+      });
+    } catch (err) {
+      console.error('KaTeX error:', err);
+      return match;
+    }
+  });
+});
+
 onMounted(async () => {
   try {
     const noteId = route.params.noteId;
     if (!noteId) throw new Error("Nieprawidłowy odnośnik.");
     const data = await fetchSharedNote(noteId);
     if (!data?.finalNote) throw new Error("Notatka już nie istnieje.");
-    note.value = data.finalNote;
+    note.value = { ...data.finalNote, homework: data.homework };
     transcripts.value = data.transcripts || [];
     startedAt.value = data.startedAt || null;
   } catch (e) {
@@ -138,6 +154,10 @@ function formatDate(val) {
   return new Date(val).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 </script>
+
+<style>
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css');
+</style>
 
 <style scoped>
 @reference "../styles/index.css";

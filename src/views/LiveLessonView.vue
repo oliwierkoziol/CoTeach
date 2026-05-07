@@ -988,9 +988,13 @@ const renderedFractionPreview = computed(() => {
 });
 
 const points = computed(() => state.lesson?.plan || []);
-const discussedCount = computed(() => points.value.filter((p) => p.status === "discussed").length);
-const progress = computed(() => (points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0));
-const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed"));
+const discussedCount = computed(() => 
+  points.value.filter((p) => p.status === "discussed" || p.manualApproved).length
+);
+const progress = computed(() => 
+  points.value.length ? Math.round((discussedCount.value / points.value.length) * 100) : 0
+);
+const pendingPoints = computed(() => points.value.filter((p) => p.status !== "discussed" && !p.manualApproved));
 
 // Watch transcription changes for auto-scroll
 watch(transcription, () => {
@@ -1977,12 +1981,15 @@ async function cancelLessonAndRedirect() {
 
 async function toggleManualApproval(point) {
   if (!state.lesson?.id || !point?.id) return;
+  console.log(`[ManualApproval] Toggling point ${point.id}. Current manualApproved: ${point.manualApproved}`);
   try {
     error.value = "";
     manualUpdateLoadingId.value = point.id;
     const nextApproved = !Boolean(point.manualApproved);
-    await setManualPointApproval(state.lesson.id, point.id, nextApproved);
+    const updatedLesson = await setManualPointApproval(state.lesson.id, point.id, nextApproved);
+    console.log(`[ManualApproval] Success. New status in state:`, points.value.find(p => p.id === point.id));
   } catch (e) {
+    console.error(`[ManualApproval] Error:`, e);
     error.value = e.message || "Nie udało się zaktualizować statusu podtematu.";
   } finally {
     manualUpdateLoadingId.value = "";

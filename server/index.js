@@ -578,6 +578,7 @@ function rowToLesson(row) {
     startedAt: row.started_at || null,
     finishedAt: row.finished_at || null,
     class_name: row.class_name || null,
+    homework: row.homework || null,
     updatedAt: row.updated_at || null
   };
 }
@@ -635,6 +636,7 @@ function lessonToRow(lesson) {
     started_at: lesson.startedAt || null,
     finished_at: lesson.finishedAt || null,
     class_name: lesson.class_name || null,
+    homework: lesson.homework || null,
     updated_at: new Date().toISOString()
   };
 }
@@ -1882,8 +1884,8 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
   const transcript = (transcripts || []).map((item) => item.text).join(" ").slice(0, 25000);
   if (!plan?.length || !transcript.trim()) return plan || [];
 
-  // Use simple keyword matching with fuzzy matching
   const normalizedTranscript = normalize(transcript);
+  console.log(`[Coverage] Analyzing coverage for ${plan.length} points using transcript (${normalizedTranscript.length} chars)`);
 
   return plan.map((rawItem, index) => {
     const item = normalizePlanPoint(rawItem, index);
@@ -1893,10 +1895,9 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       return { ...item, status: "discussed" };
     }
 
-    // Check each keyword individually with fuzzy matching
     const keywords = item.keywords || [];
     if (keywords.length === 0) {
-      return item; // No keywords, can't determine coverage
+      return item;
     }
 
     const previouslyFound = new Set(item.foundKeywords || []);
@@ -1926,18 +1927,17 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       }
     });
 
-    // REQUIREMENT: Minimum 3 keywords must be found to mark as discussed
-
-
-    // REQUIREMENT: Dynamic keyword threshold
-    // If only 1-2 keywords, require 1. If more, require ~35% but at least 1 and max 3.
-    let minKeywordsRequired = 1;
+    let minKeywordsRequired = keywords.length;
     if (keywords.length > 2) {
-      minKeywordsRequired = Math.max(1, Math.min(3, Math.ceil(keywords.length * 0.35)));
+      minKeywordsRequired = Math.ceil(keywords.length * 0.5);
     }
 
-    if (foundKeywords.length >= minKeywordsRequired || item.status === "discussed") {
-      console.log(`[Coverage] Point "${item.title}" marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
+    const isNowDiscussed = foundKeywords.length >= minKeywordsRequired || item.status === "discussed";
+
+    if (isNowDiscussed) {
+      if (item.status !== "discussed") {
+        console.log(`[Coverage] Point "${item.title}" NEWLY marked as discussed. Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
+      }
       return {
         ...item,
         status: "discussed",
@@ -1945,8 +1945,9 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
         coverage: foundKeywords.length / keywords.length
       };
     } else if (foundKeywords.length > 0) {
-      // Partial coverage if some keywords found but not enough
-      console.log(`[Coverage] Point "${item.title}" partially discussed. Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
+      if (item.status !== "skipped") {
+        console.log(`[Coverage] Point "${item.title}" NEWLY partially discussed (skipped). Found ${foundKeywords.length}/${keywords.length} keywords (required: ${minKeywordsRequired}):`, foundKeywords);
+      }
       return {
         ...item,
         status: "skipped",
@@ -1955,19 +1956,11 @@ async function calculateCoverageWithLLM(plan, transcripts, context = {}) {
       };
     }
 
-    // No keywords found - keep current status if not pending
-    if (item.status === "skipped") {
-      console.log(`[Coverage] Point "${item.title}" keeping skipped status`);
-      return { ...item, status: "skipped" };
-    }
-
-    // No keywords found - only set to pending if current status is also pending
-    console.log(`[Coverage] Point "${item.title}" remains ${item.status} (no new keywords found)`);
     return {
       ...item,
       status: item.status === "pending" ? "pending" : item.status,
-      foundKeywords: [],
-      coverage: 0
+      foundKeywords: foundKeywords,
+      coverage: foundKeywords.length / keywords.length
     };
   });
 }
@@ -2083,14 +2076,14 @@ Transkrypcja: ${transcript}
       coveredText,
       summaryText: studentSummary
     });
-    return applyDemoHtmlWatermark(html, context.isDemoLicense === true);
+    return html;
   } catch {
     const fallbackHtml = buildFinalNoteHtml({
       lesson,
       coveredText: "Notatka wygenerowana awaryjnie na podstawie stanu planu i transkrypcji.",
       summaryText: "Kontynuuj kolejną lekcję od punktów oznaczonych jako częściowo omówione lub nieomówione."
     });
-    return applyDemoHtmlWatermark(fallbackHtml, context.isDemoLicense === true);
+    return fallbackHtml;
   }
 }
 
@@ -2138,7 +2131,7 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
     latencyMs: note.latencyMs
   });
 
-  return applyDemoTextWatermark(note.text, context.isDemoLicense === true);
+  return note.text;
 }
 
 function addCost({ lessonId = null, schoolId = null, teacherId = null, provider, model = null, feature = null, amountPLN, baseAmountPLN = null, marginAmountPLN = null, category = "other", providerCostUsd = null, costUsd = null, promptTokens = 0, completionTokens = 0, totalTokens = 0, requestId = null, latencyMs = null, status = "ok", errorMessage = null }) {
@@ -2564,7 +2557,7 @@ app.post("/api/notes/generate", async (req, res) => {
       context: {
         teacherId: teacher.teacherId,
         schoolId: teacher.schoolId,
-        isDemoLicense: activeLicense?.demoMode === true
+        isDemoLicense: false
       }
     });
     return res.json({ note });
@@ -3066,6 +3059,7 @@ app.get("/api/share/:id", async (req, res) => {
       return res.json({
         finalNote: lesson.finalNote,
         transcripts: lesson.transcripts || [],
+        homework: lesson.homework,
         startedAt: lesson.startedAt
       });
     }
@@ -3089,6 +3083,7 @@ app.get("/api/share/:id", async (req, res) => {
         return res.json({
           finalNote: lessonDb.final_note,
           transcripts: lessonDb.transcripts || [],
+          homework: lessonDb.homework,
           startedAt: lessonDb.started_at
         });
       }
@@ -3245,15 +3240,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
-  if (activeLicense.demoMode && !lesson.startedAt) {
-    const liveLessonsCount = [...db.lessons.values()].filter(l => String(l.teacherId) === String(teacher.teacherId) && l.startedAt).length;
-    if (liveLessonsCount >= DEMO_POLICY.maxLiveLessons) {
-      return res.status(403).json({
-        code: "DEMO_LIVE_LESSON_LIMIT",
-        error: `W trybie demo możesz przeprowadzić maksymalnie ${DEMO_POLICY.maxLiveLessons} lekcji na żywo.`
-      });
-    }
-  }
+  // Demo limit enforcement removed
 
   lesson.status = "live";
   lesson.finishedAt = null;
@@ -3261,11 +3248,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   db.lessons.set(lesson.id, lesson);
   await persistLessonSafe(lesson);
   return res.json({
-    lesson,
-    demo: {
-      isDemo: activeLicense.demoMode === true,
-      maxLiveMinutes: activeLicense.demoMode ? DEMO_POLICY.maxLiveMinutes : null
-    }
+    lesson
   });
 });
 
@@ -3282,7 +3265,7 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
     await persistLessonSafe(lesson);
     return res.status(409).json({ error: "Lekcja została automatycznie zakończona po upływie ustawionego czasu." });
   }
-  if (!enforceDemoLiveLimit(activeLicense, lesson, res)) return;
+  // Demo limit enforcement removed
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
 
@@ -3330,7 +3313,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson, {
     lessonId: lesson.id,
-    isDemoLicense: activeLicense.demoMode === true
+    isDemoLicense: false
   });
   const noteId = randomUUID();
   const baseUrl = req.body.baseUrl || PUBLIC_APP_URL;
@@ -3557,9 +3540,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
             id: assignedLicense.id,
             key: assignedLicense.key,
             expiresAt: assignedLicense.expiresAt,
-            maxActiveUsers: assignedLicense.maxActiveUsers,
-            demoMode: assignedLicense.demoMode === true
-          }
+            maxActiveUsers: assignedLicense.maxActiveUsers          }
           : null
       };
     });

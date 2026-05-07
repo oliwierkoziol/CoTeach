@@ -67,6 +67,19 @@
                 </svg>
                 Sprawdziany
               </button>
+              <button
+                type="button"
+                @click="activeTab = 'homework'"
+                :class="[
+                  'inline-flex h-11 items-center gap-2 rounded-full px-6 text-[15px] font-bold transition',
+                  activeTab === 'homework' ? 'bg-[#0c3dfe] text-white' : 'bg-[#e7e8ee] text-[#4b5563] hover:bg-[#dde0e8]'
+                ]"
+              >
+                <svg class="h-4 w-4 shrink-0" :class="activeTab === 'homework' ? 'text-white' : 'text-[#4b5563]'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Zadania domowe
+              </button>
             </div>
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block mb-2">
               {{ searchLabel }}
@@ -169,6 +182,36 @@
           <!-- Quizzes List -->
           <div v-if="activeTab === 'quizzes' && !filteredQuizzes.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
             <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych sprawdzianów.</p>
+          </div>
+
+          <div v-if="activeTab === 'homework' && !filteredHomework.length" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-10 text-center">
+            <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[16px]">Brak zapisanych zadań domowych.</p>
+          </div>
+
+          <div
+            v-if="activeTab === 'homework'"
+            v-for="lesson in filteredHomework"
+            :key="lesson.id"
+            class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
+            :class="selectedHomework?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            @click="selectedHomework = lesson"
+          >
+            <div class="flex w-full items-center gap-4">
+              <div class="size-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] truncate">
+                  Zadanie: {{ lesson.finalNote?.title || lesson.title }}
+                </h3>
+                <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
+                  <span v-if="lesson.class_name" class="font-semibold text-[#0c3dfe]">{{ lesson.class_name }} • </span>
+                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div
@@ -402,6 +445,36 @@
             </button> -->
           </div>
 
+          <div v-else-if="activeTab === 'homework' && selectedHomework" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-6">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+              Szczegóły zadania domowego
+            </h3>
+            
+            <div class="space-y-4">
+              <button
+                class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                @click="openHomeworkLink"
+              >
+                Otwórz zadanie (link)
+              </button>
+
+              <button
+                type="button"
+                class="w-full rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+                @click="openHomeworkPreview"
+              >
+                Pokaż treść zadania
+              </button>
+
+              <div class="pt-4 border-t border-gray-100">
+                <p class="text-xs text-[#767683] leading-relaxed">
+                  Zadanie domowe jest powiązane z lekcją: <br/>
+                  <span class="font-bold text-[#191c1e]">{{ selectedHomework.title }}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Quiz Details -->
           <div v-else-if="activeTab === 'quizzes' && selectedQuiz" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-6">
             <div class="flex items-center justify-between gap-3">
@@ -522,6 +595,7 @@ const editDate = ref("");
 const isQrModalOpen = ref(false);
 const selectedQuiz = ref(null);
 const quizResults = ref([]);
+const selectedHomework = ref(null);
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), fetchUserClasses()]);
@@ -535,6 +609,7 @@ onMounted(async () => {
 
   if (filteredNotes.value.length) selectedNote.value = filteredNotes.value[0];
   if (filteredPresentations.value.length) selectedPresentation.value = filteredPresentations.value[0];
+  if (filteredHomework.value.length) selectedHomework.value = filteredHomework.value[0];
 });
 
 
@@ -602,10 +677,27 @@ const filteredQuizzes = computed(() => {
   });
 });
 
+const filteredHomework = computed(() => {
+  let lessonsWithHomework = state.lessons.filter(l => !!l.homework);
+  
+  if (state.selectedClass) {
+    lessonsWithHomework = lessonsWithHomework.filter(l => l.class_name === state.selectedClassName);
+  }
+
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return lessonsWithHomework;
+  return lessonsWithHomework.filter((l) => {
+    const title = l.finalNote?.title || l.title || "";
+    const subject = l.finalNote?.subject || l.subject || "";
+    return `${title} ${subject}`.toLowerCase().includes(q);
+  });
+});
+
 const searchLabel = computed(() => {
   if (activeTab.value === "notes") return "Szukaj notatek";
   if (activeTab.value === "presentations") return "Szukaj prezentacji";
   if (activeTab.value === "quizzes") return "Szukaj sprawdzianów";
+  if (activeTab.value === "homework") return "Szukaj zadań domowych";
   return "Szukaj lekcji";
 });
 
@@ -613,6 +705,7 @@ const searchPlaceholder = computed(() => {
   if (activeTab.value === "notes") return "Szukaj według tytułu, przedmiotu albo poziomu...";
   if (activeTab.value === "presentations") return "Szukaj według tytułu lub daty prezentacji...";
   if (activeTab.value === "quizzes") return "Szukaj według tytułu sprawdzianu...";
+  if (activeTab.value === "homework") return "Szukaj według tytułu zadania...";
   return "Szukaj według przedmiotu, tytułu albo miesiąca...";
 });
 
@@ -785,6 +878,17 @@ async function handleDeleteQuiz() {
   } catch (e) {
     alert("Błąd podczas usuwania.");
   }
+}
+
+function openHomeworkLink() {
+  if (!selectedHomework.value?.finalNote?.shareUrl) return;
+  window.open(selectedHomework.value.finalNote.shareUrl + "?type=homework", "_blank", "noopener,noreferrer");
+}
+
+function openHomeworkPreview() {
+  const text = selectedHomework.value?.homework || "";
+  textPreviewBody.value = text || "Brak treści zadania domowego.";
+  textPreviewOpen.value = true;
 }
 
 watch(activeTab, async (tab) => {
