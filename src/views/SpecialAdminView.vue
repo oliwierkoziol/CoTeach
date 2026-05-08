@@ -302,8 +302,39 @@
         </div>
       </section>
 
+      <!-- Link Existing Account -->
+      <section class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8">
+        <h2 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-1">Przypisz istniejące konto</h2>
+        <p class="font-['Plus_Jakarta_Sans'] text-[#454652] text-[14px] mb-8">
+          Dodaj nauczyciela, który ma już konto w CoTeach, do Twojej organizacji.
+        </p>
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <label class="block">
+            <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] mb-2 block">Adres e-mail nauczyciela</span>
+            <div class="bg-[#e0e3e6] h-[48px] rounded-[8px] flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
+              <input v-model.trim="linkExistingEmail" type="email" class="bg-transparent border-none outline-none w-full px-4 text-[16px] text-[#191c1e] font-['Plus_Jakarta_Sans']" placeholder="nauczyciel@email.pl" />
+            </div>
+          </label>
+        </div>
+
+        <div class="mt-8 flex justify-end">
+          <button
+            type="button"
+            class="bg-[#142588] px-8 py-3 rounded-xl font-bold text-white shadow-lg hover:bg-[#0f1d66] transition-all disabled:opacity-50"
+            :disabled="isLinkingAccount"
+            @click="linkExistingAccount"
+          >
+            {{ isLinkingAccount ? "Łączenie..." : "Przypisz do organizacji" }}
+          </button>
+        </div>
+      </section>
+
       <div v-if="actionError" class="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm font-medium text-red-700">
          {{ actionError }}
+      </div>
+      <div v-if="linkSuccess" class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-700">
+         {{ linkSuccess }}
       </div>
     </div>
 
@@ -447,6 +478,8 @@ const isCreatingBusinessUser = ref(false);
 const schoolName = ref("");
 const businessEmailDomain = ref("");
 const isSavingSchoolSettings = ref(false);
+const linkExistingEmail = ref("");
+const isLinkingAccount = ref(false);
 
 function formatDate(value) {
   if (!value) return "—";
@@ -698,6 +731,44 @@ async function saveSchoolSettings() {
     actionError.value = e.message;
   } finally {
     isSavingSchoolSettings.value = false;
+  }
+}
+
+const linkSuccess = ref("");
+
+async function linkExistingAccount() {
+  const email = String(linkExistingEmail.value || "").trim().toLowerCase();
+  if (!email) {
+    actionError.value = "Podaj adres e-mail.";
+    return;
+  }
+
+  isLinkingAccount.value = true;
+  actionError.value = "";
+  linkSuccess.value = "";
+  try {
+    const headers = await getAuthHeader();
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}/api/admin/users/link-organization`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ email })
+    });
+    const data = await readApiPayload(res);
+    if (!res.ok) throw new Error(data.error || "Nie udało się przypisać konta.");
+
+    linkExistingEmail.value = "";
+    linkSuccess.value = "Konto zostało pomyślnie przypisane do organizacji.";
+    await loadDashboard();
+    
+    // Clear success message after 5 seconds
+    setTimeout(() => {
+      linkSuccess.value = "";
+    }, 5000);
+  } catch (e) {
+    actionError.value = e.message;
+  } finally {
+    isLinkingAccount.value = false;
   }
 }
 

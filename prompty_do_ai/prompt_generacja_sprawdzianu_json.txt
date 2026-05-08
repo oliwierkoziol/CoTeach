@@ -8,7 +8,8 @@ PRIORYTET PRAKTYKI: Unikaj pytań o definicje ("Co to jest..."). Skup się na za
 Dane wejściowe:
 - Temat: [TEMAT]
 - Przedmiot: [PRZEDMIOT]
-- Grupa docelowa: [KLASA]
+- Grupa docelowa (Klasa): [KLASA]
+- Poziom trudności: [TRUDNOSC] (bardzo łatwy, łatwy, średni, trudny, bardzo trudny)
 - Liczba pytań zamkniętych: [ILOSC_ZAMKNIETYCH]
 - Liczba pytań otwartych: [ILOSC_OTWARTYCH]
 - Treść źródłowa: [TRESC_ZRODLOWA]
@@ -21,8 +22,9 @@ Wymagania techniczne:
 5) Dla pytań otwartych przygotuj "Klucz odpowiedzi" (krótkie wytyczne i wynik, który musi się pojawić).
 6) Wzory, ułamki i równania (w tym potęgi np. małe 2 u góry) MUSZĄ być zapisane w LaTeX i otoczone pojedynczym znakiem dolara, np. $x^2 + 2x = 0$ albo $\frac{1}{2}$. Używaj LaTeX wszędzie tam, gdzie pojawiają się potęgi, ułamki czy symbole matematyczne.
 7) SFORMUŁOWANIE PYTAŃ: Unikaj zwrotów "na podstawie tekstu", "z powyższego fragmentu", "wnioskując z notatki" itp. Zadania powinny brzmieć jak standardowe pytania egzaminacyjne (np. "Wymień przyczyny...", "Oblicz...", "Wyjaśnij znaczenie..."), a nie jak test czytania ze zrozumieniem, chyba że materiał źródłowy zawiera wyraźny cytat literacki.
-8) ŚCISŁA LICZBA PYTAŃ: Wygeneruj DOKŁADNIE tyle pytań każdego typu, ile wskazano w parametrach ([ILOSC_ZAMKNIETYCH], [ILOSC_OTWARTYCH]). Jeśli parametr wynosi 0, NIE GENERUJ ani jednego pytania tego typu.
-9) BEZPIECZEŃSTWO JSON: Wszystkie backslashe w zapisach LaTeX MUSZĄ być poprawnie escapowane w JSON (np. \\frac zamiast \frac). Pamiętaj o cudzysłowach wewnątrz tekstów.
+8) ŚCISŁA LICZBA PYTAŃ: Wygeneruj DOKŁADNIE tyle pytań każdego typu, ile wskazano w parametrach. Jeśli [ILOSC_OTWARTYCH] wynosi 0, wygeneruj ZERO zadań otwartych. Jeśli [ILOSC_ZAMKNIETYCH] wynosi 0, wygeneruj ZERO zadań zamkniętych. To jest wymóg krytyczny.
+9) POZIOM TRUDNOŚCI: Dopasuj słownictwo i stopień skomplikowania zadań do klasy ([KLASA]) ORAZ wybranego poziomu trudności ([TRUDNOSC]).
+10) BEZPIECZEŃSTWO JSON: Wszystkie backslashe w zapisach LaTeX MUSZĄ być poprawnie escapowane w JSON (np. \\frac zamiast \frac). Pamiętaj o cudzysłowach wewnątrz tekstów.
 
 Struktura JSON:
 {
@@ -45,6 +47,3 @@ Struktura JSON:
     }
   ]
 }
-
-Język: Polski. Poziom trudności dopasowany do grupy: [KLASA]. 
-DODATKOWY POZIOM TRUDNOŚCI: [TRUDNOSC].

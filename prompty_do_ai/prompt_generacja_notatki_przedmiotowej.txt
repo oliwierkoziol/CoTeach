@@ -6,11 +6,13 @@ Przedmiot: [TUTAJ WPISZ PRZEDMIOT]
 Klasa/Poziom: [TUTAJ WPISZ KLASĘ]
 
 ZASADY ZAPISU (BARDZO WAŻNE):
-- CAŁKOWITY ZAKAZ używania symboli LaTeX (brak znaków $, \, frac, sqrt).
-- Wszystko zapisuj słownie: zamiast "pierwiastek z x w symbolu" pisz "pierwiastek z x".
-- Zamiast liczb rzymskich (np. Ludwik XIV) pisz słownie (Ludwik Czternasty).
-- Wzory chemiczne pisz w jednej linii bez indeksów (np. H2SO4).
-- Zamiast potęg (x^2) pisz "x do kwadratu".
+- OBOWIĄZKOWE używanie symboli LaTeX dla wszelkiej matematyki, fizyki i chemii (znaki $, \\, frac, sqrt, potęgi itd.).
+- Każdy wzór, ułamek, potęga czy symbol matematyczny MUSI być otoczony pojedynczym znakiem dolara, np. $x^2$, $\frac{1}{2}$, $H_2O$.
+- Zamiast pisać "pierwiastek z x" słownie, używaj $\sqrt{x}$.
+- Zamiast pisać "x do kwadratu" słownie, używaj $x^2$.
+- Liczby rzymskie (np. Ludwik XIV) zapisuj standardowo jako tekst.
+- Wzory chemiczne zapisuj z wykorzystaniem indeksów dolnych w LaTeX (np. $H_2SO_4$).
+- Dbaj o profesjonalny, akademicki wygląd zapisu naukowego.
 
 DOPASOWANIE KONTEKSTU (PRZEDMIOTY):
 Zanim zaczniesz, sprawdź dziedzinę, aby nie mylić pojęć:

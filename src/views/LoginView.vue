@@ -209,7 +209,7 @@ let googleAuthSubscription = null;
 
 function resolvePostLoginPath() {
   const redirect = String(route.query.redirect || "").trim();
-  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) return "/dashboard";
+  if (!redirect || redirect === "/" || !redirect.startsWith("/") || redirect.startsWith("//")) return "/dashboard";
   if (redirect === "/login" || redirect === "/register" || redirect === "/reset-password") return "/dashboard";
   return redirect;
 }

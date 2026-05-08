@@ -208,7 +208,7 @@
                 </h3>
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
                   <span v-if="lesson.class_name" class="font-semibold text-[#0c3dfe]">{{ lesson.class_name }} • </span>
-                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date }}
+                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date || new Date(lesson.createdAt || lesson.updatedAt || Date.now()).toLocaleDateString('pl-PL') }}
                 </p>
               </div>
             </div>
@@ -678,17 +678,20 @@ const filteredQuizzes = computed(() => {
 });
 
 const filteredHomework = computed(() => {
-  let lessonsWithHomework = state.lessons.filter(l => !!l.homework);
+  const lessonsWithHomework = state.lessons.filter(l => !!l.homework).map(l => ({ ...l, isNote: false }));
+  const notesWithHomework = state.notes.filter(n => !!n.homework).map(n => ({ ...n, isNote: true }));
   
+  let combined = [...lessonsWithHomework, ...notesWithHomework];
+
   if (state.selectedClass) {
-    lessonsWithHomework = lessonsWithHomework.filter(l => l.class_name === state.selectedClassName);
+    combined = combined.filter(item => item.class_name === state.selectedClassName || item.classLevel === state.selectedClassName);
   }
 
   const q = searchQuery.value.toLowerCase().trim();
-  if (!q) return lessonsWithHomework;
-  return lessonsWithHomework.filter((l) => {
-    const title = l.finalNote?.title || l.title || "";
-    const subject = l.finalNote?.subject || l.subject || "";
+  if (!q) return combined;
+  return combined.filter((item) => {
+    const title = item.finalNote?.title || item.title || "";
+    const subject = item.finalNote?.subject || item.subject || "";
     return `${title} ${subject}`.toLowerCase().includes(q);
   });
 });
@@ -881,8 +884,9 @@ async function handleDeleteQuiz() {
 }
 
 function openHomeworkLink() {
-  if (!selectedHomework.value?.finalNote?.shareUrl) return;
-  window.open(selectedHomework.value.finalNote.shareUrl + "?type=homework", "_blank", "noopener,noreferrer");
+  const hw = selectedHomework.value;
+  if (!hw || !hw.id) return;
+  window.open(`${window.location.origin}/share/${hw.id}?type=homework`, "_blank", "noopener,noreferrer");
 }
 
 function openHomeworkPreview() {

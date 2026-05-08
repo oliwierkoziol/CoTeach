@@ -100,6 +100,13 @@
 
             <!-- Quiz Settings -->
             <div v-if="activeTab === 'quiz'" class="mt-6 space-y-4">
+              <div>
+                <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Klasa / Poziom</label>
+                <div class="bg-[#f2f4f7] rounded-lg flex items-center px-3 focus-within:ring-2 focus-within:ring-[#0c3dfe]/30 transition">
+                  <input type="text" v-model="classLevel" placeholder="np. 6A, Klasa 8..." class="w-full bg-transparent border-none outline-none p-2.5 font-bold text-[#191c1e]" />
+                </div>
+              </div>
+
               <div class="flex gap-4">
                 <div class="flex-1">
                   <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Pytania zamknięte</label>
@@ -114,10 +121,11 @@
               <div>
                 <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Poziom trudności</label>
                 <select v-model="difficulty" class="w-full bg-[#f2f4f7] rounded-lg p-2.5 outline-none font-bold">
+                  <option value="bardzo łatwy">Bardzo łatwy</option>
                   <option value="łatwy">Łatwy</option>
                   <option value="średni">Średni</option>
                   <option value="trudny">Trudny</option>
-                  <option value="bardzo trudny">Bardzo trudny (olimpiada)</option>
+                  <option value="bardzo trudny (olimpiada)">Bardzo trudny (olimpiada)</option>
                 </select>
               </div>
 
@@ -190,7 +198,6 @@
 
             <!-- Homework Settings -->
             <div v-else class="mt-6 space-y-4">
-              <!-- Homework Generator Controls -->
               <div class="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div class="flex justify-between items-center">
                   <label class="text-[11px] font-bold text-gray-400 uppercase">Liczba zadań</label>
@@ -201,51 +208,46 @@
                 <button
                   @click="handleGenerateHomework"
                   :disabled="isGeneratingHomework || (!selectedLessonId && !selectedNoteId)"
-                  class="w-full bg-white border-2 border-primary text-primary font-bold py-2.5 rounded-xl hover:bg-primary/5 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  class="w-full bg-[#142588] text-white font-bold py-2.5 rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <svg v-if="isGeneratingHomework" class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   {{ isGeneratingHomework ? 'Generowanie...' : 'Generuj propozycję zadania' }}
                 </button>
               </div>
-
-              <label class="text-[11px] font-bold text-gray-400 uppercase mb-1 block">Treść zadania (możesz edytować przed wysłaniem)</label>
-              <textarea 
-                v-model="homeworkText" 
-                rows="6"
-                placeholder="Wpisz treść zadania lub wygeneruj ją powyżej..."
-                class="w-full bg-[#f2f4f7] rounded-lg p-3 outline-none font-medium text-sm resize-none"
-              ></textarea>
-              <button
-                @click="handleSaveHomework"
-                :disabled="isSavingHomework || !selectedLessonId || !homeworkText"
-                class="w-full bg-[#0c3dfe] text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-50"
-              >
-                {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz i udostępnij zadanie' }}
-              </button>
+              <p class="text-[11px] text-gray-400 italic">Kliknij generuj, aby otrzymać propozycję zadania domowego, którą będziesz mógł edytować w panelu po prawej.</p>
             </div>
           </div>
         </div>
 
         <!-- Preview / Editor Column -->
         <div class="col-span-12 lg:col-span-8">
-          <!-- Quiz Preview -->
+          <!-- Quiz Preview / Editor -->
           <div v-if="activeTab === 'quiz' && quiz" class="space-y-6">
             <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
               <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
-              <button @click="printQuiz" class="bg-emerald-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
-                Drukuj sprawdzian
-              </button>
+              <div class="flex gap-2">
+                <button @click="saveQuizEdits" class="bg-primary/10 text-primary px-4 py-2.5 rounded-lg font-bold hover:bg-primary/20 transition">
+                  Zapisz zmiany
+                </button>
+                <button @click="printQuiz" class="bg-emerald-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
+                  Drukuj sprawdzian
+                </button>
+              </div>
             </div>
 
-            <div v-for="(q, idx) in quiz.questions" :key="q.id" class="bg-white rounded-xl shadow-md p-6 border-l-4" :class="q.type === 'closed' ? 'border-blue-500' : 'border-amber-500'">
+            <div v-for="(q, idx) in quiz.questions" :key="q.id" class="bg-white rounded-xl shadow-md p-6 border-l-4 transition-all hover:shadow-lg" :class="q.type === 'closed' ? 'border-blue-500' : 'border-amber-500'">
               <div class="flex justify-between items-start gap-4 mb-4">
                 <div class="flex-1">
-                  <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gray-100 text-gray-500 mb-2 inline-block">
-                    Zadanie {{ idx + 1 }} ({{ q.type === 'closed' ? 'Zamknięte' : 'Otwarte' }})
-                  </span>
-                  <textarea v-model="q.question" rows="2" class="w-full text-lg font-bold text-foreground bg-transparent border-none outline-none resize-none"></textarea>
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gray-100 text-gray-500">
+                      Zadanie {{ idx + 1 }} ({{ q.type === 'closed' ? 'Zamknięte' : 'Otwarte' }})
+                    </span>
+                    <button @click="removeQuestion(idx)" class="text-xs text-red-400 hover:text-red-600 font-bold">Usuń</button>
+                  </div>
+                  <textarea v-model="q.question" rows="2" class="w-full text-lg font-bold text-foreground bg-transparent border-none outline-none resize-none focus:ring-0"></textarea>
+                  
                   <!-- Math Preview -->
-                  <div v-if="q.question.includes('$')" class="mt-2 p-2 bg-blue-50/50 rounded border border-blue-100">
+                  <div v-if="q.question.includes('$')" class="mt-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                     <p class="text-[10px] text-blue-400 font-bold uppercase mb-1">Podgląd matematyki:</p>
                     <div class="text-sm font-normal" v-html="renderMath(q.question)"></div>
                   </div>
@@ -259,10 +261,10 @@
               <!-- Closed Question Options -->
               <div v-if="q.type === 'closed'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div v-for="(opt, oIdx) in q.options" :key="oIdx" class="flex flex-col gap-1">
-                  <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-transparent" :class="q.correctAnswer === oIdx ? 'border-emerald-200 bg-emerald-50' : ''">
+                  <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-transparent transition-all" :class="q.correctAnswer === oIdx ? 'border-emerald-200 bg-emerald-50' : 'hover:border-gray-200'">
                     <span class="w-6 h-6 flex items-center justify-center rounded-full bg-white text-xs font-black shadow-sm">{{ ['A','B','C','D'][oIdx] }}</span>
                     <input v-model="q.options[oIdx]" class="flex-1 bg-transparent border-none outline-none text-sm" />
-                    <input type="radio" :name="'correct-'+q.id" :checked="q.correctAnswer === oIdx" @change="q.correctAnswer = oIdx" class="accent-emerald-600" />
+                    <input type="radio" :name="'correct-'+q.id" :checked="q.correctAnswer === oIdx" @change="q.correctAnswer = oIdx" class="accent-emerald-600 size-4 cursor-pointer" />
                   </div>
                   <!-- Math Preview for Option -->
                   <div v-if="opt.includes('$')" class="ml-2 text-xs text-blue-500" v-html="renderMath(opt)"></div>
@@ -272,28 +274,84 @@
               <!-- Open Question Answer Guide -->
               <div v-else class="mt-2">
                 <label class="text-[10px] font-bold text-amber-600 uppercase mb-1 block">Klucz odpowiedzi (ukryty na sprawdzianie)</label>
-                <textarea v-model="q.answerGuide" class="w-full bg-amber-50/50 p-3 rounded-lg text-sm italic text-gray-600 outline-none border border-amber-100" />
+                <textarea v-model="q.answerGuide" class="w-full bg-amber-50/50 p-3 rounded-lg text-sm italic text-gray-600 outline-none border border-amber-100 resize-none" rows="3" />
+                <div v-if="q.answerGuide?.includes('$')" class="mt-2 p-2 bg-amber-50 rounded border border-amber-100">
+                  <div class="text-sm font-normal" v-html="renderMath(q.answerGuide)"></div>
+                </div>
               </div>
             </div>
+
+            <button @click="addQuestion" class="w-full py-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold hover:border-primary hover:text-primary transition-all">
+              + Dodaj nowe zadanie
+            </button>
           </div>
 
-          <!-- Homework Preview / QR -->
-          <div v-else-if="activeTab === 'homework' && homeworkSaved" class="bg-white rounded-2xl shadow-xl p-10 text-center flex flex-col items-center">
-            <div class="size-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
-              <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <h2 class="text-2xl font-black text-gray-900 mb-2">Zadanie zostało zapisane!</h2>
-            <p class="text-gray-500 mb-8 max-w-sm">Uczniowie mogą teraz zobaczyć to zadanie po wejściu w link do notatki lub skanując poniższy kod QR.</p>
-            
-            <div class="bg-gray-50 p-6 rounded-3xl border border-dashed border-gray-200 mb-8">
-              <img :src="homeworkQrUrl" alt="QR" class="size-48 mx-auto mb-4" />
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Skanuj aby zobaczyć zadanie</p>
+          <!-- Homework Editor / Result -->
+          <div v-else-if="activeTab === 'homework'" class="h-full">
+            <div v-if="!homeworkSaved" class="bg-white rounded-2xl shadow-xl p-8 space-y-6 h-full flex flex-col">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-black text-gray-900">Edytor Zadania Domowego</h2>
+                <div class="flex gap-2">
+                   <button 
+                    @click="copyHomeworkText" 
+                    :disabled="!homeworkText"
+                    class="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-200 transition disabled:opacity-50"
+                  >
+                    Kopiuj treść
+                  </button>
+                   <button 
+                    @click="handleSaveHomework" 
+                    :disabled="isSavingHomework || !homeworkText"
+                    class="bg-[#0c3dfe] text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-lg disabled:opacity-50"
+                  >
+                    {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz i udostępnij' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex-1 relative">
+                <textarea 
+                  v-model="homeworkText" 
+                  class="w-full h-full min-h-[400px] bg-[#f8fafc] border-2 border-gray-100 rounded-2xl p-8 text-lg font-medium text-gray-700 outline-none focus:border-[#0c3dfe]/30 transition-all resize-none shadow-inner"
+                  placeholder="Treść zadania domowego pojawi się tutaj po wygenerowaniu lub możesz ją wpisać ręcznie..."
+                ></textarea>
+                
+                <div v-if="homeworkText.includes('$')" class="absolute bottom-4 right-4 max-w-sm bg-white/90 backdrop-blur shadow-xl border border-blue-100 rounded-xl p-4 no-print">
+                  <p class="text-[10px] text-blue-400 font-bold uppercase mb-2">Podgląd LaTeX:</p>
+                  <div class="text-sm max-h-[150px] overflow-y-auto" v-html="renderMath(homeworkText)"></div>
+                </div>
+              </div>
             </div>
 
-            <div class="w-full max-w-md space-y-3">
-              <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <input :value="homeworkShareUrl" readonly class="bg-transparent border-none outline-none flex-1 text-xs text-blue-600 font-medium" />
-                <button @click="copyLink" class="text-xs font-bold text-gray-500 hover:text-primary">Kopiuj</button>
+            <!-- Homework Success View -->
+            <div v-else class="bg-white rounded-2xl shadow-xl p-12 text-center flex flex-col items-center">
+              <div class="size-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                <svg class="size-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <h2 class="text-3xl font-black text-gray-900 mb-2">Zadanie udostępnione!</h2>
+              <p class="text-gray-500 mb-10 max-w-md text-lg">Zadanie zostało pomyślnie przypisane. Uczniowie mogą je zobaczyć pod poniższym linkiem lub skanując kod QR.</p>
+              
+              <div class="grid md:grid-cols-2 gap-10 items-center w-full max-w-4xl">
+                <div class="bg-gradient-to-br from-gray-50 to-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                  <div class="bg-white p-4 rounded-2xl shadow-lg inline-block mb-4">
+                    <img :src="homeworkQrUrl" alt="QR" class="size-48 mx-auto" />
+                  </div>
+                  <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Kod QR dla uczniów</p>
+                </div>
+
+                <div class="space-y-6 text-left">
+                  <div class="space-y-2">
+                    <label class="text-xs font-black text-gray-400 uppercase">Link do zadania</label>
+                    <div class="flex items-center gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                      <input :value="homeworkShareUrl" readonly class="bg-transparent border-none outline-none flex-1 text-sm text-blue-600 font-bold truncate" />
+                      <button @click="copyLink" class="px-4 py-2 bg-white text-xs font-bold text-gray-600 rounded-lg shadow-sm hover:bg-gray-100 transition">Kopiuj</button>
+                    </div>
+                  </div>
+
+                  <button @click="homeworkSaved = false" class="w-full py-4 text-sm font-bold text-gray-400 hover:text-gray-600 transition underline">
+                    Wróć do edycji zadania
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -431,6 +489,7 @@ const activeTab = ref("quiz");
 const numClosed = ref(5);
 const numOpen = ref(2);
 const difficulty = ref("średni");
+const classLevel = ref("");
 const isGenerating = ref(false);
 const isExporting = ref(false);
 const quiz = ref(null);
@@ -450,6 +509,49 @@ const selectedGradingQuizId = ref("");
 const showKeyPreview = ref(false);
 const isGrading = ref(false);
 const gradingResult = ref(null);
+
+function addQuestion() {
+  if (!quiz.value) return;
+  const newQ = {
+    id: crypto.randomUUID(),
+    type: "closed",
+    question: "Nowe zadanie...",
+    options: ["Opcja A", "Opcja B", "Opcja C", "Opcja D"],
+    correctAnswer: 0,
+    points: 1
+  };
+  quiz.value.questions.push(newQ);
+}
+
+function removeQuestion(index) {
+  if (!quiz.value) return;
+  quiz.value.questions.splice(index, 1);
+}
+
+async function saveQuizEdits() {
+  if (!quiz.value) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    const response = await fetch(`${API_BASE}/api/quizzes/${quiz.value.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token}`
+      },
+      body: JSON.stringify({ 
+        title: quiz.value.title,
+        questions: quiz.value.questions 
+      })
+    });
+    if (!response.ok) throw new Error("Failed to save edits");
+    alert("Zmiany zostały zapisane!");
+    await fetchSavedQuizzes();
+  } catch (e) {
+    console.error(e);
+    alert("Błąd podczas zapisywania zmian.");
+  }
+}
 
 const selectedGradingQuiz = computed(() => {
   return savedQuizzes.value.find(q => q.id === selectedGradingQuizId.value) || null;
@@ -540,6 +642,7 @@ function handleSelectLesson(lesson) {
   selectedLessonId.value = lesson.id;
   selectedNoteId.value = "";
   homeworkText.value = lesson.homework || "";
+  classLevel.value = lesson.class_name || lesson.classLevel || "";
   homeworkSaved.value = false;
   homeworkShareUrl.value = "";
   homeworkQrUrl.value = "";
@@ -548,7 +651,8 @@ function handleSelectLesson(lesson) {
 function handleSelectNote(note) {
   selectedNoteId.value = note.id;
   selectedLessonId.value = "";
-  homeworkText.value = ""; // Homework only for lessons
+  homeworkText.value = note.homework || "";
+  classLevel.value = note.class_name || note.classLevel || "";
   homeworkSaved.value = false;
 }
 
@@ -560,7 +664,6 @@ async function handleGenerateQuiz() {
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    // Używamy tej samej logiki co w useLessonStore
     const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
     
     const response = await fetch(`${API_BASE}/api/quizzes/generate`, {
@@ -572,9 +675,10 @@ async function handleGenerateQuiz() {
       body: JSON.stringify({
         lessonId: selectedLessonId.value,
         noteId: selectedNoteId.value,
-        numClosed: numClosed.value,
-        numOpen: numOpen.value,
-        difficulty: difficulty.value
+        numClosed: Number(numClosed.value),
+        numOpen: Number(numOpen.value),
+        difficulty: difficulty.value,
+        classLevel: classLevel.value
       })
     });
 
@@ -584,13 +688,12 @@ async function handleGenerateQuiz() {
     }
     
     quiz.value = data.quiz;
-    // Add to saved list immediately so it shows up in Grading tab
     if (data.quiz) {
       savedQuizzes.value = [data.quiz, ...savedQuizzes.value];
     }
   } catch (error) {
     console.error(error);
-    alert(`Wystąpił błąd: ${error.message}. Upewnij się, że masz aktywną licencję i serwer backendowy jest zaktualizowany.`);
+    alert(`Wystąpił błąd: ${error.message}`);
   } finally {
     isGenerating.value = false;
   }
@@ -630,14 +733,21 @@ async function handleGenerateHomework() {
 }
 
 async function handleSaveHomework() {
-  if (!selectedLessonId.value) return;
+  if (!selectedLessonId.value && !selectedNoteId.value) return;
   isSavingHomework.value = true;
   
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
     
-    const response = await fetch(`${API_BASE}/api/lessons/${selectedLessonId.value}/homework`, {
+    let url = "";
+    if (selectedLessonId.value) {
+      url = `${API_BASE}/api/lessons/${selectedLessonId.value}/homework`;
+    } else {
+      url = `${API_BASE}/api/notes/${selectedNoteId.value}/homework`;
+    }
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -654,8 +764,13 @@ async function handleSaveHomework() {
     homeworkSaved.value = true;
     
     // Update local state
-    const lesson = state.lessons.find(l => l.id === selectedLessonId.value);
-    if (lesson) lesson.homework = homeworkText.value;
+    if (selectedLessonId.value) {
+      const lesson = state.lessons.find(l => l.id === selectedLessonId.value);
+      if (lesson) lesson.homework = homeworkText.value;
+    } else {
+      const note = state.notes.find(n => n.id === selectedNoteId.value);
+      if (note) note.homework = homeworkText.value;
+    }
     
   } catch (error) {
     console.error(error);
@@ -672,6 +787,11 @@ function printQuiz() {
 function copyLink() {
   navigator.clipboard.writeText(homeworkShareUrl.value);
   alert("Link skopiowany!");
+}
+
+function copyHomeworkText() {
+  navigator.clipboard.writeText(homeworkText.value);
+  alert("Treść zadania skopiowana!");
 }
 
 async function handleGradingUpload(event) {

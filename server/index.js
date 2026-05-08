@@ -411,6 +411,15 @@ async function resolveTeacherContext(req, res) {
     return null;
   }
 
+  // Force email verification for security
+  if (!user.email_confirmed_at) {
+    res.status(403).json({
+      error: "E-mail nie został jeszcze zweryfikowany. Sprawdź swoją skrzynkę (także folder Spam) i kliknij w link aktywacyjny.",
+      code: "EMAIL_NOT_VERIFIED"
+    });
+    return null;
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("teacher_id, school_id, license, license_lenght")
@@ -3072,7 +3081,8 @@ app.get("/api/share/:id", async (req, res) => {
           subject: note.subject,
           html: note.content,
           date: note.date || note.createdAt
-        }
+        },
+        homework: note.homework
       });
     }
 
@@ -3901,8 +3911,47 @@ app.post("/api/admin/users/special-account", async (req, res) => {
       full_name: fullName || null,
       email,
       businessLogin: login
-    }
   });
+});
+
+app.post("/api/admin/users/link-organization", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!supabase) return res.status(500).json({ error: "Supabase nie jest skonfigurowany." });
+
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: "Podaj adres e-mail." });
+
+  // Find user by email
+  const { data: profile, error: findError } = await supabase
+    .from("profiles")
+    .select("id, school_id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (findError) return res.status(500).json({ error: `Błąd wyszukiwania: ${findError.message}` });
+  if (!profile) return res.status(404).json({ error: "Użytkownik z tym adresem e-mail nie został znaleziony." });
+
+  if (profile.school_id === adminSchool.schoolId) {
+    return res.status(400).json({ error: "Użytkownik jest już przypisany do tej organizacji." });
+  }
+
+  // Update profile
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ 
+      school_id: adminSchool.schoolId,
+      organisation: true,
+      teacher_id: profile.teacher_id || `teacher-${randomUUID()}`,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", profile.id);
+
+  if (updateError) return res.status(500).json({ error: `Błąd aktualizacji: ${updateError.message}` });
+
+  return res.json({ success: true, userId: profile.id });
 });
 
 app.patch("/api/admin/users/:userId/license", async (req, res) => {

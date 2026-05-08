@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS public.saved_notes (
     content TEXT,
     class_level TEXT,
     date TEXT,
+    homework TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -136,6 +137,9 @@ DROP POLICY IF EXISTS "Manage own lessons" ON public.lessons;
 DROP POLICY IF EXISTS "Manage own notes" ON public.saved_notes;
 DROP POLICY IF EXISTS "Manage own quizzes" ON public.quizzes;
 DROP POLICY IF EXISTS "Manage own quiz results" ON public.quiz_results;
+DROP POLICY IF EXISTS "View own usage" ON public.openrouter_usage_events;
+DROP POLICY IF EXISTS "View assigned license" ON public.licenses;
+DROP POLICY IF EXISTS "View school" ON public.schools;
 
 -- Policies with robust type handling
 CREATE POLICY "Manage own profile" ON public.profiles 
@@ -164,3 +168,10 @@ CREATE POLICY "View assigned license" ON public.licenses
 
 CREATE POLICY "View school" ON public.schools
     FOR SELECT USING (id IN (SELECT school_id FROM public.profiles WHERE id::text = auth.uid()::text));
+
+-- Bezpieczne dodanie kolumn dla istniejących tabel
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS homework TEXT;
+ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS homework TEXT;
+
+-- Natychmiastowe odświeżenie pamięci podręcznej (Schema Cache)
+NOTIFY pgrst, 'reload schema';
