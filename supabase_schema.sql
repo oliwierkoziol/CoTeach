@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.lessons (
     source_files JSONB DEFAULT '[]'::jsonb,
     final_note JSONB,
     homework TEXT,
+    homework_due_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS public.saved_notes (
     class_level TEXT,
     date TEXT,
     homework TEXT,
+    homework_due_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

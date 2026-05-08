@@ -40,6 +40,13 @@
                 <svg class="size-4 opacity-40" fill="currentColor" viewBox="0 0 18 20"><path d="M4 2H14V0H16V2H18V20H0V2H2V0H4V2ZM16 18V6H2V18H16ZM14 10H4V8H14V10ZM14 14H4V12H14V14Z" /></svg>
                 {{ formatDate(isHomework ? (note.updatedAt || note.date) : note.date) }}
               </span>
+              <template v-if="isHomework && note.homeworkDueDate">
+                <span class="size-1 bg-gray-300 rounded-full"></span>
+                <span class="flex items-center gap-1.5 text-red-600 font-bold">
+                  <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Termin: {{ formatDate(note.homeworkDueDate) }}
+                </span>
+              </template>
             </div>
           </div>
         </div>
@@ -131,7 +138,12 @@ onMounted(async () => {
     if (!noteId) throw new Error("Nieprawidłowy odnośnik.");
     const data = await fetchSharedNote(noteId);
     if (!data?.finalNote) throw new Error("Notatka już nie istnieje.");
-    note.value = { ...data.finalNote, homework: data.homework, updatedAt: data.updatedAt };
+    note.value = { 
+      ...data.finalNote, 
+      homework: data.homework, 
+      updatedAt: data.updatedAt,
+      homeworkDueDate: data.homeworkDueDate 
+    };
     transcripts.value = data.transcripts || [];
     startedAt.value = data.startedAt || null;
   } catch (e) {

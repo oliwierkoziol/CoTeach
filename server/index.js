@@ -595,6 +595,7 @@ function rowToLesson(row) {
     finishedAt: row.finished_at || null,
     class_name: row.class_name || null,
     homework: row.homework || null,
+    homeworkDueDate: row.homework_due_date || null,
     updatedAt: row.updated_at || null
   };
 }
@@ -627,6 +628,7 @@ function rowToSavedNote(row) {
     class_name: row.class_name || null,
     content: row.content || "",
     homework: row.homework || null,
+    homeworkDueDate: row.homework_due_date || null,
     source: row.source || "manual",
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
@@ -656,6 +658,10 @@ function lessonToRow(lesson) {
     homework: lesson.homework || null,
     updated_at: new Date().toISOString()
   };
+  if (lesson.homeworkDueDate) {
+    row.homework_due_date = lesson.homeworkDueDate;
+  }
+  return row;
 }
 
 function finalNoteToRow(finalNote, teacherId) {
@@ -691,6 +697,10 @@ function savedNoteToRow(note, teacherId) {
     created_at: note.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
+  if (note.homeworkDueDate) {
+    row.homework_due_date = note.homeworkDueDate;
+  }
+  return row;
 }
 
 function licenseToRow(license) {
@@ -842,6 +852,52 @@ function markLessonFinished(lesson, nowIso = new Date().toISOString()) {
     const endMs = new Date(lesson.finishedAt).getTime();
     const actualMinutes = Math.max(1, Math.round((endMs - startMs) / 60000));
     lesson.length = actualMinutes;
+  }
+}
+
+async function cleanupExpiredHomework() {
+  try {
+    const now = Date.now();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+
+    // 1. Lessons
+    for (const lesson of db.lessons.values()) {
+      if (lesson.homework && lesson.homeworkDueDate) {
+        const dueTs = new Date(lesson.homeworkDueDate).getTime();
+        if (now > dueTs + twoDaysMs) {
+          console.log(`[cleanup] Auto-deleting homework for lesson: ${lesson.id}`);
+          lesson.homework = "";
+          lesson.homeworkDueDate = null;
+          lesson.updatedAt = new Date().toISOString();
+          db.lessons.set(lesson.id, lesson);
+          await persistLessonSafe(lesson);
+        }
+      }
+    }
+
+    // 2. Notes
+    for (const note of db.notes.values()) {
+      if (note.homework && note.homeworkDueDate) {
+        const dueTs = new Date(note.homeworkDueDate).getTime();
+        if (now > dueTs + twoDaysMs) {
+          console.log(`[cleanup] Auto-deleting homework for note: ${note.id}`);
+          note.homework = "";
+          note.homeworkDueDate = null;
+          note.updatedAt = new Date().toISOString();
+          db.notes.set(note.id, note);
+          
+          if (supabase) {
+            await supabase
+              .from("saved_notes")
+              .update({ homework: "", homework_due_date: null, updated_at: note.updatedAt })
+              .eq("id", note.id)
+              .catch(() => {}); // ignore if column missing
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Cleanup error:", e.message);
   }
 }
 
@@ -2416,6 +2472,7 @@ app.post("/api/lessons", async (req, res) => {
 app.get("/api/lessons", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await cleanupExpiredHomework();
   await refreshTeacherLessonsFromSupabaseSafe(teacher.teacherId, teacher.schoolId);
   await autoFinishDueLessons();
 
@@ -2755,9 +2812,17 @@ app.post("/api/quizzes/grade", upload.single("file"), async (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: "Brak zdjęcia pracy." });
 
+    const formattedKey = quiz.questions.map((q, i) => {
+      return `Zadanie ${i + 1}:
+Pytanie: ${q.question}
+Typ: ${q.type}
+Poprawna odpowiedź: ${q.correctAnswer}
+Maksymalna liczba punktów: ${q.points}`;
+    }).join("\n\n");
+
     const prompt = GRADING_PROMPT_TEMPLATE.replace(
       "[KLUCZ_ODPOWIEDZI]",
-      JSON.stringify(quiz.questions)
+      formattedKey
     );
 
     const base64Image = req.file.buffer.toString("base64");
@@ -2794,7 +2859,7 @@ app.post("/api/homework/generate", async (req, res) => {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
 
-    const { lessonId, noteId, numTasks } = req.body;
+    const { lessonId, noteId, numTasks, classLevel } = req.body;
     let sourceContent = "";
 
     if (lessonId) {
@@ -2821,7 +2886,8 @@ app.post("/api/homework/generate", async (req, res) => {
 
     const prompt = HOMEWORK_GEN_PROMPT_TEMPLATE
       .replace("[SOURCE_CONTENT]", sourceContent.slice(0, 10000))
-      .replace("[NUM_TASKS]", numTasks || 3);
+      .replace("[NUM_TASKS]", numTasks || 3)
+      .replace("[CLASS_LEVEL]", classLevel || "nieokreślony");
 
     const out = await callOpenRouter({
       model: OPENROUTER_TEXT_MODEL,
@@ -2954,11 +3020,13 @@ app.post("/api/lessons/:lessonId/homework", async (req, res) => {
     if (!teacher) return;
     const lessonId = req.params.lessonId;
     const homework = String(req.body?.homework || "").trim();
+    const homeworkDueDate = req.body?.homeworkDueDate || null;
 
     const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     lesson.homework = homework;
+    lesson.homeworkDueDate = homeworkDueDate;
     lesson.updatedAt = new Date().toISOString();
 
     db.lessons.set(lessonId, lesson);
@@ -2977,6 +3045,7 @@ app.post("/api/notes/:noteId/homework", async (req, res) => {
     if (!teacher) return;
     const noteId = req.params.noteId;
     const homework = String(req.body?.homework || "").trim();
+    const homeworkDueDate = req.body?.homeworkDueDate || null;
 
     const note = db.notes.get(noteId);
     if (!note || String(note.teacherId) !== String(teacher.teacherId)) {
@@ -2984,13 +3053,18 @@ app.post("/api/notes/:noteId/homework", async (req, res) => {
     }
 
     note.homework = homework;
+    note.homeworkDueDate = homeworkDueDate;
     note.updatedAt = new Date().toISOString();
     db.notes.set(noteId, note);
 
     if (supabase) {
       const { error } = await supabase
         .from("saved_notes")
-        .update({ homework, updated_at: note.updatedAt })
+        .update({ 
+          homework, 
+          homework_due_date: homeworkDueDate,
+          updated_at: note.updatedAt 
+        })
         .eq("id", noteId)
         .eq("teacher_id", teacher.userId);
       if (error) throw error;
@@ -2998,6 +3072,55 @@ app.post("/api/notes/:noteId/homework", async (req, res) => {
 
     const shareUrl = `${PUBLIC_APP_URL}/share/${noteId}?type=homework`;
     return res.json({ success: true, shareUrl });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.delete("/api/lessons/:lessonId/homework", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const lessonId = req.params.lessonId;
+    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    if (!lesson) return;
+
+    lesson.homework = "";
+    lesson.updatedAt = new Date().toISOString();
+    db.lessons.set(lessonId, lesson);
+    await persistLessonSafe(lesson);
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.delete("/api/notes/:noteId/homework", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const noteId = req.params.noteId;
+
+    const note = db.notes.get(noteId);
+    if (!note || String(note.teacherId) !== String(teacher.teacherId)) {
+      return res.status(404).json({ error: "Notatka nie znaleziona lub brak dostępu." });
+    }
+
+    note.homework = "";
+    note.updatedAt = new Date().toISOString();
+    db.notes.set(noteId, note);
+
+    if (supabase) {
+      const { error } = await supabase
+        .from("saved_notes")
+        .update({ homework: "", updated_at: note.updatedAt })
+        .eq("id", noteId)
+        .eq("teacher_id", teacher.userId);
+      if (error) throw error;
+    }
+
+    return res.json({ success: true });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -3088,6 +3211,7 @@ app.get("/api/share/:id", async (req, res) => {
         finalNote: lesson.finalNote,
         transcripts: lesson.transcripts || [],
         homework: lesson.homework,
+        homeworkDueDate: lesson.homeworkDueDate,
         startedAt: lesson.startedAt,
         updatedAt: lesson.updatedAt
       });
@@ -3103,6 +3227,7 @@ app.get("/api/share/:id", async (req, res) => {
           date: note.date || note.createdAt
         },
         homework: note.homework,
+        homeworkDueDate: note.homeworkDueDate,
         updatedAt: note.updatedAt
       });
     }
@@ -3116,6 +3241,7 @@ app.get("/api/share/:id", async (req, res) => {
           finalNote: lesson.finalNote,
           transcripts: lesson.transcripts || [],
           homework: lesson.homework,
+          homeworkDueDate: lesson.homeworkDueDate,
           startedAt: lesson.startedAt,
           updatedAt: lesson.updatedAt
         });
@@ -3132,6 +3258,7 @@ app.get("/api/share/:id", async (req, res) => {
             date: note.date || note.createdAt
           },
           homework: note.homework,
+          homeworkDueDate: note.homeworkDueDate,
           updatedAt: note.updatedAt
         });
       }
@@ -3146,6 +3273,7 @@ app.get("/api/share/:id", async (req, res) => {
 app.get("/api/notes", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
+  await cleanupExpiredHomework();
   const notes = [...db.notes.values()]
     .filter((note) => String(note.teacherId) === String(teacher.teacherId) && String(note.schoolId || "") === String(teacher.schoolId || ""))
     .sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
@@ -4619,6 +4747,9 @@ loadSchoolsFromSupabase()
     setInterval(() => {
       autoFinishDueLessons().catch((error) => {
         console.error("Auto-finish due lessons failed:", error.message || error);
+      });
+      cleanupExpiredHomework().catch((error) => {
+        console.error("Cleanup expired homework failed:", error.message || error);
       });
     }, 10_000);
     app.listen(port, () => {

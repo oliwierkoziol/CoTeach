@@ -3,6 +3,7 @@ Jesteś nauczycielem przygotowującym zadanie domowe dla uczniów na podstawie m
 DANE WEJŚCIOWE:
 Materiał źródłowy: [SOURCE_CONTENT]
 Liczba zadań do wygenerowania: [NUM_TASKS]
+Poziom klasy: [CLASS_LEVEL]
 
 TWOJE ZADANIE:
 1. Przeczytaj uważnie materiał źródłowy.

@@ -471,9 +471,18 @@
           </div>
 
           <div v-else-if="activeTab === 'homework' && selectedHomework" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-6">
-            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
-              Szczegóły zadania domowego
-            </h3>
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px]">
+                Szczegóły zadania domowego
+              </h3>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-lg bg-[#ffe8dd] text-[#9e3f4e] text-sm font-semibold hover:bg-[#ffdacc] transition-colors cursor-pointer"
+                @click="handleDeleteHomework"
+              >
+                Usuń
+              </button>
+            </div>
             
             <div class="space-y-4">
               <button
@@ -929,6 +938,41 @@ function openHomeworkPreviewFromLesson() {
   const text = selected.value?.homework || "";
   textPreviewBody.value = text || "Brak treści zadania domowego.";
   textPreviewOpen.value = true;
+}
+
+async function handleDeleteHomework() {
+  const hw = selectedHomework.value;
+  if (!hw || !hw.id) return;
+  const ok = window.confirm("Na pewno usunąć to zadanie domowe?");
+  if (!ok) return;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    const url = hw.isNote 
+      ? `${API_BASE}/api/notes/${hw.id}/homework`
+      : `${API_BASE}/api/lessons/${hw.id}/homework`;
+
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${session?.access_token}` }
+    });
+
+    if (!res.ok) throw new Error("Failed to delete");
+    
+    // Update local state
+    if (hw.isNote) {
+      const note = state.notes.find(n => n.id === hw.id);
+      if (note) note.homework = "";
+    } else {
+      const lesson = state.lessons.find(l => l.id === hw.id);
+      if (lesson) lesson.homework = "";
+    }
+    
+    selectedHomework.value = null;
+  } catch (e) {
+    alert("Błąd podczas usuwania.");
+  }
 }
 
 watch(activeTab, async (tab) => {

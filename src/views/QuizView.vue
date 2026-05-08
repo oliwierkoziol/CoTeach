@@ -290,8 +290,25 @@
           <div v-else-if="activeTab === 'homework'" class="h-full">
             <div v-if="!homeworkSaved" class="bg-white rounded-2xl shadow-xl p-8 space-y-6 h-full flex flex-col">
               <div class="flex items-center justify-between">
-                <h2 class="text-2xl font-black text-gray-900">Edytor Zadania Domowego</h2>
+                <div class="flex flex-col">
+                  <h2 class="text-2xl font-black text-gray-900">Edytor Zadania Domowego</h2>
+                  <div class="flex items-center gap-2 mt-2">
+                    <label class="text-sm font-bold text-gray-400 uppercase tracking-wider">Termin wykonania:</label>
+                    <input 
+                      type="date" 
+                      v-model="homeworkDueDate"
+                      class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-sm font-semibold focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
                 <div class="flex gap-2">
+                   <button 
+                     @click="handleDeleteHomework" 
+                     v-if="homeworkText"
+                     class="bg-red-50 text-red-600 px-6 py-3 rounded-xl font-bold hover:bg-red-100 transition"
+                   >
+                     Usuń
+                   </button>
                    <button 
                     @click="copyHomeworkText" 
                     :disabled="!homeworkText"
@@ -370,9 +387,14 @@
                     </div>
                   </div>
 
-                  <button @click="homeworkSaved = false" class="w-full py-4 text-sm font-bold text-gray-400 hover:text-gray-600 transition underline">
-                    Wróć do edycji zadania
-                  </button>
+                  <div class="flex gap-2">
+                    <button @click="handleDeleteHomework" class="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition">
+                      Usuń zadanie
+                    </button>
+                    <button @click="homeworkSaved = false" class="flex-1 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 transition underline">
+                      Wróć do edycji
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -519,6 +541,7 @@ const quiz = ref(null);
 
 // Homework state
 const homeworkText = ref("");
+const homeworkDueDate = ref(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
 const numHomeworkTasks = ref(3);
 const isGeneratingHomework = ref(false);
 const isSavingHomework = ref(false);
@@ -533,6 +556,12 @@ const selectedGradingQuizId = ref("");
 const showKeyPreview = ref(false);
 const isGrading = ref(false);
 const gradingResult = ref(null);
+
+const selectedSource = computed(() => {
+  if (selectedLessonId.value) return { id: selectedLessonId.value, type: 'lesson' };
+  if (selectedNoteId.value) return { id: selectedNoteId.value, type: 'note' };
+  return null;
+});
 
 function addQuestion() {
   if (!quiz.value) return;
@@ -682,8 +711,11 @@ function handleSelectLesson(lesson) {
   selectedLessonId.value = lesson.id;
   selectedNoteId.value = "";
   homeworkText.value = lesson.homework || "";
+  homeworkDueDate.value = lesson.homeworkDueDate 
+    ? lesson.homeworkDueDate.split('T')[0] 
+    : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   classLevel.value = lesson.class_name || lesson.classLevel || "";
-  homeworkSaved.value = false;
+  homeworkSaved.value = !!lesson.homework;
   homeworkShareUrl.value = "";
   homeworkQrUrl.value = "";
 }
@@ -692,8 +724,11 @@ function handleSelectNote(note) {
   selectedNoteId.value = note.id;
   selectedLessonId.value = "";
   homeworkText.value = note.homework || "";
+  homeworkDueDate.value = note.homeworkDueDate 
+    ? note.homeworkDueDate.split('T')[0] 
+    : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   classLevel.value = note.class_name || note.classLevel || "";
-  homeworkSaved.value = false;
+  homeworkSaved.value = !!note.homework;
 }
 
 async function handleGenerateQuiz() {
@@ -756,7 +791,8 @@ async function handleGenerateHomework() {
       body: JSON.stringify({ 
         lessonId: selectedLessonId.value,
         noteId: selectedNoteId.value,
-        numTasks: numHomeworkTasks.value
+        numTasks: numHomeworkTasks.value,
+        classLevel: classLevel.value
       })
     });
 
@@ -793,7 +829,10 @@ async function handleSaveHomework() {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session?.access_token}`
       },
-      body: JSON.stringify({ homework: homeworkText.value })
+      body: JSON.stringify({ 
+        homework: homeworkText.value,
+        homeworkDueDate: homeworkDueDate.value ? new Date(homeworkDueDate.value).toISOString() : null
+      })
     });
 
     if (!response.ok) throw new Error("Failed to save homework");
@@ -806,17 +845,60 @@ async function handleSaveHomework() {
     // Update local state
     if (selectedLessonId.value) {
       const lesson = state.lessons.find(l => l.id === selectedLessonId.value);
-      if (lesson) lesson.homework = homeworkText.value;
+      if (lesson) {
+        lesson.homework = homeworkText.value;
+        lesson.homeworkDueDate = homeworkDueDate.value ? new Date(homeworkDueDate.value).toISOString() : null;
+      }
     } else {
       const note = state.notes.find(n => n.id === selectedNoteId.value);
-      if (note) note.homework = homeworkText.value;
+      if (note) {
+        note.homework = homeworkText.value;
+        note.homeworkDueDate = homeworkDueDate.value ? new Date(homeworkDueDate.value).toISOString() : null;
+      }
     }
     
   } catch (error) {
     console.error(error);
-    alert("Błąd podczas zapisywania zadania.");
+    alert("Błąd: " + (error.message || "Nie udało się zapisać zadania."));
   } finally {
     isSavingHomework.value = false;
+  }
+}
+
+async function handleDeleteHomework() {
+  if (!selectedSource.value) return;
+  const ok = window.confirm("Na pewno usunąć to zadanie domowe?");
+  if (!ok) return;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    
+    // Check if it's a note or a lesson
+    const isNote = selectedSource.value.type === 'note';
+    const id = selectedSource.value.id;
+    const url = isNote ? `${API_BASE}/api/notes/${id}/homework` : `${API_BASE}/api/lessons/${id}/homework`;
+
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${session?.access_token}` }
+    });
+
+    if (!res.ok) throw new Error("Failed to delete");
+
+    // Update local state
+    if (isNote) {
+      const note = state.notes.find(n => n.id === id);
+      if (note) note.homework = "";
+    } else {
+      const lesson = state.lessons.find(l => l.id === id);
+      if (lesson) lesson.homework = "";
+    }
+
+    homeworkText.value = "";
+    homeworkSaved.value = false;
+  } catch (e) {
+    alert("Błąd podczas usuwania: " + e.message);
   }
 }
 
