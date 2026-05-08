@@ -68,6 +68,13 @@ const openaiClientConfig = process.env.OPENROUTER_API_KEY
     }
   }
   : null;
+
+if (openaiClientConfig) {
+  console.log(`[AI] OpenRouter key detected, starting with: ${openaiClientConfig.apiKey.slice(0, 10)}...`);
+} else {
+  console.warn("[AI] No OpenRouter key found in .env!");
+}
+
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
 const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
@@ -619,6 +626,7 @@ function rowToSavedNote(row) {
     classLevel: row.class_level || "",
     class_name: row.class_name || null,
     content: row.content || "",
+    homework: row.homework || null,
     source: row.source || "manual",
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
@@ -678,6 +686,7 @@ function savedNoteToRow(note, teacherId) {
     class_level: String(note.classLevel || ""),
     class_name: note.class_name || null,
     content: String(note.content || ""),
+    homework: note.homework || null,
     source: String(note.source || "manual"),
     created_at: note.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -1237,79 +1246,62 @@ function approximateTokensFromText(text) {
 }
 
 async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens, temperature }) {
-  const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing.");
-
+  if (!openai) {
+    throw new Error("OpenAI client not initialized (check OPENROUTER_API_KEY).");
+  }
+  
   const fallbackMaxTokens = Number.isFinite(OPENROUTER_MAX_TOKENS) ? Math.max(256, Math.min(OPENROUTER_MAX_TOKENS, 8192)) : 2000;
   const requestedMaxTokens = Number.isFinite(Number(maxTokens)) ? Number(maxTokens) : fallbackMaxTokens;
   const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
   const startedAt = Date.now();
 
-  const requestOpenRouter = async (targetModel) =>
-    fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: targetModel,
-        max_tokens: finalMaxTokens,
-        messages: [{ role: "user", content: parts.map(partToOpenRouterContent) }]
-      })
-    });
-
+  const messages = [{ role: "user", content: parts.map(partToOpenRouterContent) }];
   let effectiveModel = String(model || "").trim() || OPENROUTER_TEXT_MODEL;
-  let response = await requestOpenRouter(effectiveModel);
-  if (!response.ok) {
-    const errorText = await response.text();
-    const shouldRetryWithFallback =
-      response.status === 404 &&
-      /No endpoints found/i.test(errorText) &&
-      effectiveModel !== OPENROUTER_TEXT_FALLBACK_MODEL;
 
-    if (shouldRetryWithFallback) {
-      effectiveModel = OPENROUTER_TEXT_FALLBACK_MODEL;
-      response = await requestOpenRouter(effectiveModel);
-      if (!response.ok) {
-        const fallbackErrorText = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} ${fallbackErrorText}`);
-      }
-    } else {
-      throw new Error(`OpenRouter API error: ${response.status} ${errorText}`);
-    }
-  }
-
-  const data = await response.json();
-  const text = String(data?.choices?.[0]?.message?.content || "").trim();
-  const usage = data?.usage || {};
-  const estimatedPromptTokens = approximateTokensFromText(
-    parts
-      .map((part) => (part.text ? part.text : part.inlineData?.mimeType ? "[image]" : ""))
-      .join("\n")
-  );
-  const estimatedCompletionTokens = approximateTokensFromText(text);
-  const promptTokens = Number(usage.prompt_tokens || estimatedPromptTokens);
-  const completionTokens = Number(usage.completion_tokens || estimatedCompletionTokens);
-  const totalTokens = Number(usage.total_tokens || promptTokens + completionTokens);
-  const baseUsd = estimateOpenRouterBaseUsdCost({
-    model: effectiveModel,
-    promptTokens,
-    completionTokens
-  });
-
-  return {
-    text,
-    model: effectiveModel,
-    usage: {
-      promptTokens,
-      completionTokens,
-      totalTokens
-    },
-    requestId: String(response.headers.get("x-request-id") || data?.id || ""),
-    latencyMs: Date.now() - startedAt,
-    baseUsd
+  const performRequest = async (targetModel) => {
+    return await openai.chat.completions.create({
+      model: targetModel,
+      max_tokens: finalMaxTokens,
+      temperature: temperature ?? 0.7,
+      messages
+    });
   };
+
+  try {
+    let completion;
+    try {
+      completion = await performRequest(effectiveModel);
+    } catch (err) {
+      // Check for 404 to trigger fallback
+      if (err.status === 404 && effectiveModel !== OPENROUTER_TEXT_FALLBACK_MODEL) {
+        effectiveModel = OPENROUTER_TEXT_FALLBACK_MODEL;
+        completion = await performRequest(effectiveModel);
+      } else {
+        throw err;
+      }
+    }
+
+    const text = String(completion.choices?.[0]?.message?.content || "").trim();
+    const usage = completion.usage || {};
+    
+    return {
+      text,
+      model: effectiveModel,
+      usage: {
+        promptTokens: usage.prompt_tokens || 0,
+        completionTokens: usage.completion_tokens || 0,
+        totalTokens: usage.total_tokens || 0
+      },
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalTokens: usage.total_tokens || 0,
+      requestId: completion.id || "",
+      latencyMs: Date.now() - startedAt
+    };
+  } catch (error) {
+    console.error("OpenRouter SDK Error:", error);
+    throw new Error(`OpenRouter API error: ${error.message}`);
+  }
 }
 
 function parseJsonFromModel(text) {
@@ -1748,53 +1740,48 @@ async function generateQuizWithLLM({
     .replace("[TRUDNOSC]", String(difficulty))
     .replace("[TRESC_ZRODLOWA]", (safeNote + "\n" + JSON.stringify(safePlan)).slice(0, 35000));
 
-  try {
-    const out = await callOpenRouter({
-      model: OPENROUTER_PRESENTATION_MODEL, // Używamy tego samego wydajnego modelu
-      parts: [{ text: prompt }],
-      maxTokens: 12000,
-      temperature: 0.2
-    });
+  const out = await callOpenRouter({
+    model: OPENROUTER_PRESENTATION_MODEL,
+    parts: [{ text: prompt }],
+    maxTokens: 12000,
+    temperature: 0.2
+  });
 
-    const parsed = parseJsonFromModel(out.text);
-    const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
+  const parsed = parseJsonFromModel(out.text);
+  const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
 
-    recordCostFromBase({
-      lessonId: context.lessonId || null,
-      schoolId: context.schoolId || null,
-      teacherId: context.teacherId || null,
-      provider: "openrouter",
+  recordCostFromBase({
+    lessonId: context.lessonId || null,
+    schoolId: context.schoolId || null,
+    teacherId: context.teacherId || null,
+    provider: "openrouter",
+    model: out.model,
+    feature: "quiz_generation",
+    category: "quiz",
+    baseAmountPLN: estimateOpenRouterBaseUsdCost({
       model: out.model,
-      feature: "quiz_generation",
-      category: "quiz",
-      baseAmountPLN: estimateOpenRouterBaseUsdCost({
-        model: out.model,
-        promptTokens: out.promptTokens,
-        completionTokens: out.completionTokens
-      }) * USD_TO_PLN,
-      providerCostUsd: estimateOpenRouterBaseUsdCost({
-        model: out.model,
-        promptTokens: out.promptTokens,
-        completionTokens: out.completionTokens
-      }),
       promptTokens: out.promptTokens,
-      completionTokens: out.completionTokens,
-      totalTokens: out.totalTokens,
-      latencyMs: out.latencyMs
-    });
+      completionTokens: out.completionTokens
+    }) * USD_TO_PLN,
+    providerCostUsd: estimateOpenRouterBaseUsdCost({
+      model: out.model,
+      promptTokens: out.promptTokens,
+      completionTokens: out.completionTokens
+    }),
+    promptTokens: out.promptTokens,
+    completionTokens: out.completionTokens,
+    totalTokens: out.totalTokens,
+    latencyMs: out.latencyMs
+  });
 
-    return {
-      title: parsed?.title || `Sprawdzian: ${lessonTitle}`,
-      questions: questions.map(q => ({
-        ...q,
-        id: q.id || randomUUID(),
-        points: Number(q.points || (q.type === 'closed' ? 1 : 3))
-      }))
-    };
-  } catch (error) {
-    console.error("Quiz generation error:", error);
-    return { title: "Błąd generowania", questions: [] };
-  }
+  return {
+    title: parsed?.title || `Sprawdzian: ${lessonTitle}`,
+    questions: questions.map(q => ({
+      ...q,
+      id: q.id || randomUUID(),
+      points: Number(q.points || (q.type === 'closed' ? 1 : 3))
+    }))
+  };
 }
 
 
@@ -2665,8 +2652,8 @@ app.post("/api/quizzes/generate", async (req, res) => {
     const lessonId = String(req.body?.lessonId || "").trim();
     const noteId = String(req.body?.noteId || "").trim();
     const classLevel = String(req.body?.classLevel || "").trim();
-    const numClosed = Number(req.body?.numClosed || 5);
-    const numOpen = Number(req.body?.numOpen || 2);
+    const numClosed = Number(req.body?.numClosed ?? 5);
+    const numOpen = Number(req.body?.numOpen ?? 2);
     const difficulty = String(req.body?.difficulty || "średni").trim();
 
     let lesson = null;
@@ -2984,6 +2971,38 @@ app.post("/api/lessons/:lessonId/homework", async (req, res) => {
   }
 });
 
+app.post("/api/notes/:noteId/homework", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    const noteId = req.params.noteId;
+    const homework = String(req.body?.homework || "").trim();
+
+    const note = db.notes.get(noteId);
+    if (!note || String(note.teacherId) !== String(teacher.teacherId)) {
+      return res.status(404).json({ error: "Notatka nie znaleziona lub brak dostępu." });
+    }
+
+    note.homework = homework;
+    note.updatedAt = new Date().toISOString();
+    db.notes.set(noteId, note);
+
+    if (supabase) {
+      const { error } = await supabase
+        .from("saved_notes")
+        .update({ homework, updated_at: note.updatedAt })
+        .eq("id", noteId)
+        .eq("teacher_id", teacher.userId);
+      if (error) throw error;
+    }
+
+    const shareUrl = `${PUBLIC_APP_URL}/share/${noteId}?type=homework`;
+    return res.json({ success: true, shareUrl });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 app.post("/api/insights/live-lesson-summary", async (req, res) => {
   try {
     const teacher = await resolveTeacherContext(req, res);
@@ -3069,7 +3088,8 @@ app.get("/api/share/:id", async (req, res) => {
         finalNote: lesson.finalNote,
         transcripts: lesson.transcripts || [],
         homework: lesson.homework,
-        startedAt: lesson.startedAt
+        startedAt: lesson.startedAt,
+        updatedAt: lesson.updatedAt
       });
     }
 
@@ -3082,7 +3102,8 @@ app.get("/api/share/:id", async (req, res) => {
           html: note.content,
           date: note.date || note.createdAt
         },
-        homework: note.homework
+        homework: note.homework,
+        updatedAt: note.updatedAt
       });
     }
 
@@ -3090,23 +3111,28 @@ app.get("/api/share/:id", async (req, res) => {
       // Fallback to Supabase if not in memory
       const { data: lessonDb } = await supabase.from("lessons").select("*").eq("id", id).maybeSingle();
       if (lessonDb) {
+        const lesson = rowToLesson(lessonDb);
         return res.json({
-          finalNote: lessonDb.final_note,
-          transcripts: lessonDb.transcripts || [],
-          homework: lessonDb.homework,
-          startedAt: lessonDb.started_at
+          finalNote: lesson.finalNote,
+          transcripts: lesson.transcripts || [],
+          homework: lesson.homework,
+          startedAt: lesson.startedAt,
+          updatedAt: lesson.updatedAt
         });
       }
 
       const { data: noteDb } = await supabase.from("saved_notes").select("*").eq("id", id).maybeSingle();
       if (noteDb) {
+        const note = rowToSavedNote(noteDb);
         return res.json({
           finalNote: {
-            title: noteDb.title,
-            subject: noteDb.subject,
-            html: noteDb.content,
-            date: noteDb.created_at
-          }
+            title: note.title,
+            subject: note.subject,
+            html: note.content,
+            date: note.date || note.createdAt
+          },
+          homework: note.homework,
+          updatedAt: note.updatedAt
         });
       }
     }
@@ -3911,6 +3937,7 @@ app.post("/api/admin/users/special-account", async (req, res) => {
       full_name: fullName || null,
       email,
       businessLogin: login
+    }
   });
 });
 

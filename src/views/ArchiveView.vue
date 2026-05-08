@@ -208,7 +208,7 @@
                 </h3>
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
                   <span v-if="lesson.class_name" class="font-semibold text-[#0c3dfe]">{{ lesson.class_name }} • </span>
-                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ lesson.finalNote?.date || lesson.date || new Date(lesson.createdAt || lesson.updatedAt || Date.now()).toLocaleDateString('pl-PL') }}
+                  {{ lesson.finalNote?.subject || lesson.subject }} • {{ formatDate(lesson.updatedAt || lesson.createdAt) }}
                 </p>
               </div>
             </div>
@@ -320,6 +320,31 @@
             >
               Pokaż treść notatki
             </button>
+
+            <!-- Homework integration in Lesson Details -->
+            <div v-if="selected.homework" class="pt-6 mt-6 border-t border-gray-100">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[16px] mb-4 flex items-center gap-2">
+                <svg class="size-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Zadanie domowe
+              </h3>
+              <div class="space-y-3">
+                <button
+                  class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] text-sm font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                  @click="openHomeworkLinkFromLesson"
+                >
+                  Otwórz zadanie (link)
+                </button>
+                <button
+                  type="button"
+                  class="w-full rounded-lg bg-[#f2f4f7] text-[#142588] font-['Inter'] text-sm font-semibold py-2.5 hover:bg-[#e8ebf0] transition-colors cursor-pointer"
+                  @click="openHomeworkPreviewFromLesson"
+                >
+                  Podgląd zadania
+                </button>
+              </div>
+            </div>
             </template>
             <div v-else class="py-4">
               <p class="font-['Inter'] text-[#454652] text-[14px]">Dla tej lekcji nie ma jeszcze notatki końcowej.</p>
@@ -891,6 +916,17 @@ function openHomeworkLink() {
 
 function openHomeworkPreview() {
   const text = selectedHomework.value?.homework || "";
+  textPreviewBody.value = text || "Brak treści zadania domowego.";
+  textPreviewOpen.value = true;
+}
+
+function openHomeworkLinkFromLesson() {
+  if (!selected.value?.id) return;
+  window.open(`${window.location.origin}/share/${selected.value.id}?type=homework`, "_blank", "noopener,noreferrer");
+}
+
+function openHomeworkPreviewFromLesson() {
+  const text = selected.value?.homework || "";
   textPreviewBody.value = text || "Brak treści zadania domowego.";
   textPreviewOpen.value = true;
 }

@@ -38,7 +38,7 @@
               <span class="size-1 bg-gray-300 rounded-full"></span>
               <span class="flex items-center gap-1.5">
                 <svg class="size-4 opacity-40" fill="currentColor" viewBox="0 0 18 20"><path d="M4 2H14V0H16V2H18V20H0V2H2V0H4V2ZM16 18V6H2V18H16ZM14 10H4V8H14V10ZM14 14H4V12H14V14Z" /></svg>
-                {{ formatDate(note.date) }}
+                {{ formatDate(isHomework ? (note.updatedAt || note.date) : note.date) }}
               </span>
             </div>
           </div>
@@ -103,11 +103,16 @@ const note = ref(null);
 const loading = ref(true);
 const error = ref("");
 
+import { marked } from 'marked';
+
 const renderedHomework = computed(() => {
   const text = note.value?.homework || 'Brak treści zadania domowego dla tej lekcji.';
   
-  // Replace $...$ with KaTeX
-  return text.replace(/\$([^$]+)\$/g, (match, latex) => {
+  // 1. Convert Markdown to HTML
+  let html = marked.parse(text);
+  
+  // 2. Replace $...$ with KaTeX
+  return html.replace(/\$([^$]+)\$/g, (match, latex) => {
     try {
       return katex.renderToString(latex, {
         throwOnError: false,
@@ -126,7 +131,7 @@ onMounted(async () => {
     if (!noteId) throw new Error("Nieprawidłowy odnośnik.");
     const data = await fetchSharedNote(noteId);
     if (!data?.finalNote) throw new Error("Notatka już nie istnieje.");
-    note.value = { ...data.finalNote, homework: data.homework };
+    note.value = { ...data.finalNote, homework: data.homework, updatedAt: data.updatedAt };
     transcripts.value = data.transcripts || [];
     startedAt.value = data.startedAt || null;
   } catch (e) {
@@ -168,4 +173,10 @@ function formatDate(val) {
 .note-render-area :deep(ul) { @apply list-disc ml-6 mb-6 space-y-3 text-[#454652]; }
 .note-render-area :deep(li) { @apply font-['Plus_Jakarta_Sans'] text-[17px] leading-[26px]; }
 .note-render-area :deep(b), .note-render-area :deep(strong) { @apply text-[#191c1e] font-bold; }
+
+.homework-content :deep(p) { @apply mb-6 leading-relaxed; }
+.homework-content :deep(ul) { @apply list-disc ml-8 mb-6 space-y-3; }
+.homework-content :deep(ol) { @apply list-decimal ml-8 mb-6 space-y-3; }
+.homework-content :deep(li) { @apply text-[20px]; }
+.homework-content :deep(strong) { @apply font-bold text-[#191c1e]; }
 </style>

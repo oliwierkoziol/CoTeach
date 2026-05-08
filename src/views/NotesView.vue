@@ -76,26 +76,6 @@
       </div>
 
       <!-- Modal dodawania nowej klasy removed - moved to AppLayout -->
-      <div v-if="showAddClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-[12px] shadow-lg p-[24px] max-w-[400px] w-full">
-          <h3 class="font-['Manrope'] font-extrabold text-[#191c1e] text-[18px] leading-[28px] mb-[16px]">Dodaj nową klasę</h3>
-          <div class="flex flex-col gap-[12px] mb-[20px]">
-            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] leading-[20px]">Nazwa klasy</label>
-            <div class="bg-[#e0e3e6] dark:bg-input-background h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50">
-              <input 
-                v-model="newClassName" 
-                @keyup.enter="handleAddClass"
-                class="bg-transparent border-none outline-none w-full h-full px-4 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans']" 
-                placeholder="np. 3A, 5B, Liceum 1..."
-                autofocus
-              />
-            </div>
-          </div>
-          <div v-if="classError" class="text-sm text-red-500 font-['Plus_Jakarta_Sans'] font-semibold mb-[16px]">
-            {{ classError }}
-          </div>
-        </div>
-      </div>
 
       <!-- Ingestion Area -->
       <div class="gap-x-[32px] gap-y-[32px] grid grid-cols-1 xl:grid-cols-12 relative shrink-0 w-full xl:min-h-[400px]">

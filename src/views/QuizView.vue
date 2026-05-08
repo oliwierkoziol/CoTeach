@@ -44,7 +44,7 @@
             </div>
 
             <!-- Source Selection Toggle -->
-            <div class="flex items-center justify-between mb-4 px-1">
+            <div v-if="activeTab !== 'grading'" class="flex items-center justify-between mb-4 px-1">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Źródło treści</label>
               <div class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
                 <button 
@@ -65,7 +65,7 @@
             </div>
 
             <!-- List of Lessons -->
-            <div v-if="sourceType === 'lesson'" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <div v-if="activeTab !== 'grading' && sourceType === 'lesson'" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
                 v-for="lesson in filteredLessons"
                 :key="lesson.id"
@@ -82,7 +82,7 @@
             </div>
 
             <!-- List of Notes -->
-            <div v-else class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            <div v-if="activeTab !== 'grading' && sourceType === 'note'" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               <div
                 v-for="note in filteredNotes"
                 :key="note.id"
@@ -143,17 +143,17 @@
               <label class="text-xs font-bold text-muted-foreground uppercase mb-1 block">Wybierz sprawdzian do oceny</label>
               <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 <div
-                  v-for="q in savedQuizzes"
+                  v-for="q in filteredSavedQuizzes"
                   :key="q.id"
                   @click="selectedGradingQuizId = q.id"
                   class="p-3 rounded-xl border transition-all cursor-pointer"
                   :class="selectedGradingQuizId === q.id ? 'border-[#0c3dfe] bg-[#f0f4ff]' : 'border-[#e0e3e6] hover:bg-gray-50'"
                 >
                   <h4 class="font-bold text-sm text-[#191c1e] truncate">{{ q.title }}</h4>
-                  <p class="text-[10px] text-[#454652] mt-0.5">{{ new Date(q.createdAt).toLocaleDateString() }} • {{ q.questions.length }} zadań</p>
+                  <p class="text-[10px] text-[#454652] mt-0.5">{{ new Date(q.createdAt).toLocaleDateString() }} • {{ q.questions.length }} zadań • {{ q.class_name || 'Brak klasy' }}</p>
                 </div>
-                <div v-if="savedQuizzes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
-                  Brak zapisanych sprawdzianów. Wygeneruj sprawdzian najpierw.
+                <div v-if="filteredSavedQuizzes.length === 0" class="text-center py-8 text-xs text-gray-400 italic">
+                  {{ state.selectedClass ? 'Brak sprawdzianów dla wybranej klasy.' : 'Brak zapisanych sprawdzianów.' }}
                 </div>
               </div>
 
@@ -309,16 +309,38 @@
                 </div>
               </div>
 
-              <div class="flex-1 relative">
-                <textarea 
-                  v-model="homeworkText" 
-                  class="w-full h-full min-h-[400px] bg-[#f8fafc] border-2 border-gray-100 rounded-2xl p-8 text-lg font-medium text-gray-700 outline-none focus:border-[#0c3dfe]/30 transition-all resize-none shadow-inner"
-                  placeholder="Treść zadania domowego pojawi się tutaj po wygenerowaniu lub możesz ją wpisać ręcznie..."
-                ></textarea>
-                
-                <div v-if="homeworkText.includes('$')" class="absolute bottom-4 right-4 max-w-sm bg-white/90 backdrop-blur shadow-xl border border-blue-100 rounded-xl p-4 no-print">
-                  <p class="text-[10px] text-blue-400 font-bold uppercase mb-2">Podgląd LaTeX:</p>
-                  <div class="text-sm max-h-[150px] overflow-y-auto" v-html="renderMath(homeworkText)"></div>
+              <div class="flex-1 relative flex flex-col">
+                <!-- Tabs for Editor/Preview -->
+                <div class="flex gap-2 mb-4">
+                  <button 
+                    @click="homeworkPreviewMode = false"
+                    class="px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                    :class="!homeworkPreviewMode ? 'bg-[#0c3dfe] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                  >
+                    Edytor (Markdown)
+                  </button>
+                  <button 
+                    @click="homeworkPreviewMode = true"
+                    class="px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                    :class="homeworkPreviewMode ? 'bg-[#0c3dfe] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                  >
+                    Podgląd
+                  </button>
+                </div>
+
+                <div class="flex-1 min-h-[400px]">
+                  <textarea 
+                    v-if="!homeworkPreviewMode"
+                    v-model="homeworkText" 
+                    class="w-full h-full bg-[#f8fafc] border-2 border-gray-100 rounded-2xl p-8 text-lg font-medium text-gray-700 outline-none focus:border-[#0c3dfe]/30 transition-all resize-none shadow-inner"
+                    placeholder="Treść zadania domowego pojawi się tutaj po wygenerowaniu lub możesz ją wpisać ręcznie..."
+                  ></textarea>
+                  
+                  <div 
+                    v-else
+                    class="w-full h-full bg-white border-2 border-gray-100 rounded-2xl p-8 overflow-y-auto homework-preview-area"
+                    v-html="renderMarkdown(homeworkText)"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -477,6 +499,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useRoute, useRouter } from "vue-router";
 import { supabase } from "../supabase";
+import { marked } from "marked";
 
 const { state, fetchLessons, fetchTeacherNotes, saveQuizResult } = useLessonStore();
 const route = useRoute();
@@ -502,6 +525,7 @@ const isSavingHomework = ref(false);
 const homeworkSaved = ref(false);
 const homeworkShareUrl = ref("");
 const homeworkQrUrl = ref("");
+const homeworkPreviewMode = ref(false);
 
 // Grading state
 const savedQuizzes = ref([]);
@@ -592,6 +616,22 @@ const filteredNotes = computed(() => {
     n.classLevel === state.selectedClassName
   );
 });
+
+const filteredSavedQuizzes = computed(() => {
+  if (!state.selectedClass || !state.selectedClassName) return savedQuizzes.value;
+  return savedQuizzes.value.filter(q => 
+    q.class_name === state.selectedClassName || 
+    q.class_name === state.selectedClass
+  );
+});
+
+function renderMarkdown(text) {
+  if (!text) return '<p class="text-gray-400 italic">Brak treści do wyświetlenia.</p>';
+  // 1. Markdown
+  const html = marked.parse(text);
+  // 2. Math
+  return renderMath(html);
+}
 
 function renderMath(text) {
   if (!text) return "";
@@ -905,6 +945,7 @@ async function saveGradingResult() {
 </style>
 
 <style scoped>
+@reference "../styles/index.css";
 .print-only {
   display: none;
 }
@@ -919,4 +960,10 @@ async function saveGradingResult() {
   background: #e0e3e6;
   border-radius: 10px;
 }
+
+.homework-preview-area :deep(p) { @apply mb-4 leading-relaxed text-[#454652]; }
+.homework-preview-area :deep(strong) { @apply font-bold text-[#191c1e]; }
+.homework-preview-area :deep(ul) { @apply list-disc ml-5 mb-4 space-y-2; }
+.homework-preview-area :deep(ol) { @apply list-decimal ml-5 mb-4 space-y-2; }
+.homework-preview-area :deep(li) { @apply text-[#454652]; }
 </style>
