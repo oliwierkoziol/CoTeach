@@ -4,6 +4,18 @@
 
     <!-- Sidebar / Selection (Ukrywane przy druku) -->
     <div class="quiz-ui-container p-4 sm:p-6 md:p-12 pt-8 w-full max-w-[1664px] relative z-10 mx-auto no-print">
+      <!-- Beta Info Banner -->
+      <div class="mb-6 rounded-2xl bg-gradient-to-r from-blue-600/5 to-indigo-600/5 border border-blue-500/10 p-4 flex items-center gap-4 shadow-sm">
+        <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="text-[14px] leading-relaxed text-blue-800 dark:text-blue-300 font-semibold font-['Plus_Jakarta_Sans']">
+          Ta funkcja jest w fazie intensywnego rozwoju. Dziękujemy szkołom partnerskim za pomoc w testowaniu i współtworzeniu nowych możliwości CoTeach!
+        </p>
+      </div>
+
       <div class="mb-7">
         <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
           Generator Sprawdzianów

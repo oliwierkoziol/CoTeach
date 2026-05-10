@@ -183,6 +183,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
                 <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="currentColor"/>
               </svg>
               <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Prezentacja</p>
+              <span class="ml-auto rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-extrabold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 tracking-wider">BETA</span>
             </a>
           </RouterLink>
 
@@ -193,6 +194,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p :class="['text-[14px] font-semibold', isActive ? 'text-primary' : 'text-inherit']" style="font-family: 'Plus Jakarta Sans', sans-serif;">Sprawdziany</p>
+              <span class="ml-auto rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-extrabold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 tracking-wider">BETA</span>
             </a>
           </RouterLink>
 

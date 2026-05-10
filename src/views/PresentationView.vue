@@ -85,8 +85,36 @@
         <div :class="['relative mx-auto h-full max-h-full w-full max-w-full overflow-hidden transition-all duration-700', activeTheme.panelClass]">
           
           <div class="relative z-10 flex h-full min-h-0 flex-col">
+            <!-- Last Slide / Branding -->
+            <template v-if="slideIndex === slides.length - 1">
+              <div class="flex h-full flex-col items-center justify-center text-center p-12">
+                <div class="mb-8 flex flex-col items-center">
+                  <img :src="sygnetUrl" alt="CoTeach Signet" class="h-24 w-auto mb-5 opacity-95 drop-shadow-xl" />
+                  <div :class="['text-[clamp(2rem,5vh,3.5rem)] font-black tracking-tighter', activeTheme.titleClass]">
+                    CoTeach
+                  </div>
+                </div>
+                
+                <div :class="['max-w-2xl px-8 py-6 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl', activeTheme.accentClass]">
+                  <p :class="['text-[clamp(1.2rem,3vh,2rem)] font-extrabold mb-2', activeTheme.titleClass]">
+                    Dziękujemy za wspólną lekcję!
+                  </p>
+                  <p :class="['text-[clamp(1rem,2vh,1.4rem)] font-bold opacity-60', activeTheme.textClass]">
+                    Przygotowano przy użyciu CoTeach
+                  </p>
+                </div>
+
+                <div class="mt-20 opacity-30">
+                  <div class="h-1 w-20 bg-blue-500 rounded-full mx-auto mb-4"></div>
+                  <p :class="['text-sm font-bold uppercase tracking-widest', activeTheme.textClass]">
+                    Asystent AI dla Nauczycieli
+                  </p>
+                </div>
+              </div>
+            </template>
+
             <!-- Title Slide Layout -->
-            <template v-if="current.type === 'title'">
+            <template v-else-if="current.type === 'title'">
               <div class="flex h-full flex-col lg:flex-row">
                 <div :class="['w-full lg:w-[55%] flex flex-col justify-center p-12 lg:p-20', activeTheme.accentClass]">
                   <h1 :class="['text-[clamp(2.5rem,7vh,5rem)] font-black leading-[1.1] mb-8', activeTheme.titleClass]">{{ current.title }}</h1>
@@ -94,8 +122,14 @@
                   <p v-if="current.summary" :class="['mt-10 text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-70', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
                 <div :class="['flex-1 flex items-center justify-center p-12', current.imageUrl ? activeTheme.panelClass : '']">
-                  <div class="w-full h-full max-h-[500px] rounded-sm overflow-hidden flex items-center justify-center">
-                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                  <div class="w-full h-full max-h-[500px] rounded-sm overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse">
+                    <img v-if="current.imageUrl" 
+                         :key="current.imageUrl"
+                         :src="current.imageUrl" 
+                         referrerpolicy="no-referrer"
+                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
+                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
+                         class="w-full h-full object-cover" />
                   </div>
                 </div>
               </div>
@@ -108,41 +142,111 @@
                   <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-black mb-8', activeTheme.titleClass]">{{ current.title || 'Podsumowanie' }}</h2>
                   <p :class="['mx-auto max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] font-medium leading-relaxed', activeTheme.textClass]">{{ current.summary }}</p>
                 </div>
-                <div :class="['h-[35%] w-full flex items-center justify-center p-10', activeTheme.accentClass]">
-                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden flex items-center justify-center', current.imageUrl ? activeTheme.panelClass : '']">
-                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                <div :class="['h-[35%] w-full flex items-center justify-center p-10 relative', activeTheme.accentClass]">
+                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse', current.imageUrl ? activeTheme.panelClass : '']">
+                    <img v-if="current.imageUrl" 
+                         :key="current.imageUrl"
+                         :src="current.imageUrl" 
+                         referrerpolicy="no-referrer"
+                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
+                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
+                         class="w-full h-full object-cover" />
                   </div>
                 </div>
               </div>
             </template>
 
             <template v-else>
-              <!-- Practice/General Slide with Split Layout -->
-              <div v-if="slideIndex % 2 === 0" class="flex h-full flex-col lg:flex-row">
+              <!-- 0: Text Left, Image Right (Split) -->
+              <div v-if="slideLayoutType === 0" class="flex h-full flex-col lg:flex-row">
                 <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-12 lg:p-16', activeTheme.accentClass]">
                   <p v-if="current.type === 'practice'" class="mb-4 text-sm font-bold text-blue-600 uppercase tracking-widest">Ćwiczenie praktyczne</p>
                   <h2 :class="['text-[clamp(2rem,5vh,3.5rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
                   <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
                   <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
+                  <ul v-if="current.details && current.details.length" class="mt-8 space-y-4 text-left">
+                    <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-3 text-[clamp(0.9rem,1.8vh,1.2rem)] font-medium', activeTheme.textClass]">
+                      <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
+                      <span>{{ detail }}</span>
+                    </li>
+                  </ul>
                 </div>
-                <div :class="['flex-1 flex items-center justify-center p-12', current.imageUrl ? activeTheme.panelClass : '']">
-                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group">
-                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                <div :class="['w-full lg:w-[55%] flex items-center justify-center p-8 lg:p-12 relative min-h-[300px]', current.imageUrl ? activeTheme.panelClass : '']">
+                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group bg-slate-200/50 animate-pulse">
+                    <img v-if="current.imageUrl" 
+                         :key="current.imageUrl"
+                         :src="current.imageUrl" 
+                         referrerpolicy="no-referrer"
+                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
+                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
+                         class="w-full h-full object-cover" />
                   </div>
                 </div>
               </div>
 
-              <!-- Top-Down Split Layout -->
-              <div v-else class="flex h-full flex-col">
-                <div :class="['flex-1 p-12 lg:p-16 flex flex-col justify-center text-center', activeTheme.panelClass]">
-                   <h2 :class="['text-[clamp(2.2rem,5.5vh,4rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
-                   <p v-if="current.subtitle" :class="['mx-auto max-w-3xl text-[clamp(1.2rem,2.8vh,1.6rem)] font-bold opacity-60 mb-6', activeTheme.textClass]">{{ current.subtitle }}</p>
-                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
+              <!-- 1: Image Left, Text Right (Inverse Split) -->
+              <div v-else-if="slideLayoutType === 1" class="flex h-full flex-col lg:flex-row-reverse">
+                <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-12 lg:p-16', activeTheme.accentClass]">
+                  <h2 :class="['text-[clamp(2rem,5vh,3.5rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
+                  <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
+                  <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
+                  <ul v-if="current.details && current.details.length" class="mt-8 space-y-4 text-left">
+                    <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-3 text-[clamp(0.9rem,1.8vh,1.2rem)] font-medium', activeTheme.textClass]">
+                      <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
+                      <span>{{ detail }}</span>
+                    </li>
+                  </ul>
                 </div>
-                <div :class="['h-[40%] w-full flex items-center justify-center p-12', activeTheme.accentClass]">
-                  <div :class="['w-full max-w-3xl h-full rounded-sm overflow-hidden flex items-center justify-center', current.imageUrl ? activeTheme.panelClass : '']">
-                    <img v-if="current.imageUrl" :src="current.imageUrl" class="w-full h-full object-cover" />
+                <div :class="['w-full lg:w-[55%] flex items-center justify-center p-8 lg:p-12 relative min-h-[300px]', current.imageUrl ? activeTheme.panelClass : '']">
+                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group bg-slate-200/50 animate-pulse">
+                    <img v-if="current.imageUrl" 
+                         :key="current.imageUrl"
+                         :src="current.imageUrl" 
+                         referrerpolicy="no-referrer"
+                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
+                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
+                         class="w-full h-full object-cover" />
                   </div>
+                </div>
+              </div>
+
+              <!-- 2: Full-height Text Layout (Centered) -->
+              <div v-else-if="slideLayoutType === 2" class="flex h-full flex-col items-center justify-center">
+                <div :class="['w-full max-w-6xl p-12 lg:p-20 text-center', activeTheme.panelClass]">
+                   <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-extrabold leading-tight mb-8', activeTheme.titleClass]">{{ current.title }}</h2>
+                   <p v-if="current.subtitle" :class="['mx-auto max-w-4xl text-[clamp(1.3rem,3vh,2rem)] font-bold opacity-60 mb-8', activeTheme.textClass]">{{ current.subtitle }}</p>
+                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.8vh,1.6rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
+                   <ul v-if="current.details && current.details.length" class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-5xl mx-auto text-left">
+                     <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-4 text-[clamp(1rem,2vh,1.3rem)] font-medium', activeTheme.textClass]">
+                       <span class="mt-2.5 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
+                       <span>{{ detail }}</span>
+                     </li>
+                   </ul>
+                </div>
+              </div>
+
+              <!-- 3: Top Image Layout (Minimalist) -->
+              <div v-else class="flex h-full flex-col">
+                <div :class="['h-[35%] w-full flex items-center justify-center p-6 relative', activeTheme.accentClass]">
+                   <div :class="['w-full max-w-5xl h-full rounded-xl overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse shadow-lg', current.imageUrl ? activeTheme.panelClass : '']">
+                    <img v-if="current.imageUrl" 
+                         :key="current.imageUrl"
+                         :src="current.imageUrl" 
+                         referrerpolicy="no-referrer"
+                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
+                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
+                         class="w-full h-full object-cover" />
+                  </div>
+                </div>
+                <div :class="['flex-1 p-10 lg:p-14 flex flex-col justify-center text-center relative z-10', activeTheme.panelClass]">
+                   <h2 :class="['text-[clamp(2.2rem,5vh,3.8rem)] font-extrabold leading-tight mb-4', activeTheme.titleClass]">{{ current.title }}</h2>
+                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
+                   <div v-if="current.details && current.details.length" class="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-3">
+                     <div v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-center gap-2 text-[clamp(0.9rem,1.8vh,1.1rem)] font-bold', activeTheme.textClass]">
+                       <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                       <span>{{ detail }}</span>
+                     </div>
+                   </div>
                 </div>
               </div>
             </template>
@@ -249,6 +353,18 @@
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
     <div class="flex flex-col gap-[27px] w-full max-w-[1568px] relative z-10 mx-auto">
+      <!-- Beta Info Banner -->
+      <div class="mb-2 rounded-2xl bg-gradient-to-r from-blue-600/5 to-indigo-600/5 border border-blue-500/10 p-4 flex items-center gap-4 shadow-sm">
+        <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="text-[14px] leading-relaxed text-blue-800 dark:text-blue-300 font-semibold font-['Plus_Jakarta_Sans']">
+          Ta funkcja jest w fazie intensywnego rozwoju. Dziękujemy szkołom partnerskim za pomoc w testowaniu i współtworzeniu nowych możliwości CoTeach!
+        </p>
+      </div>
+
       <!-- Header -->
       <div class="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full mb-4">
         <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[36px] tracking-[-0.9px] leading-[40px]">Generator prezentacji</h2>
@@ -469,6 +585,8 @@ import { supabase } from "../supabase";
 import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/presentationHistoryStorage";
 import archiveIcon from "../assets/archive.svg";
 import liveLessonIcon from "../assets/livelesson.svg";
+import logoUrl from "../assets/logo.svg";
+import sygnetUrl from "../assets/sygnet.svg";
 
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
@@ -494,6 +612,16 @@ const originatingLessonId = ref(null);
 const selectedPresentation = ref(null);
 const presentationSource = ref("lesson");
 const selectedLessonId = ref("");
+
+const slideLayoutType = computed(() => {
+  if (!slides.value || slides.value.length === 0) return 0;
+  // Use a mix of slide index and total slides to vary layouts
+  // Ensure title/agenda/summary always have their own logic
+  const currentSlide = slides.value[slideIndex.value];
+  if (['title', 'summary', 'agenda'].includes(currentSlide?.type)) return 0;
+  
+  return (slideIndex.value + (slides.value[0]?.title?.length || 0)) % 4;
+});
 
 const slideTypeTranslations = {
   title: "Tytuł",
@@ -560,6 +688,50 @@ const availableStyles = [
       accent: "bg-yellow-100 rounded-xl border-2 border-yellow-200",
       title: "bg-yellow-800",
       text: "bg-yellow-600"
+    }
+  },
+  {
+    id: "modern",
+    name: "Nowoczesny",
+    description: "Czysty i profesjonalny",
+    preview: {
+      wrapper: "bg-white",
+      accent: "bg-blue-600/5",
+      title: "bg-blue-900",
+      text: "bg-slate-600"
+    }
+  },
+  {
+    id: "nature",
+    name: "Ekologia",
+    description: "Zielony i organiczny",
+    preview: {
+      wrapper: "bg-emerald-50",
+      accent: "bg-emerald-600/10 rounded-full",
+      title: "bg-emerald-900",
+      text: "bg-emerald-800"
+    }
+  },
+  {
+    id: "contrast",
+    name: "Kontrast",
+    description: "Mocny i czytelny",
+    preview: {
+      wrapper: "bg-black",
+      accent: "bg-yellow-400/20 border border-yellow-400",
+      title: "bg-yellow-400",
+      text: "bg-yellow-200"
+    }
+  },
+  {
+    id: "vintage",
+    name: "Klasyczny",
+    description: "Elegancki i ponadczasowy",
+    preview: {
+      wrapper: "bg-[#f4f1ea]",
+      accent: "bg-[#e5e0d4] border-y border-[#d1cbb8]",
+      title: "bg-[#2c2c2c]",
+      text: "bg-[#4a4a4a]"
     }
   }
 ];
@@ -987,6 +1159,42 @@ function resolvePresentationTheme(title, slides, style = "auto") {
       titleClass: "text-[#854d0e] font-['Comic_Sans_MS',_cursive]",
       textClass: "text-[#713f12]",
       accentClass: "bg-yellow-50 rounded-[40px] border-4 border-yellow-200"
+    };
+  }
+  if (style === "modern") {
+    return {
+      wrapperClass: "bg-white",
+      panelClass: basePanel,
+      titleClass: "text-[#1e3a8a] font-['Inter',_sans-serif] tracking-tight",
+      textClass: "text-[#334155]",
+      accentClass: "bg-blue-50/50 border-r-8 border-blue-600"
+    };
+  }
+  if (style === "nature") {
+    return {
+      wrapperClass: "bg-[#f0fdf4]",
+      panelClass: basePanel,
+      titleClass: "text-[#064e3b] font-medium",
+      textClass: "text-[#065f46]",
+      accentClass: "bg-emerald-100/50 rounded-[60px]"
+    };
+  }
+  if (style === "contrast") {
+    return {
+      wrapperClass: "bg-black",
+      panelClass: "bg-black border-2 border-yellow-400/20",
+      titleClass: "text-yellow-400 font-black uppercase",
+      textClass: "text-yellow-100",
+      accentClass: "bg-yellow-400/10 border-l-4 border-yellow-400"
+    };
+  }
+  if (style === "vintage") {
+    return {
+      wrapperClass: "bg-[#f4f1ea]",
+      panelClass: "bg-[#fdfcf9] shadow-inner",
+      titleClass: "text-[#2c2c2c] font-serif font-bold italic",
+      textClass: "text-[#4a4a4a] font-serif",
+      accentClass: "bg-[#e5e0d4] border-y-2 border-[#d1cbb8]"
     };
   }
 

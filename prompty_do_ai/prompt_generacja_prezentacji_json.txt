@@ -27,10 +27,12 @@ Wymagania:
 {
   "slides": [
     {
-      "type": "title|concept|example|practice|summary",
+      "type": "title|concept|example|practice|summary|comparison",
       "title": "Tytuł slajdu (maks. 8-10 słów)",
       "subtitle": "Krótki podtytuł (opcjonalnie)",
-      "summary": "Merytoryczny blok tekstu. Pisz wyczerpująco, stosuj 3-5 zdań, ale absolutnie unikaj ucinania w połowie. Bez żadnych wypunktowań czy tablic."
+      "summary": "Merytoryczny blok tekstu. Pisz wyczerpująco, stosuj 3-5 zdań, ale absolutnie unikaj ucinania w połowie. Bez żadnych wypunktowań czy tablic.",
+      "details": ["Dodatkowe 2-4 konkretne punkty/ciekawostki", "Zawsze w formie tablicy stringów"],
+      "imagePrompt": "Krótki, konkretny opis obrazka pasującego do treści slajdu (po angielsku, np. 'molecular structure of water' lub 'roman legionary in armor'). Bez zbędnych słów."
     }
   ]
 }
@@ -40,5 +42,5 @@ Wymagania:
 7) Jeśli zakres to "tylko nieomówione punkty", MASZ ABSOLUTNY ZAKAZ generowania slajdów na tematy, które nie znajdują się w przekazanym Planie Lekcji (JSON). Skup się wyłącznie na tych konkretnych zagadnieniach. Ignoruj części notatki, które dotyczą już omówionych tematów (nieobecnych w planie).
 8) Używaj tylko i wyłącznie informacji z dostarczonego planu i notatki, które są bezpośrednio związane z celami prezentacji określonymi w punkcie 7.
 9) Zamiast pojedynczych słów używaj pełnych, zrozumiałych zdań, dopasowanych do [KLASA]. Znajdź idealny środek między merytorycznością a byciem zbyt rozwlekłym.
-10) Pierwszy slajd musi bezwzględnie mieć "type": "title" (zawierający temat lekcji i ewentualny podtytuł, bez details). Ostatni slajd musi mieć "type": "summary" (jako wielkie podsumowanie i zakończenie prezentacji).
-11) Zero obrazów, zero pól wizualnych. Prezentacja w 100% tekstowa.
+10) Pierwszy slajd musi bezwzględnie mieć "type": "title" (zawierający temat lekcji i ewentualny podtytuł). Ostatni slajd musi mieć "type": "summary" (jako wielkie podsumowanie i zakończenie prezentacji).
+11) Wygeneruj trafny 'imagePrompt' dla każdego slajdu, aby zilustrować treść.

@@ -1537,14 +1537,28 @@ function buildTagBasedImageUrl({ imagePrompt = "", title = "", summary = "", vis
   return `https://loremflickr.com/1280/720/${tags.slice(0, 4).join(",")}?lock=1`;
 }
 
-function buildSlideImageUrl({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "", classLevel = "" }) {
-  const baseIdea = String(imagePrompt || "").trim() || `${title}. ${summary}. ${visualHint}`;
-  const prompt = `Ilustracja edukacyjna dokładnie do tematu: ${baseIdea}. Przedmiot: ${subject}. Poziom: ${classLevel}. Pokaż to, o czym jest slajd, bez losowych scen. Bez tekstu na obrazie, bez znaków wodnych, bez logotypów. Kompozycja 16:9, wysoka czytelność, styl nowoczesny.`
+function buildSlideImageUrl({ imagePrompt = "", title = "", summary = "", subject = "", classLevel = "", attempt = 0 }) {
+  const baseIdea = String(imagePrompt || "").trim() || `${title} ${summary}`;
+  const cleanIdea = baseIdea
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\.+/g, ".")
+    .replace(/\s+/g, " ")
+    .trim();
+    
+  const prompt = `Professional educational illustration: ${cleanIdea}. Style: modern, 16:9, high quality, no text.`
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 550);
+    .slice(0, 500);
+    
   if (!prompt) return "";
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&height=720&nologo=true&model=flux`;
+
+  // Rotate models to increase throughput for anonymous users
+  // Each model has its own queue on Pollinations
+  const models = ["flux", "turbo"];
+  const model = models[attempt % models.length];
+  const seed = Math.floor(Math.random() * 1000000);
+  
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&height=720&nologo=true&model=${model}&seed=${seed}`;
 }
 
 function hashString(value) {
@@ -1561,76 +1575,46 @@ function buildUnsplashUrl({ query, slideKey }) {
   const q = encodeURIComponent(String(query || "").trim().slice(0, 180));
   if (!q) return "";
   const sig = hashString(slideKey) % 1000;
-  return `https://source.unsplash.com/1280x720/?${q}&sig=${sig}`;
+  return `https://loremflickr.com/1280/720/${q}?lock=${sig}`;
 }
 
-async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "", classLevel = "", slideKey = "", usedImageSignatures = new Set() }) {
-  const baseIdea = String(imagePrompt || "").trim() || `${title}. ${summary}. ${visualHint}`;
-  const prompt = `Stwórz ilustrację edukacyjną do slajdu: ${baseIdea}. Przedmiot: ${subject}. Poziom: ${classLevel}. Bez tekstu na obrazie, bez znaków wodnych, bez logotypów, format poziomy.`
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 900);
-  if (!prompt) return "";
+async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary = "", subject = "", classLevel = "", slideKey = "" }) {
+  const cleanTitle = String(title || "").trim();
+  const cleanSubject = String(subject || "").trim();
+  const cleanPrompt = String(imagePrompt || "").trim();
 
-  const wikiQuery = [title, subject, imagePrompt, visualHint]
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .slice(0, 140);
-  const candidateUrls = [];
+  const stemSubjects = ["Matematyka", "Fizyka", "Chemia", "Informatyka", "Biologia", "Geometria"];
+  const isStem = stemSubjects.some(s => cleanSubject.toLowerCase().includes(s.toLowerCase()));
 
-  const wikiImage = await resolveWikipediaImage(wikiQuery);
-  if (wikiImage) candidateUrls.push(wikiImage);
-
-  const unsplashPrimary = buildUnsplashUrl({
-    query: [subject, title, imagePrompt, visualHint].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-primary`
-  });
-  if (unsplashPrimary) candidateUrls.push(unsplashPrimary);
-
-  const unsplashSecondary = buildUnsplashUrl({
-    query: [subject, summary, classLevel].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-secondary`
-  });
-  if (unsplashSecondary) candidateUrls.push(unsplashSecondary);
-
-  if (openai && String(process.env.OPENROUTER_API_KEY || "").trim()) {
-    try {
-      const imageRes = await openai.images.generate({
-        model: OPENAI_IMAGE_MODEL,
-        prompt,
-        size: "1536x1024"
+  // For STEM, AI generation is usually better (diagrams, clean visuals)
+  if (isStem) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const pollinationsUrl = buildSlideImageUrl({ 
+        imagePrompt: cleanPrompt || cleanTitle, 
+        title, 
+        summary, 
+        subject, 
+        classLevel,
+        attempt 
       });
-      const first = imageRes?.data?.[0];
-      if (first?.url) return String(first.url);
-      if (first?.b64_json) return `data:image/png;base64,${String(first.b64_json)}`;
-    } catch {
-      // fallback below
+      
+      // On server side, we can try to "bake" the image into a Data URL
+      // This also checks if the image service is responding or 429'ing
+      const baked = await fetchImageAsDataUrl(pollinationsUrl);
+      if (baked) return baked;
+      // If failed/429, loop will try next model (e.g. turbo)
     }
   }
 
-  const pollinationsUrl =
-    typeof buildSlideImageUrl === "function"
-      ? buildSlideImageUrl({ imagePrompt, title, summary, visualHint, subject, classLevel })
-      : "";
-  if (pollinationsUrl) {
-    const asDataUrl = await fetchImageAsDataUrl(pollinationsUrl);
-    if (asDataUrl) return asDataUrl;
-  }
+  // Try Wikipedia for factual/historical topics (Authentic visuals)
+  const wikiQuery = (cleanPrompt || cleanTitle).slice(0, 100);
+  const wikiImage = await resolveWikipediaImage(wikiQuery);
+  if (wikiImage) return wikiImage;
 
-  const tagUrl = buildTagBasedImageUrl({ imagePrompt, title, summary, visualHint, subject });
-  if (tagUrl) candidateUrls.push(tagUrl);
-
-  for (const url of candidateUrls) {
-    const asDataUrl = await fetchImageAsDataUrl(url);
-    if (!asDataUrl) continue;
-    const signature = asDataUrl.slice(0, 180);
-    if (usedImageSignatures.has(signature)) continue;
-    usedImageSignatures.add(signature);
-    return asDataUrl;
-  }
-
-  return "";
+  // Fallback to Unsplash via loremflickr
+  const q = (cleanPrompt || cleanTitle || cleanSubject || "education").split(" ").slice(0, 3).join(",");
+  const sig = hashString(slideKey || cleanTitle) % 10000;
+  return `https://loremflickr.com/1280/720/${encodeURIComponent(q)}?lock=${sig}`;
 }
 
 async function resolveWikipediaImage(query) {
@@ -1749,25 +1733,37 @@ async function generatePresentationWithLLM({
       latencyMs: out.latencyMs
     });
 
-    return slides.map((slide) => ({
-      ...slide,
-      imagePrompt: "",
-      imageUrl: "",
-      visualHint: ""
-    }));
-  } catch {
+    const finalSlides = [];
+    for (let i = 0; i < slides.length; i++) {
+      const slide = slides[i];
+      try {
+        const imageUrl = await generateSlideImageWithAI({
+          imagePrompt: slide.imagePrompt,
+          title: slide.title,
+          summary: slide.summary,
+          subject: lessonSubject,
+          classLevel: classLevel,
+          slideKey: `presentation-${lessonTitle}-${i}`
+        });
+        finalSlides.push({ ...slide, imageUrl: imageUrl || "" });
+      } catch (err) {
+        console.error(`[AI Presentation] Image generation failed for slide ${i}:`, err);
+        finalSlides.push({ ...slide, imageUrl: "" });
+      }
+    }
+    return finalSlides;
+  } catch (error) {
+    console.error("[AI Presentation] Error:", error);
     const fallbackSlides = fallbackPresentationSlides({
       lessonTitle,
       scope: safeScope,
       plan: safePlan,
       noteContent: safeNote,
-      maxSlides: safeMaxSlides
+      maxSlides: sliceMaxSlides
     });
     return fallbackSlides.map((slide) => ({
       ...slide,
-      imagePrompt: "",
-      imageUrl: "",
-      visualHint: ""
+      imageUrl: ""
     }));
   }
 }
