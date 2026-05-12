@@ -1,5 +1,8 @@
 Dzienniczek - Oliwier Kozioł
 
+8 Kwietnia
+- pierwsze spotkanie, wymyślanie pomysłu na aplikację
+
 9 Kwietnia
 - wyznaczyliśmy zadania do ukończenia
 - wstępnie określiliśmy funkcjonalności aplikacji
@@ -24,6 +27,9 @@ Dzienniczek - Oliwier Kozioł
 - zaktualizowałem ikony w całym projekcie
 - naprawiłem system wychwytywania mowy w lekcji na żywo
 
+15 Kwietnia
+- pierwsza prezentacja projektu
+
 16 Kwietnia
 - naprawiłem system licencji kont
 - zaktualizowałem wygląd strony archiwum
@@ -46,6 +52,9 @@ Dzienniczek - Oliwier Kozioł
 - dodałem możliwość usuwania notatek, lekcji i prezentacji
 - zacząłem implementować funkcję wybierania klasy przez nauczyciela
 
+22 Kwietnia
+- druga prezentacja projektu w szkole
+
 23 Kwietnia
 - zaktualizowałem wygląd stron logowania i rejestracji
 - usprawniłem funkcję generowania prezentacji
@@ -63,6 +72,9 @@ Dzienniczek - Oliwier Kozioł
 - zredesignowałem i ujednoliciłem panel admina
 - dodałem możliwość podglądu transkrypcji lekcji
 - ulepszyłem okno napisów na żywo
+
+29 Kwietnia
+- prezentacja projektu w szkole
 
 30 Kwietnia
 - tworzenie lekcji z pliku audio
