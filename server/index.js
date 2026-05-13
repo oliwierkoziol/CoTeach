@@ -1871,8 +1871,22 @@ async function generatePlanWithLLM(rawText, context = {}) {
     });
     const parsed = parseJsonFromModel(out.text);
     if (!Array.isArray(parsed)) throw new Error("Invalid plan JSON");
+
+    const isMalformed = parsed.some(item => {
+      const titleStr = String(item.tytul_sekcji || item.title || "");
+      const keywordsStr = Array.isArray(item.keywords) ? item.keywords.join(" ") : String(item.keywords || "");
+      return titleStr.includes("#") || titleStr.includes("*") || keywordsStr.includes("#") || keywordsStr.includes("*");
+    });
+    
+    if (isMalformed) {
+      throw new Error("MALFORMED_PLAN");
+    }
+
     return parsed.slice(0, 12).map((item, index) => mapPlanItem(item, index));
-  } catch {
+  } catch (e) {
+    if (e.message === "MALFORMED_PLAN") {
+      throw e;
+    }
     return fallbackGeneratePlan(rawText);
   }
 }
@@ -2414,56 +2428,63 @@ app.post("/api/files/extract-text", upload.single("file"), async (req, res) => {
 });
 
 app.post("/api/lessons", async (req, res) => {
-  const teacher = await resolveTeacherContext(req, res);
-  if (!teacher) return;
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
 
-  const { title, subject, month, date, rawText = "", length, class_name } = req.body || {};
-  if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
+    const { title, subject, month, date, rawText = "", length, class_name } = req.body || {};
+    if (!title || !subject) return res.status(400).json({ error: "Missing fields" });
 
-  const activeLicense = getActiveUserLicense(teacher.userId);
+    const activeLicense = getActiveUserLicense(teacher.userId);
 
-  const normalizedDate = normalizeLessonDate(date);
-  const normalizedMonth = resolveLessonMonth(month, normalizedDate);
-  const lessonId = randomUUID();
-  const lesson = {
-    id: lessonId,
-    schoolId: teacher.schoolId,
-    teacherId: teacher.teacherId,
-    title,
-    subject,
-    month: normalizedMonth,
-    date: normalizedDate,
-    status: "draft",
-    length: resolveLessonLengthMinutes({ length }),
-    sourceFiles: [],
-    plan: [],
-    transcripts: [],
-    finalNote: null,
-    startedAt: null,
-    finishedAt: null,
-    class_name: class_name || null
-  };
+    const normalizedDate = normalizeLessonDate(date);
+    const normalizedMonth = resolveLessonMonth(month, normalizedDate);
+    const lessonId = randomUUID();
+    const lesson = {
+      id: lessonId,
+      schoolId: teacher.schoolId,
+      teacherId: teacher.teacherId,
+      title,
+      subject,
+      month: normalizedMonth,
+      date: normalizedDate,
+      status: "draft",
+      length: resolveLessonLengthMinutes({ length }),
+      sourceFiles: [],
+      plan: [],
+      transcripts: [],
+      finalNote: null,
+      startedAt: null,
+      finishedAt: null,
+      class_name: class_name || null
+    };
 
-  if (rawText && activeLicense) {
-    lesson.plan = await generatePlanWithLLM(rawText, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
+    if (rawText && activeLicense) {
+      lesson.plan = await generatePlanWithLLM(rawText, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
+    }
+
+    if (rawText && !activeLicense) {
+      lesson.sourceFiles.push({
+        id: randomUUID(),
+        lessonId: lesson.id,
+        fileName: "material-note.txt",
+        mimeType: "text/plain",
+        uploadType: "text",
+        extractedText: String(rawText || "").trim(),
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    if (lesson.plan.length) lesson.status = "ready";
+    db.lessons.set(lesson.id, lesson);
+    await persistLessonSafe(lesson);
+    return res.status(201).json({ lesson });
+  } catch (err) {
+    if (err.message === "MALFORMED_PLAN") {
+      return res.status(422).json({ error: "MALFORMED_PLAN" });
+    }
+    return res.status(500).json({ error: err.message });
   }
-
-  if (rawText && !activeLicense) {
-    lesson.sourceFiles.push({
-      id: randomUUID(),
-      lessonId: lesson.id,
-      fileName: "material-note.txt",
-      mimeType: "text/plain",
-      uploadType: "text",
-      extractedText: String(rawText || "").trim(),
-      createdAt: new Date().toISOString()
-    });
-  }
-
-  if (lesson.plan.length) lesson.status = "ready";
-  db.lessons.set(lesson.id, lesson);
-  await persistLessonSafe(lesson);
-  return res.status(201).json({ lesson });
 });
 
 app.get("/api/lessons", async (req, res) => {
@@ -2576,6 +2597,9 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
     await persistLessonSafe(lesson);
     return res.json({ lesson });
   } catch (error) {
+    if (error.message === "MALFORMED_PLAN") {
+      return res.status(422).json({ error: "MALFORMED_PLAN" });
+    }
     return res.status(400).json({ error: error.message });
   }
 });
@@ -4479,14 +4503,31 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
           }
         },
         {
-          text: "Zapisz tekst z nagrania audio słowo w słowo (dokładna transkrypcja), zachowując interpunkcję. Wykryj automatycznie język (np. polski, angielski). Zwróć TYLKO transkrypcję, bez żadnych dodatkowych komentarzy ani streszczeń. Jeśli w nagraniu jest cisza lub brak mowy, zwróć pusty ciąg znaków."
+          text: "Jesteś precyzyjnym systemem transkrypcji audio (STT). Twoim zadaniem jest zapisać tekst z nagrania audio SŁOWO W SŁOWO.\n" +
+                "ZASADY:\n" +
+                "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
+                "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
+                "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
+                "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
+                "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
+                "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
+                "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz."
         }
       ],
       maxTokens: 2048,
       temperature: 0.0
     });
 
-    const rawText = String(geminiResponse.text || "").trim();
+    let rawText = String(geminiResponse.text || "").trim();
+    
+    // Usuwamy prefiksy językowe i znaczniki czasu, które Gemini czasem dodaje mimo instrukcji
+    rawText = rawText
+      .replace(/^([a-z]{3,15}|język\s+[a-z]+)[:\s]*/gmi, "") // Usuwa "polski: ", "English: ", "Język polski: " itp. z początku każdej linii
+      .replace(/\b(\d{1,2}:)?\d{1,2}:\d{2}\b/g, "")        // Usuwa znaczniki czasu typu 02:53 lub 1:02:53
+      .trim();
+
+
+
     console.log(`[🎤] Gemini STT: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
     // Obliczanie kosztu na podstawie tokenów (Gemini Flash jest bardzo tani)

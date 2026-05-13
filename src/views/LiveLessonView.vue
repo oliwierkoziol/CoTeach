@@ -1660,28 +1660,34 @@ async function beginWhisperMode() {
         throw new Error(data.error || data.message || "Błąd transkrypcji");
       }
 
-      const text = String(data.text || "").trim();
-      console.log(`📝 Transcription: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
-
-      // Rozszerzone filtrowanie - usuwanie znanych halucynacji AI
+      const rawText = String(data.text || "").trim();
       const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
       const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
-      const cleanText = text.trim();
+
+      let cleanText = rawText
+        .replace(/^([a-z]{3,15}|język\s+[a-z]+)[:\s]*/gmi, "") // Usuwa "polski: ", "English: ", "Język polski: " itp. z początku każdej linii
+        .replace(/\b(\d{1,2}:)?\d{1,2}:\d{2}\b/g, "")        // Usuwa znaczniki czasu typu 02:53 lub 1:02:53
+        .trim();
+
+
+
       const isValidTranscription = cleanText &&
-                              cleanText.length > 5 &&
+                              cleanText.length > 3 &&
                               !obviousHallucinations.test(cleanText) &&
                               !hallucinationRegex.test(cleanText);
 
+
       if (isValidTranscription) {
         // Check if this text is already in the array to prevent duplicates
-        const isDuplicate = transcription.value.some(t => t.text === text);
+        const isDuplicate = transcription.value.some(t => t.text === cleanText);
         if (isDuplicate) {
-          console.log(`⚠️ Duplicate skipped: "${text.substring(0, 30)}..."`);
+          console.log(`⚠️ Duplicate skipped: "${cleanText.substring(0, 30)}..."`);
         } else {
           const relativeMs = Date.now() - startAt.value;
-          transcription.value.push({ text, timestamp: formatTimestamp(relativeMs) });
+          transcription.value.push({ text: cleanText, timestamp: formatTimestamp(relativeMs) });
           console.log(`✅ Added transcription #${transcription.value.length}`);
           await nextTick();
+
 
           // Reset user scrolling flag when new content is added
           isUserScrolling.value = false;

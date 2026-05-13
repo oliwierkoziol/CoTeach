@@ -2,6 +2,20 @@
   <div class="bg-[#f7f9fc] min-h-[calc(100vh-64px)] relative overflow-x-hidden px-4 py-6 sm:px-6 md:p-12 pb-14 w-full">
     <div class="fixed bottom-0 right-0 h-[384px] w-[384px] rounded-full bg-[rgba(20,37,136,0.05)] blur-[60px] pointer-events-none" />
 
+    <!-- Malformed Plan Modal -->
+    <div v-if="showMalformedModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl flex flex-col items-center text-center animate-in fade-in zoom-in duration-200">
+        <div class="w-16 h-16 bg-[#0c3dfe]/10 text-[#0c3dfe] rounded-full flex items-center justify-center mb-6">
+          <svg class="w-8 h-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <h3 class="text-[22px] font-extrabold text-[#191c1e] mb-3 font-['Plus_Jakarta_Sans']">Trwa poprawianie planu</h3>
+        <p class="text-[#454652] text-[16px] leading-[24px] font-['Plus_Jakarta_Sans']">Błąd po naszej stronie. Twój plan lekcji zaraz będzie gotowy.</p>
+      </div>
+    </div>
+
     <template v-if="!lesson || !lesson.plan?.length">
       <!-- Welcome Header -->
       <header class="mb-7 relative z-10 w-full text-left">
@@ -222,6 +236,8 @@ const audioFileInput = ref(null);
 
 const error = ref("");
 const info = ref("");
+let generateRetries = 0;
+const showMalformedModal = ref(false);
 
 const sourceNote = computed(() => {
   const files = Array.isArray(lesson.value?.sourceFiles) ? lesson.value.sourceFiles : [];
@@ -241,6 +257,14 @@ const selectedNote = computed(() => state.notes.find((note) => note.id === selec
 
 onMounted(async () => {
   await fetchTeacherNotes();
+  
+  // Test function for console
+  window.ShowMalformedLessonPlanError = () => {
+    showMalformedModal.value = true;
+    setTimeout(() => {
+      showMalformedModal.value = false;
+    }, 3000);
+  };
 });
 
 watch(selectedNoteId, (noteId) => {
@@ -304,10 +328,27 @@ async function handleGenerate() {
     });
     
     info.value = state.info;
+    generateRetries = 0;
+    showMalformedModal.value = false;
   } catch (e) {
-    error.value = e.message;
+    const isMalformed = e.message === "MALFORMED_PLAN" || e.error === "MALFORMED_PLAN";
+    if (isMalformed && generateRetries < 2) {
+      generateRetries++;
+      showMalformedModal.value = true;
+      setTimeout(() => {
+        handleGenerate();
+      }, 1500); // Wait a bit before retrying
+      return; // Do not reset isGenerating yet
+    } else {
+      showMalformedModal.value = false;
+      error.value = isMalformed ? "Nie udało się wygenerować planu po kilku próbach." : e.message;
+      generateRetries = 0;
+    }
   } finally {
-    isGenerating.value = false;
+    if (generateRetries === 0) {
+      isGenerating.value = false;
+      showMalformedModal.value = false;
+    }
   }
 }
 
@@ -361,12 +402,29 @@ async function handleAudioLesson(event) {
     }
 
     info.value = "Lekcja gotowa. Przekierowuję...";
+    generateRetries = 0;
+    showMalformedModal.value = false;
     await router.push(`/live-lesson/${created.id}`);
   } catch (e) {
-    error.value = "Błąd: " + e.message;
+    const isMalformed = e.message === "MALFORMED_PLAN" || e.error === "MALFORMED_PLAN";
+    if (isMalformed && generateRetries < 2) {
+      generateRetries++;
+      showMalformedModal.value = true;
+      setTimeout(() => {
+        handleAudioLesson({ target: { files: [file] } });
+      }, 1500);
+      return;
+    } else {
+      showMalformedModal.value = false;
+      error.value = isMalformed ? "Błąd: Nie udało się wygenerować planu po kilku próbach." : "Błąd: " + e.message;
+      generateRetries = 0;
+    }
   } finally {
-    isGenerating.value = false;
-    if (audioFileInput.value) audioFileInput.value.value = "";
+    if (generateRetries === 0) {
+      isGenerating.value = false;
+      showMalformedModal.value = false;
+      if (audioFileInput.value) audioFileInput.value.value = "";
+    }
   }
 }
 
