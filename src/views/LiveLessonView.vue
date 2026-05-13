@@ -1547,8 +1547,9 @@ async function beginWhisperMode() {
 
   const dataArray = new Uint8Array(analyser.frequencyBinCount);
   let silenceStart = null;
-  const SILENCE_THRESHOLD = 20; // Balanced threshold for speech detection
-  const SILENCE_DURATION = 500; // 0.5 seconds of silence before sending (faster response)
+  let hasSpeechDetected = false; // Flag to track if any speech was heard in current fragment
+  const SILENCE_THRESHOLD = 15; // Slightly lower to catch quieter speech
+  const SILENCE_DURATION = 2000; // 2 seconds of silence before sending (allow for natural pauses)
 
   console.log(`[WhisperMode] Audio setup complete. Threshold: ${SILENCE_THRESHOLD}, Duration: ${SILENCE_DURATION}ms`);
 
@@ -1614,9 +1615,9 @@ async function beginWhisperMode() {
       console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${audioChunks.value.length} chunks`);
 
       // More reasonable filtering - balance between filtering noise and capturing speech
-      const minSize = 2000; // Minimum 5KB of audio
+      const minSize = 1000; // Minimum ~1KB of audio
       const estimatedDurationMs = audioChunks.value.length * 1000; // ~1 second per chunk
-      const minDuration = 1500; // Require at least 1.5 seconds of audio
+      const minDuration = 1000; // Require at least 1 second of audio
 
       if (audioBlob.size < minSize || estimatedDurationMs < minDuration) {
         console.log(`❌ Audio too short: ${audioBlob.size}b / ${estimatedDurationMs}ms (min: ${minSize}b/${minDuration}ms)`);
@@ -1779,12 +1780,18 @@ async function beginWhisperMode() {
     const recordingDuration = Date.now() - recordingStartTime;
     if (recordingDuration > MAX_RECORDING_TIME && audioChunks.value.length > 0) {
       console.log(`⏱️ Max time reached, forcing transcription`);
-      sendAudioForTranscription();
+      if (hasSpeechDetected) {
+        sendAudioForTranscription();
+      } else {
+        console.log("🤫 Max time reached but no speech detected, clearing chunks");
+        audioChunks.value.length = 0;
+      }
       recorder.stop();
       audioChunks.value.length = 0;
       recorder.start(1000);
       recordingStartTime = Date.now();
       silenceStart = null;
+      hasSpeechDetected = false;
       requestAnimationFrame(monitorAudio);
       return;
     }
@@ -1792,6 +1799,7 @@ async function beginWhisperMode() {
     // Detect silence or speech
     if (average > SILENCE_THRESHOLD) {
       silenceStart = null;
+      hasSpeechDetected = true; // Mark that we heard something in this fragment
       if (frameCount % 60 === 0) {
         info.value = `Mowa wykryta (poziom: ${Math.round(average)})`;
       }
@@ -1802,12 +1810,18 @@ async function beginWhisperMode() {
       const silenceDuration = Date.now() - silenceStart;
       if (silenceDuration >= SILENCE_DURATION && audioChunks.value.length > 0) {
         console.log(`⏸️ Silence detected, sending transcription`);
-        sendAudioForTranscription();
+        if (hasSpeechDetected) {
+          sendAudioForTranscription();
+        } else {
+          console.log("🤫 Silence detected but no speech was heard during this cycle, skipping API call");
+          audioChunks.value.length = 0;
+        }
         recorder.stop();
         audioChunks.value.length = 0;
         recorder.start(1000);
         recordingStartTime = Date.now();
         silenceStart = null;
+        hasSpeechDetected = false; // Reset for next cycle
       } else if (frameCount % 60 === 0) {
         info.value = `Czekam na mowę... (${Math.round(silenceDuration/1000)}s ciszy)`;
       }

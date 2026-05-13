@@ -25,6 +25,7 @@ Wymagania techniczne:
 8) ŚCISŁA LICZBA PYTAŃ: Wygeneruj DOKŁADNIE tyle pytań każdego typu, ile wskazano w parametrach. Jeśli [ILOSC_OTWARTYCH] wynosi 0, wygeneruj ZERO zadań otwartych. Jeśli [ILOSC_ZAMKNIETYCH] wynosi 0, wygeneruj ZERO zadań zamkniętych. To jest wymóg krytyczny.
 9) POZIOM TRUDNOŚCI: Dopasuj słownictwo i stopień skomplikowania zadań do klasy ([KLASA]) ORAZ wybranego poziomu trudności ([TRUDNOSC]).
 10) BEZPIECZEŃSTWO JSON: Wszystkie backslashe w zapisach LaTeX MUSZĄ być poprawnie escapowane w JSON (np. \\frac zamiast \frac). Pamiętaj o cudzysłowach wewnątrz tekstów.
+11) JĘZYK: Cały sprawdzian (pytania, opcje, klucz odpowiedzi) musi być wygenerowany w tym samym języku, co materiał źródłowy [TRESC_ZRODLOWA].
 
 Struktura JSON:
 {

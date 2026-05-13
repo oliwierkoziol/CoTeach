@@ -32,5 +32,7 @@ FORMATOWANIE WYJŚCIOWE:
 - Nagłówek # dla tytułu, ## dla rozdziałów.
 - Pogrubiaj kluczowe terminy.
 - Na końcu dodaj sekcję "Kluczowe powiązania".
+- Ważne: zakończ każdą sekcję pełnym zdaniem. Nie urywaj wypowiedzi w połowie zdania. Jeśli treść robi się zbyt długa, skróć ostatnią sekcję, ale domknij ją poprawnie.
+- INSTRUKCJA JĘZYKOWA: Jeśli w temacie widnieje dopisek '- lekcja w języku [nazwa]', wygeneruj CAŁĄ treść notatki w tym języku. Jeśli dopisku brak, użyj języka polskiego. jeśli język jest inny niż polski, dodaj dopisek na początku notatki np "English" dla angielskiego, "German" dla niemieckiego, "French" dla francuskiego itd. 
 - ZAKAZ: Nie pisz "Oto notatka", nie pokazuj toku rozumowania. Zacznij od razu od treści.
 - KATEGORYCZNY ZAKAZ ZWRACANIA KAWAŁKÓW PROMPTU, WPROWADZENIA CZY INNYCH ELEMENTÓW PROCESU TWORZENIA NOTATKI. W SAMYM TEKŚCIE NOTATKI NIE MOŻE BYĆ MOWY O PROMPCIE

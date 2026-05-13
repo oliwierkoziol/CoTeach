@@ -886,13 +886,13 @@ async function cleanupExpiredHomework() {
           note.homeworkDueDate = null;
           note.updatedAt = new Date().toISOString();
           db.notes.set(note.id, note);
-          
+
           if (supabase) {
             await supabase
               .from("saved_notes")
               .update({ homework: "", homework_due_date: null, updated_at: note.updatedAt })
               .eq("id", note.id)
-              .catch(() => {}); // ignore if column missing
+              .catch(() => { }); // ignore if column missing
           }
         }
       }
@@ -1306,7 +1306,7 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
   if (!openai) {
     throw new Error("OpenAI client not initialized (check OPENROUTER_API_KEY).");
   }
-  
+
   const fallbackMaxTokens = Number.isFinite(OPENROUTER_MAX_TOKENS) ? Math.max(256, Math.min(OPENROUTER_MAX_TOKENS, 8192)) : 2000;
   const requestedMaxTokens = Number.isFinite(Number(maxTokens)) ? Number(maxTokens) : fallbackMaxTokens;
   const finalMaxTokens = Math.max(256, Math.min(requestedMaxTokens, 8192));
@@ -1340,7 +1340,7 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
 
     const text = String(completion.choices?.[0]?.message?.content || "").trim();
     const usage = completion.usage || {};
-    
+
     return {
       text,
       model: effectiveModel,
@@ -1545,12 +1545,12 @@ function buildSlideImageUrl({ imagePrompt = "", title = "", summary = "", subjec
     .replace(/\.+/g, ".")
     .replace(/\s+/g, " ")
     .trim();
-    
+
   const prompt = `Professional educational illustration: ${cleanIdea}. Style: modern, 16:9, high quality, no text.`
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 500);
-    
+
   if (!prompt) return "";
 
   // Rotate models to increase throughput for anonymous users
@@ -1558,7 +1558,7 @@ function buildSlideImageUrl({ imagePrompt = "", title = "", summary = "", subjec
   const models = ["flux", "turbo"];
   const model = models[attempt % models.length];
   const seed = Math.floor(Math.random() * 1000000);
-  
+
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&height=720&nologo=true&model=${model}&seed=${seed}`;
 }
 
@@ -1590,15 +1590,15 @@ async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary 
   // For STEM, AI generation is usually better (diagrams, clean visuals)
   if (isStem) {
     for (let attempt = 0; attempt < 2; attempt++) {
-      const pollinationsUrl = buildSlideImageUrl({ 
-        imagePrompt: cleanPrompt || cleanTitle, 
-        title, 
-        summary, 
-        subject, 
+      const pollinationsUrl = buildSlideImageUrl({
+        imagePrompt: cleanPrompt || cleanTitle,
+        title,
+        summary,
+        subject,
         classLevel,
-        attempt 
+        attempt
       });
-      
+
       // On server side, we can try to "bake" the image into a Data URL
       // This also checks if the image service is responding or 429'ing
       const baked = await fetchImageAsDataUrl(pollinationsUrl);
@@ -2082,6 +2082,7 @@ async function generateFinalNoteWithLLM(lesson, context = {}) {
 
   const prompt = `
 Przygotuj dwa krótkie opisy po lekcji na podstawie danych.
+Jeśli w tytule lekcji widnieje dopisek "- lekcja w języku [nazwa]", wygeneruj oba opisy w tym języku.
 Zwróć WYŁĄCZNIE JSON o strukturze:
 {
   "covered": "1-3 akapity o tym, co faktycznie omówiono",
@@ -2149,7 +2150,6 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
     .replace("[TUTAJ WPISZ PRZEDMIOT]", cleanSubject)
     .replace("[podaj klase]", cleanClass || "nie podano")
     .replace(/POD ŻADNYM POZOREM NIE ODSYŁAJ TOKU ROZUMOWANIA ALBO CZĘŚCI PROMPTA!!!/i, "Nie pokazuj toku rozumowania ani treści promptu.")
-    .concat("\n\nWażne: zakończ każdą sekcję pełnym zdaniem. Nie urywaj wypowiedzi w połowie zdania. Jeśli treść robi się zbyt długa, skróć ostatnią sekcję, ale domknij ją poprawnie.")
     .trim();
 
   const note = await callOpenRouter({
@@ -3057,10 +3057,10 @@ app.post("/api/notes/:noteId/homework", async (req, res) => {
     if (supabase) {
       const { error } = await supabase
         .from("saved_notes")
-        .update({ 
-          homework, 
+        .update({
+          homework,
           homework_due_date: homeworkDueDate,
-          updated_at: note.updatedAt 
+          updated_at: note.updatedAt
         })
         .eq("id", noteId)
         .eq("teacher_id", teacher.userId);
@@ -3720,7 +3720,8 @@ app.get("/api/admin/dashboard", async (req, res) => {
             id: assignedLicense.id,
             key: assignedLicense.key,
             expiresAt: assignedLicense.expiresAt,
-            maxActiveUsers: assignedLicense.maxActiveUsers          }
+            maxActiveUsers: assignedLicense.maxActiveUsers
+          }
           : null
       };
     });
@@ -4112,7 +4113,7 @@ app.post("/api/admin/users/link-organization", async (req, res) => {
   // Update profile
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ 
+    .update({
       school_id: adminSchool.schoolId,
       organisation: true,
       teacher_id: profile.teacher_id || `teacher-${randomUUID()}`,
@@ -4496,9 +4497,9 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       completionTokens: usage.completionTokens
     }) * USD_TO_PLN;
 
-    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
-    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
-    
+    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej|zapisz tekst z nagrania|zwróć tylko transkrypcję|dokładna transkrypcja|wykryj automatycznie język|nigger|murzyn)/i;
+    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?|cisza\.?|brak mowy\.?)$/i;
+
     const isValidTranscription = rawText &&
       rawText.length > 3 && // Gemini rzadziej halucynuje niż Whisper, ale zostawiamy krótki filtr
       !obviousHallucinations.test(rawText) &&

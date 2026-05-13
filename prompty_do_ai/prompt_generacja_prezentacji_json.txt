@@ -1,7 +1,7 @@
 Rola: Jesteś ekspertem od projektowania profesjonalnych prezentacji edukacyjnych i szkoleniowych.
 
 Zadanie:
-Na podstawie danych wejściowych wygeneruj merytoryczną, mocno tekstową strukturę prezentacji w języku polskim. Prezentacja ma mieć mniejszą liczbę slajdów, ale znacznie więcej obszernej treści tekstowej na każdym z nich.
+Na podstawie danych wejściowych wygeneruj merytoryczną, mocno tekstową strukturę prezentacji. Język prezentacji musi być taki sam jak język dostarczonej notatki/materiału źródłowego. Prezentacja ma mieć mniejszą liczbę slajdów, ale znacznie więcej obszernej treści tekstowej na każdym z nich.
 
 Dane wejściowe:
 - Temat lekcji: [TEMAT_LEKCJI]
