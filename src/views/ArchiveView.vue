@@ -747,8 +747,9 @@ const searchPlaceholder = computed(() => {
 });
 
 const qrCodeUrl = computed(() => {
-  const shareUrl = selected.value?.finalNote?.shareUrl;
-  if (!shareUrl) return "";
+  const shareId = selected.value?.finalNote?.id;
+  if (!shareId) return "";
+  const shareUrl = `${window.location.origin}/share/${shareId}`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(shareUrl)}`;
 });
 
@@ -801,13 +802,15 @@ async function handleDeleteLesson() {
 }
 
 function openFinalNote() {
-  if (!selected.value?.finalNote?.shareUrl) return;
-  window.open(selected.value.finalNote.shareUrl, "_blank", "noopener,noreferrer");
+  const shareId = selected.value?.finalNote?.id;
+  if (!shareId) return;
+  window.open(`${window.location.origin}/share/${shareId}`, "_blank", "noopener,noreferrer");
 }
 
 function openTranscript() {
-  if (!selected.value?.finalNote?.shareUrl) return;
-  window.open(selected.value.finalNote.shareUrl + "?type=transcript", "_blank", "noopener,noreferrer");
+  const shareId = selected.value?.finalNote?.id;
+  if (!shareId) return;
+  window.open(`${window.location.origin}/share/${shareId}?type=transcript`, "_blank", "noopener,noreferrer");
 }
 
 function openQrModal() {

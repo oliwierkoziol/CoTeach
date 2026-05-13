@@ -30,6 +30,7 @@ const OPENROUTER_TEXT_MODEL = process.env.OPENROUTER_TEXT_MODEL || "google/gemma
 const OPENROUTER_TEXT_FALLBACK_MODEL = process.env.OPENROUTER_TEXT_FALLBACK_MODEL || "google/gemma-4-31b";
 const OPENROUTER_VISION_MODEL = process.env.OPENROUTER_VISION_MODEL || "google/gemini-2.5-flash";
 const OPENROUTER_PRESENTATION_MODEL = process.env.OPENROUTER_PRESENTATION_MODEL || "google/gemini-2.5-flash";
+const OPENROUTER_TRANSCRIPTION_MODEL = process.env.OPENROUTER_TRANSCRIPTION_MODEL || "google/gemini-2.5-flash";
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
 const OPENROUTER_MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS || "2000");
 const AI_MARKUP_RATE = Number(process.env.AI_MARKUP_RATE || "0.30");
@@ -1286,7 +1287,7 @@ function fallbackGeneratePlan(rawText) {
 function partToOpenRouterContent(part) {
   if (part.text) return { type: "text", text: part.text };
   if (part.inlineData?.data && part.inlineData?.mimeType) {
-    // OpenRouter supports PDF via image_url for Gemini models
+    // OpenRouter supports images, PDFs, and Audio via image_url data URIs for Gemini models
     return {
       type: "image_url",
       image_url: {
@@ -3200,19 +3201,14 @@ ${finalNoteSnippet || "(brak notatki końcowej)"}`;
 app.get("/api/share/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    // Look for lesson or note
-    const lesson = db.lessons.get(id);
-    if (lesson) {
-      return res.json({
-        finalNote: lesson.finalNote,
-        transcripts: lesson.transcripts || [],
-        homework: lesson.homework,
-        homeworkDueDate: lesson.homeworkDueDate,
-        startedAt: lesson.startedAt,
-        updatedAt: lesson.updatedAt
-      });
+
+    // 1. Try finding a lesson by its ID or by its finalNote.id in memory
+    let lesson = db.lessons.get(id);
+    if (!lesson) {
+      lesson = [...db.lessons.values()].find(l => l.finalNote?.id === id);
     }
 
+    // 2. Try finding a saved note by its ID in memory
     const note = db.notes.get(id);
     if (note) {
       return res.json({
@@ -3228,40 +3224,72 @@ app.get("/api/share/:id", async (req, res) => {
       });
     }
 
+    // 3. Supabase fallback
     if (supabase) {
-      // Fallback to Supabase if not in memory
+      // Try finding lesson by ID
       const { data: lessonDb } = await supabase.from("lessons").select("*").eq("id", id).maybeSingle();
       if (lessonDb) {
-        const lesson = rowToLesson(lessonDb);
+        const l = rowToLesson(lessonDb);
         return res.json({
-          finalNote: lesson.finalNote,
-          transcripts: lesson.transcripts || [],
-          homework: lesson.homework,
-          homeworkDueDate: lesson.homeworkDueDate,
-          startedAt: lesson.startedAt,
-          updatedAt: lesson.updatedAt
+          finalNote: l.finalNote,
+          transcripts: l.transcripts || [],
+          homework: l.homework,
+          homeworkDueDate: l.homeworkDueDate,
+          startedAt: l.startedAt,
+          updatedAt: l.updatedAt
         });
       }
 
+      // Try finding by final_note.id (look up in final_notes table)
+      const { data: finalNoteDb } = await supabase.from("final_notes").select("*").eq("id", id).maybeSingle();
+      if (finalNoteDb) {
+        const { data: lessonFromNote } = await supabase.from("lessons").select("*").eq("id", finalNoteDb.lesson_id).maybeSingle();
+        if (lessonFromNote) {
+          const l = rowToLesson(lessonFromNote);
+          return res.json({
+            finalNote: l.finalNote,
+            transcripts: l.transcripts || [],
+            homework: l.homework,
+            homeworkDueDate: l.homeworkDueDate,
+            startedAt: l.startedAt,
+            updatedAt: l.updatedAt
+          });
+        }
+      }
+
+      // Try finding saved note by ID
       const { data: noteDb } = await supabase.from("saved_notes").select("*").eq("id", id).maybeSingle();
       if (noteDb) {
-        const note = rowToSavedNote(noteDb);
+        const n = rowToSavedNote(noteDb);
         return res.json({
           finalNote: {
-            title: note.title,
-            subject: note.subject,
-            html: note.content,
-            date: note.date || note.createdAt
+            title: n.title,
+            subject: n.subject,
+            html: n.content,
+            date: n.date || n.createdAt
           },
-          homework: note.homework,
-          homeworkDueDate: note.homeworkDueDate,
-          updatedAt: note.updatedAt
+          homework: n.homework,
+          homeworkDueDate: n.homeworkDueDate,
+          updatedAt: n.updatedAt
         });
       }
     }
 
+    // 4. Return result if found in memory (steps 1 or 2)
+    if (lesson) {
+      return res.json({
+        finalNote: lesson.finalNote,
+        transcripts: lesson.transcripts || [],
+        homework: lesson.homework,
+        homeworkDueDate: lesson.homeworkDueDate,
+        startedAt: lesson.startedAt,
+        updatedAt: lesson.updatedAt
+      });
+    }
+
     return res.status(404).json({ error: "Not found" });
   } catch (error) {
+    console.error(`[ShareRoute] Error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -3588,15 +3616,7 @@ app.delete("/api/lessons/:lessonId/costs", async (req, res) => {
   return res.json({ success: true, message: "Koszty zostały zresetowane." });
 });
 
-app.get("/api/share/:noteId", (req, res) => {
-  const lesson = [...db.lessons.values()].find((item) => item.finalNote?.id === req.params.noteId);
-  if (!lesson?.finalNote) return res.status(404).json({ error: "Not found" });
-  return res.json({
-    finalNote: lesson.finalNote,
-    transcripts: lesson.transcripts || [],
-    startedAt: lesson.startedAt || null
-  });
-});
+
 
 app.get("/api/admin", (_req, res) => {
   return res.json({
@@ -4429,98 +4449,88 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     if (String(lesson.teacherId) !== teacher.teacherId || String(lesson.schoolId || "") !== String(teacher.schoolId || "")) {
       return res.status(403).json({ error: "Forbidden" });
     }
-    // Demo limit enforcement removed
     if (!req.file?.buffer) {
       return res.status(400).json({ error: "Audio file is required." });
     }
-
-    /* 
-    const summary = getCostSummary(lessonId);
-    if (summary.total >= SESSION_LIMIT_PLN) {
-      return res.status(402).json({ error: "Budget exceeded", message: "Limit kosztu sesji został osiągnięty." });
-    }
-    */
 
     if (!openai) {
       return res.status(500).json({ error: "OPENROUTER_API_KEY is missing for AI transcription." });
     }
 
-    console.log('[transcribe] Processing audio file:', {
+    console.log('[transcribe] Processing audio with Gemini Flash:', {
       filename: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.buffer.length,
       lessonId
     });
 
-    // Use openai/gpt-4o-transcribe via OpenRouter
-    const transcriptionResponse = await openai.audio.transcriptions.create({
-      file: await toFile(req.file.buffer, `audio-${Date.now()}.webm`),
-      model: "openai/gpt-4o-transcribe",
-      prompt: "Transcribe the audio exactly as heard, including all punctuation (commas, periods, exclamation marks). Do not summarize, do not add commentary, and do not repeat phrases if there is silence."
+    // Use Gemini Flash via OpenRouter for multimodal STT
+    const base64Audio = req.file.buffer.toString("base64");
+    const mimeType = req.file.mimetype || "audio/webm";
+
+    const geminiResponse = await callOpenRouter({
+      model: OPENROUTER_TRANSCRIPTION_MODEL,
+      parts: [
+        {
+          inlineData: {
+            data: base64Audio,
+            mimeType: mimeType
+          }
+        },
+        {
+          text: "Zapisz tekst z nagrania audio słowo w słowo (dokładna transkrypcja), zachowując interpunkcję. Wykryj automatycznie język (np. polski, angielski). Zwróć TYLKO transkrypcję, bez żadnych dodatkowych komentarzy ani streszczeń. Jeśli w nagraniu jest cisza lub brak mowy, zwróć pusty ciąg znaków."
+        }
+      ],
+      maxTokens: 2048,
+      temperature: 0.0
     });
 
-    const transcription = {
-      text: transcriptionResponse.text || "",
-      duration: undefined
-    };
+    const rawText = String(geminiResponse.text || "").trim();
+    console.log(`[🎤] Gemini STT: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
-    console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars)`);
+    // Obliczanie kosztu na podstawie tokenów (Gemini Flash jest bardzo tani)
+    const usage = geminiResponse.usage || {};
+    const baseAmountPLN = estimateOpenRouterBaseUsdCost({
+      model: OPENROUTER_TRANSCRIPTION_MODEL,
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens
+    }) * USD_TO_PLN;
 
-    const durationSec = Number(transcription.duration || 0);
-    const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
-    const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
-
-    const rawText = String(transcription.text || "").trim();
-    console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
-
-    // Rozszerzone serwerowe filtrowanie halucynacji Whispera
     const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
     const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
+    
     const isValidTranscription = rawText &&
-      rawText.length > 5 &&
+      rawText.length > 3 && // Gemini rzadziej halucynuje niż Whisper, ale zostawiamy krótki filtr
       !obviousHallucinations.test(rawText) &&
       !hallucinationRegex.test(rawText);
 
-    // Only record cost if transcription is valid
     if (isValidTranscription) {
-      // Cost recording removed as per request
-      /*
       recordCostFromBase({
         lessonId,
         schoolId: teacher.schoolId,
         teacherId: teacher.teacherId,
-        provider: OPENAI_PROVIDER_NAME,
+        provider: "Google",
+        model: OPENROUTER_TRANSCRIPTION_MODEL,
         category: "live_transcription",
-        baseAmountPLN: fragmentCost
+        baseAmountPLN: baseAmountPLN,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        requestId: geminiResponse.requestId,
+        latencyMs: geminiResponse.latencyMs
       });
-      */
-    } else {
-      console.log(`[❌] Skipping cost - transcription filtered`);
     }
 
     const text = isValidTranscription ? rawText : "";
     return res.json({
       text,
-      durationSec,
+      durationSec: undefined, // Gemini nie zwraca czasu trwania w prosty sposób
       cost: getCostSummary(lessonId).total,
       limitReached: getCostSummary(lessonId).exceeded
     });
   } catch (error) {
-    console.error(`[❌] Transcription failed:`, error.message);
-
-    // Handle specific error cases
-    if (error.response) {
-      console.error('[transcribe] API response error:', {
-        status: error.response.status,
-        data: error.response.data
-      });
-      return res.status(500).json({
-        error: `Whisper API error: ${error.response.data?.error?.message || error.message}`,
-        details: error.response.data
-      });
-    }
-
-    return res.status(500).json({ error: `Whisper transcription failed: ${error.message}` });
+    console.error(`[❌] Gemini Transcription failed:`, error.message);
+    return res.status(500).json({ error: `Gemini transcription failed: ${error.message}` });
   }
 });
 

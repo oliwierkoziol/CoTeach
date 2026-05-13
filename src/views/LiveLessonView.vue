@@ -195,10 +195,10 @@
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
               <option value="webspeech" class="dark:bg-card dark:text-foreground">Web Speech API (Domyślne)</option>
-              <option value="whisper" class="dark:bg-card dark:text-foreground">Whisper AI (Zalecane dla jakości)</option>
+              <option value="whisper" class="dark:bg-card dark:text-foreground">Gemini Flash AI (Zalecane dla jakości)</option>
             </select>
             <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] dark:text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
-              {{ transcriptionMethod === 'whisper' ? 'Whisper AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
+              {{ transcriptionMethod === 'whisper' ? 'Gemini Flash AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
               <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1346,7 +1346,7 @@ async function startSession() {
       }
     }, 1000);
 
-    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Whisper' : 'Web Speech'})...`;
+    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Gemini Flash' : 'Web Speech'})...`;
     isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
 
     try {
@@ -1355,7 +1355,7 @@ async function startSession() {
 
       if (transcriptionMethod.value === 'whisper') {
         await beginWhisperMode();
-        info.value = "Whisper aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+        info.value = "Gemini Flash aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
       } else {
         await beginWebSpeechMode();
       }
@@ -1423,7 +1423,7 @@ function stopSession() {
 async function beginWebSpeechMode() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Whisper AI.");
+    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Gemini Flash AI.");
   }
 
   recognition.value = new SpeechRecognition();
@@ -1461,7 +1461,7 @@ async function beginWebSpeechMode() {
     if (event.error !== 'no-speech' && event.error !== 'aborted') {
       console.error("WebSpeech Error:", event.error);
       const errorMap = {
-        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Whisper AI.',
+        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Gemini Flash AI.',
         'not-allowed': 'Brak uprawnień do mikrofonu dla Web Speech API.',
       };
       error.value = errorMap[event.error] || `Błąd transkrypcji lokalnej: ${event.error}`;
@@ -1583,7 +1583,7 @@ async function beginWhisperMode() {
 
   mediaRecorder.value = recorder;
   sttStatus.value = "listening";
-  info.value = "Whisper aktywny. System wykrywa mowę i automatycznie wysyła fragmenty.";
+  info.value = "Gemini Flash aktywny. System wykrywa mowę i automatycznie wysyła fragmenty.";
 
   recorder.ondataavailable = (event) => {
     if (event.data && event.data.size > 0) {
@@ -1662,7 +1662,7 @@ async function beginWhisperMode() {
       const text = String(data.text || "").trim();
       console.log(`📝 Transcription: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
 
-      // Rozszerzone filtrowanie - usuwanie znanych halucynacji Whispera
+      // Rozszerzone filtrowanie - usuwanie znanych halucynacji AI
       const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
       const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
       const cleanText = text.trim();
@@ -1908,7 +1908,7 @@ async function checkApiHealth() {
 async function startMicTest() {
   try {
     error.value = "";
-    info.value = "Tryb testu: mów do mikrofonu - Whisper przetworzy Twój głos.";
+    info.value = "Tryb testu: mów do mikrofonu - Gemini Flash przetworzy Twój głos.";
     micTestActive.value = true;
     await beginMic();
   } catch (e) {

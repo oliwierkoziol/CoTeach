@@ -352,7 +352,7 @@ async function handleAudioLesson(event) {
     await uploadLessonMaterial(created.id, { rawText: extractedRawText, file: null });
     await startLive(created.id);
 
-    info.value = "Transkrybuję plik audio (Whisper AI)...";
+    info.value = "Transkrybuję plik audio (Gemini Flash AI)...";
     const transcriptText = await transcribeAudioFile(created.id, file);
 
     if (transcriptText) {
