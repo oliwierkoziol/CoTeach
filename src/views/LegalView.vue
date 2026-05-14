@@ -81,7 +81,7 @@
             <section>
               <h2 class="text-xl font-bold text-foreground">1. Administrator Danych</h2>
               <p class="text-muted-foreground">
-                Administratorem Państwa danych osobowych jest Maksymilian Kosno. W sprawach związanych z ochroną danych można kontaktować się pod adresem e-mail: mkosnoo@gmail.com.
+                Administratorem Państwa danych osobowych jest CoTeach Polska (Maksymilian Kosno, Oliwier Kozioł, Patryk Bilig, Jakub Szczygieł). W sprawach związanych z ochroną danych można kontaktować się pod adresem e-mail: kontakt@coteach.pl.
               </p>
             </section>
 

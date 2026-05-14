@@ -27,7 +27,31 @@
           </p>
         </header>
 
-        <div class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
+        <div v-if="registrationSuccess" class="rounded-xl border border-primary/30 bg-card p-10 text-center shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
+          <div class="mb-6 flex justify-center">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            </div>
+          </div>
+          <h2 class="font-['Plus_Jakarta_Sans'] text-2xl font-bold text-foreground mb-4">Sprawdź swoją pocztę!</h2>
+          <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground mb-8">
+            Wysłaliśmy link aktywacyjny na adres <span class="font-bold text-foreground">{{ registeredEmail }}</span>. 
+            Kliknij go, aby potwierdzić konto i zacząć korzystać z CoTeach.
+          </p>
+          <div class="space-y-4">
+            <button
+              @click="registrationSuccess = false"
+              class="w-full rounded-lg border border-border bg-background py-3 text-sm font-bold text-foreground transition hover:bg-muted"
+            >
+              Wróć do logowania
+            </button>
+            <p class="text-[11px] text-muted-foreground">
+              Nie widzisz maila? Sprawdź folder Spam lub <router-link to="/login" class="text-primary font-bold">zaloguj się</router-link>, aby wysłać go ponownie.
+            </p>
+          </div>
+        </div>
+
+        <div v-else class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
           <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
             <button
               type="button"
@@ -86,9 +110,10 @@
             </div>
             <button
               type="submit"
-              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+              :disabled="loading"
+              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
             >
-              Zarejestruj się
+              {{ loading ? 'Tworzenie konta...' : 'Zarejestruj się' }}
             </button>
           </form>
 
@@ -143,9 +168,10 @@
             </div>
             <button
               type="submit"
-              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+              :disabled="loading"
+              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
             >
-              Zarejestruj konto organizacji
+              {{ loading ? 'Tworzenie konta...' : 'Zarejestruj konto organizacji' }}
             </button>
           </form>
 
@@ -164,26 +190,26 @@
               Zarejestruj się przez Google
             </button>
           </template>
-        </div>
 
-        <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {{ errorMessage }}
-        </div>
-        <div v-if="infoMessage" class="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-          {{ infoMessage }}
-        </div>
+          <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {{ errorMessage }}
+          </div>
+          <div v-if="infoMessage" class="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+            {{ infoMessage }}
+          </div>
 
-        <p class="mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
-          Rejestrując się, akceptujesz nasz 
-          <router-link to="/legal?tab=terms" class="font-bold text-primary hover:underline">Regulamin</router-link> 
-          oraz 
-          <router-link to="/legal?tab=privacy" class="font-bold text-primary hover:underline">Politykę Prywatności (RODO)</router-link>.
-        </p>
+          <p class="mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
+            Rejestrując się, akceptujesz nasz 
+            <router-link to="/legal?tab=terms" class="font-bold text-primary hover:underline">Regulamin</router-link> 
+            oraz 
+            <router-link to="/legal?tab=privacy" class="font-bold text-primary hover:underline">Politykę Prywatności (RODO)</router-link>.
+          </p>
 
-        <p class="mt-4 text-center text-sm text-muted-foreground">
-          Masz już konto? 
-          <router-link to="/login" class="font-bold text-primary hover:underline">Zaloguj się</router-link>
-        </p>
+          <p class="mt-4 text-center text-sm text-muted-foreground">
+            Masz już konto? 
+            <router-link to="/login" class="font-bold text-primary hover:underline">Zaloguj się</router-link>
+          </p>
+        </div>
 
       </div>
     </div>
@@ -207,6 +233,9 @@ const businessEmail = ref("");
 const businessOrganization = ref("");
 const errorMessage = ref("");
 const infoMessage = ref("");
+const loading = ref(false);
+const registrationSuccess = ref(false);
+const registeredEmail = ref("");
 
 async function upsertProfileRow({ id, email, fullName, schoolId, organisation = false }) {
   if (!id) return;
@@ -229,6 +258,7 @@ async function upsertProfileRow({ id, email, fullName, schoolId, organisation = 
 async function handleRegister() {
   errorMessage.value = "";
   infoMessage.value = "";
+  loading.value = true;
 
   const fullName = String(name.value || "").trim();
   const normalizedEmail = String(email.value || "").trim().toLowerCase();
@@ -237,6 +267,7 @@ async function handleRegister() {
 
   if (fullName.split(/\s+/).filter(Boolean).length < 2) {
     errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
+    loading.value = false;
     return;
   }
 
@@ -250,6 +281,8 @@ async function handleRegister() {
       }
     }
   });
+
+  loading.value = false;
 
   if (error) {
     errorMessage.value = error.message;
@@ -281,14 +314,15 @@ async function handleRegister() {
       PENDING_PROFILE_SEED_KEY,
       JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: false, created_at: Date.now() })
     );
-    infoMessage.value =
-      "Konto utworzone. Wysłaliśmy e-mail potwierdzający - sprawdź skrzynkę (także Spam) i kliknij link.";
+    registeredEmail.value = normalizedEmail;
+    registrationSuccess.value = true;
   }
 }
 
 async function handleBusinessRegister() {
   errorMessage.value = "";
   infoMessage.value = "";
+  loading.value = true;
 
   const fullName = String(name.value || "").trim();
   const organizationName = String(businessOrganization.value || "").trim();
@@ -298,14 +332,17 @@ async function handleBusinessRegister() {
 
   if (!organizationName) {
     errorMessage.value = "Podaj nazwę organizacji.";
+    loading.value = false;
     return;
   }
   if (fullName.split(/\s+/).filter(Boolean).length < 2) {
     errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
+    loading.value = false;
     return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     errorMessage.value = "Podaj poprawny adres e-mail.";
+    loading.value = false;
     return;
   }
 
@@ -322,6 +359,8 @@ async function handleBusinessRegister() {
       }
     }
   });
+
+  loading.value = false;
 
   if (error) {
     errorMessage.value = error.message;
@@ -353,8 +392,8 @@ async function handleBusinessRegister() {
       PENDING_PROFILE_SEED_KEY,
       JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: true, created_at: Date.now() })
     );
-    infoMessage.value =
-      "Konto organizacji utworzone. Wysłaliśmy e-mail potwierdzający - sprawdź skrzynkę (także Spam) i kliknij link.";
+    registeredEmail.value = normalizedEmail;
+    registrationSuccess.value = true;
   }
 }
 

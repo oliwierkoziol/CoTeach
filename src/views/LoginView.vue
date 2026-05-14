@@ -137,7 +137,17 @@
         </div>
 
         <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {{ errorMessage }}
+          <div class="flex flex-col gap-2">
+            <span>{{ errorMessage }}</span>
+            <button
+              v-if="showResendButton"
+              @click="handleResendConfirmation"
+              :disabled="resending"
+              class="text-left font-bold underline hover:no-underline disabled:opacity-50"
+            >
+              {{ resending ? 'Wysyłanie...' : 'Wyślij link ponownie' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="infoMessage" class="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
@@ -205,6 +215,8 @@ function storeCachedBusinessDomain(domain) {
 const businessEmailDomain = ref(readCachedBusinessDomain() || DEFAULT_BUSINESS_EMAIL_DOMAIN);
 const errorMessage = ref("");
 const infoMessage = ref("");
+const showResendButton = ref(false);
+const resending = ref(false);
 let googleAuthSubscription = null;
 
 function resolvePostLoginPath() {
@@ -318,6 +330,7 @@ async function syncProfileAfterLogin(session) {
 async function handleLogin() {
   errorMessage.value = "";
   infoMessage.value = "";
+  showResendButton.value = false;
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.value,
@@ -326,6 +339,9 @@ async function handleLogin() {
 
   if (error) {
     errorMessage.value = mapLoginErrorMessage(error, "individual");
+    if (error.message?.toLowerCase().includes("email not confirmed")) {
+      showResendButton.value = true;
+    }
     return;
   }
 
@@ -391,6 +407,9 @@ async function handleBusinessLogin() {
 
   if (error) {
     errorMessage.value = mapLoginErrorMessage(error, "business");
+    if (error.message?.toLowerCase().includes("email not confirmed")) {
+      showResendButton.value = true;
+    }
     return;
   }
 
@@ -443,6 +462,36 @@ async function handleGoogleAuth() {
   if (error) {
     localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
     errorMessage.value = error.message;
+  }
+}
+
+async function handleResendConfirmation() {
+  errorMessage.value = "";
+  infoMessage.value = "";
+  resending.value = true;
+
+  const emailToResend = accountMode.value === "individual" ? email.value : toBusinessEmail(businessLogin.value);
+
+  if (!emailToResend) {
+    errorMessage.value = "Wpisz swój adres e-mail, aby ponowić wysyłkę.";
+    resending.value = false;
+    return;
+  }
+
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: emailToResend,
+    options: {
+      emailRedirectTo: `${window.location.origin}/login`
+    }
+  });
+
+  resending.value = false;
+  if (error) {
+    errorMessage.value = error.message;
+  } else {
+    infoMessage.value = "Link aktywacyjny został wysłany ponownie. Sprawdź skrzynkę.";
+    showResendButton.value = false;
   }
 }
 
