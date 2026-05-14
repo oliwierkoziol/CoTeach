@@ -5,8 +5,16 @@
         <GuestHeader />
         <div class="flex-1 flex flex-col min-h-[calc(100vh-64px)]">
           <RouterView class="flex-1" />
-          <footer class="mt-auto z-50 w-full border-t border-white/10 bg-background/80 backdrop-blur-md px-4 py-3 text-center text-[10px] sm:text-xs text-muted-foreground">
-            &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+          <footer class="mt-auto z-50 w-full border-t border-white/10 bg-background/80 backdrop-blur-md px-4 py-4 text-center text-[10px] sm:text-xs text-muted-foreground">
+            <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
+              <div>
+                &copy; Copyright CoTeach {{ new Date().getFullYear() }}. Wszelkie prawa zastrzeżone. Kopiowanie i rozpowszechnianie projektu zabronione.
+              </div>
+              <div class="flex gap-6 font-bold uppercase tracking-widest text-[9px] sm:text-[10px]">
+                <router-link to="/legal?tab=terms" class="hover:text-primary transition-colors">Regulamin</router-link>
+                <router-link to="/legal?tab=privacy" class="hover:text-primary transition-colors">RODO</router-link>
+              </div>
+            </div>
           </footer>
         </div>
       </template>
