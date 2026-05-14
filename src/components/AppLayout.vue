@@ -21,7 +21,7 @@
         </RouterLink>
 
         <!-- Moja Klasa Dropdown -->
-        <div class="flex items-center hidden sm:flex w-[240px]">
+        <div id="tour-class-selector" class="flex items-center hidden sm:flex w-[240px]">
           <div class="w-full bg-white dark:bg-card h-[40px] relative rounded-xl flex items-center transition-all border border-border/40 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40">
             <select v-model="selectedClass" class="bg-transparent border-none outline-none w-full h-full pl-5 pr-10 appearance-none text-[14px] font-medium text-foreground dark:text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer">
               <option value="" class="dark:bg-card dark:text-foreground">Wszystkie klasy</option>
@@ -117,6 +117,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
           v-slot="{ href, navigate }"
         >
           <a
+            id="tour-start-lesson"
             :href="href"
             :class="[
               'mb-4 flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-colors',
@@ -158,7 +159,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
 
           <!-- Dodaj materiały -->
           <RouterLink to="/notes" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
+            <a id="tour-add-notes" :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-5 w-4 shrink-0" fill="none" viewBox="0 0 16 20">
                 <path d="M7 17H9V12.825L10.6 14.425L12 13L8 9L4 13L5.425 14.4L7 12.825V17ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H10L16 6V18C16 18.55 15.8042 19.0208 15.4125 19.4125C15.0208 19.8042 14.55 20 14 20H2ZM9 7V2H2V18H14V7H9ZM2 2V7V2V7V18V2Z" fill="currentColor"/>
               </svg>
@@ -178,7 +179,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
 
           <!-- Prezentacja -->
           <RouterLink :to="presentationHref" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
+            <a id="tour-presentations" :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-4 w-5 shrink-0" fill="none" viewBox="0 0 20 16">
                 <path d="M9 12H11V7.85L12.6 9.425L14.025 8L10 4L6 8L7.425 9.4L9 7.825V12ZM2 16C1.45 16 0.979167 15.8042 0.5875 15.4125C0.195833 15.0208 0 14.55 0 14V2C0 1.45 0.195833 0.979167 0.5875 0.5875C0.979167 0.195833 1.45 0 2 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H2ZM2 14H18V2H2V14ZM2 14V2V14Z" fill="currentColor"/>
               </svg>
@@ -189,7 +190,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
 
           <!-- Sprawdziany -->
           <RouterLink to="/quiz" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
+            <a id="tour-quizzes" :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -200,7 +201,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
 
           <!-- Archiwum -->
           <RouterLink to="/archive" custom v-slot="{ href, navigate, isActive }">
-            <a :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
+            <a id="tour-archive" :href="href" :class="['flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-colors', isActive ? 'bg-primary/10 text-primary' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground']" @click="navigate(); open = false;">
               <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
                 <path d="M8 12H12V10H8V12ZM8 9H16V7H8V9ZM8 6H16V4H8V6ZM6 16C5.45 16 4.97917 15.8042 4.5875 15.4125C4.19583 15.0208 4 14.55 4 14V2C4 1.45 4.19583 0.979167 4.5875 0.5875C4.97917 0.195833 5.45 0 6 0H18C18.55 0 19.0208 0.195833 19.4125 0.5875C19.8042 0.979167 20 1.45 20 2V14C20 14.55 19.8042 15.0208 19.4125 15.4125C19.0208 15.8042 18.55 16 18 16H6ZM6 14H18V2H6V14ZM2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4H2V18H16V20H2ZM6 2V14V2Z" fill="currentColor"/>
               </svg>
@@ -291,6 +292,7 @@ open ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full md:translat
         </div>
       </footer>
     </main>
+    <ProductTour />
   </div>
 </template>
 
@@ -302,6 +304,7 @@ import { useLessonStore } from "../composables/useLessonStore";
 import { useTheme } from "../composables/useTheme";
 import organisationIcon from "../assets/organisation.svg";
 import screenIcon from "../assets/screen.svg";
+import ProductTour from "./ProductTour.vue";
 
 defineProps({
   licenseWarning: {

@@ -21,9 +21,6 @@
       </div>
     </header>
 
-    <!-- Tutorial -->
-    <DashboardTutorial />
-
     <!-- Trial Activation Banner -->
     <div v-if="showTrialBanner" class="mb-8 relative z-10">
       <div class="bg-gradient-to-r from-[#0053db] to-[#0c3dfe] rounded-2xl p-6 shadow-lg shadow-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -166,7 +163,6 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { supabase } from "../supabase";
-import DashboardTutorial from "../components/DashboardTutorial.vue";
 import iconOne from "../assets/1.svg";
 import iconTwo from "../assets/2.svg";
 import iconThree from "../assets/3.svg";
