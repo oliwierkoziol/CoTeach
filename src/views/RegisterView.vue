@@ -20,10 +20,10 @@
       <div class="w-full max-w-md">
         <header class="mb-8 lg:text-left text-center">
           <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-foreground text-[36px] tracking-[-0.9px] leading-[40px] mb-2">
-            Rejestracja
+            Dostęp do platformy
           </h1>
           <p class="font-['Plus_Jakarta_Sans'] text-muted-foreground text-[18px] leading-[28px]">
-            Dołącz do CoTeach i zacznij uczyć efektywniej.
+            Aktualnie rejestracja nowych kont jest ograniczona.
           </p>
         </header>
 
@@ -51,164 +51,24 @@
           </div>
         </div>
 
-        <div v-else class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
-          <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
-            <button
-              type="button"
-              class="rounded-md px-3 py-2 text-sm font-bold transition-all"
-              :class="accountMode === 'individual' ? 'bg-card text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:bg-background/70'"
-              @click="accountMode = 'individual'"
-            >
-              Indywidualne
-            </button>
-            <button
-              type="button"
-              class="rounded-md px-3 py-2 text-sm font-bold transition-all"
-              :class="accountMode === 'business' ? 'bg-card text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:bg-background/70'"
-              @click="accountMode = 'business'"
-            >
-              Organizacji
-            </button>
+        <div class="rounded-xl border border-border bg-card p-8 shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)]">
+          <div class="mb-6 flex justify-center text-primary/60">
+            <div class="p-4 rounded-full bg-primary/5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
           </div>
-
-          <form v-if="accountMode === 'individual'" @submit.prevent="handleRegister" class="space-y-5">
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Imię i nazwisko</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="name"
-                  type="text"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="Jan Kowalski"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Email</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="email"
-                  type="email"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="twoj@email.com"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Hasło</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="password"
-                  type="password"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
-            >
-              {{ loading ? 'Tworzenie konta...' : 'Zarejestruj się' }}
-            </button>
-          </form>
-
-          <form v-else @submit.prevent="handleBusinessRegister" class="space-y-5">
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Organizacja</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="businessOrganization"
-                  type="text"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="np. Szkoła Podstawowa nr 1"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">E-mail organizacyjny</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="businessEmail"
-                  type="email"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="np. biuro@twoja-firma.pl"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Imię i nazwisko</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="name"
-                  type="text"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="Jan Kowalski"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px]">Hasło</label>
-              <div class="bg-input-background border border-border h-[48px] rounded-lg w-full flex items-center px-4 transition-colors focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  v-model="password"
-                  type="password"
-                  required
-                  class="bg-transparent border-none outline-none w-full text-[16px] text-foreground placeholder:text-muted-foreground font-['Plus_Jakarta_Sans']"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50"
-            >
-              {{ loading ? 'Tworzenie konta...' : 'Zarejestruj konto organizacji' }}
-            </button>
-          </form>
-
-          <template v-if="accountMode === 'individual'">
-            <div class="my-6 flex items-center gap-3">
-              <span class="h-px flex-1 bg-border"></span>
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">lub</span>
-              <span class="h-px flex-1 bg-border"></span>
-            </div>
-
-            <button
-              type="button"
-              @click="handleGoogleAuth"
-              class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition hover:bg-muted"
-            >
-              Zarejestruj się przez Google
-            </button>
-          </template>
-
-          <div v-if="errorMessage" class="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {{ errorMessage }}
-          </div>
-          <div v-if="infoMessage" class="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-            {{ infoMessage }}
-          </div>
-
-          <p class="mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
-            Rejestrując się, akceptujesz nasz 
-            <router-link to="/legal?tab=terms" class="font-bold text-primary hover:underline">Regulamin</router-link> 
-            oraz 
-            <router-link to="/legal?tab=privacy" class="font-bold text-primary hover:underline">Politykę Prywatności (RODO)</router-link>.
+          
+          <p class="font-['Plus_Jakarta_Sans'] text-foreground text-[16px] leading-[26px] text-center mb-8">
+            Rejestracja została wyłączona. Jeśli jesteś testerem, a nie masz dostępu poiformuj nas mailowo: 
+            <a href="mailto:kontakt@coteach.pl" class="text-primary font-bold hover:underline">kontakt@coteach.pl</a>
           </p>
 
-          <p class="mt-4 text-center text-sm text-muted-foreground">
-            Masz już konto? 
-            <router-link to="/login" class="font-bold text-primary hover:underline">Zaloguj się</router-link>
-          </p>
+          <router-link 
+            to="/login" 
+            class="flex items-center justify-center w-full rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)]"
+          >
+            Wróć do logowania
+          </router-link>
         </div>
 
       </div>
@@ -217,213 +77,4 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import { supabase } from "../supabase";
-
-const PENDING_PROFILE_SEED_KEY = "pendingProfileSeed";
-const GOOGLE_AUTH_INTENT_KEY = "googleAuthIntent";
-
-const router = useRouter();
-const accountMode = ref("individual");
-const name = ref("");
-const email = ref("");
-const password = ref("");
-const businessEmail = ref("");
-const businessOrganization = ref("");
-const errorMessage = ref("");
-const infoMessage = ref("");
-const loading = ref(false);
-const registrationSuccess = ref(false);
-const registeredEmail = ref("");
-
-async function upsertProfileRow({ id, email, fullName, schoolId, organisation = false }) {
-  if (!id) return;
-  const teacherId = `teacher-${crypto.randomUUID()}`;
-  await supabase.from("profiles").upsert(
-    {
-      id,
-      email: email || null,
-      full_name: fullName || null,
-      school_id: schoolId || null,
-      organisation: organisation === true,
-      teacher_id: teacherId,
-      terms_accepted: false,
-      updated_at: new Date().toISOString()
-    },
-    { onConflict: "id" }
-  );
-}
-
-async function handleRegister() {
-  errorMessage.value = "";
-  infoMessage.value = "";
-  loading.value = true;
-
-  const fullName = String(name.value || "").trim();
-  const normalizedEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = null;
-  const emailConfirmRedirect = `${window.location.origin}/login`;
-
-  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
-    errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
-    loading.value = false;
-    return;
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password: password.value,
-    options: {
-      emailRedirectTo: emailConfirmRedirect,
-      data: {
-        full_name: fullName
-      }
-    }
-  });
-
-  loading.value = false;
-
-  if (error) {
-    errorMessage.value = error.message;
-    return;
-  }
-
-  const userId = data?.user?.id || "";
-  const session = data?.session;
-
-  if (session && userId) {
-    try {
-      await upsertProfileRow({
-        id: userId,
-        email: normalizedEmail,
-        fullName,
-        schoolId,
-        organisation: false
-      });
-      localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
-    } catch {
-      // Keep registration successful even if profile upsert is temporarily unavailable.
-    }
-    router.push("/dashboard");
-    return;
-  }
-
-  if (data?.user) {
-    localStorage.setItem(
-      PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: false, created_at: Date.now() })
-    );
-    registeredEmail.value = normalizedEmail;
-    registrationSuccess.value = true;
-  }
-}
-
-async function handleBusinessRegister() {
-  errorMessage.value = "";
-  infoMessage.value = "";
-  loading.value = true;
-
-  const fullName = String(name.value || "").trim();
-  const organizationName = String(businessOrganization.value || "").trim();
-  const schoolId = null;
-  const normalizedEmail = String(businessEmail.value || "").trim().toLowerCase();
-  const emailConfirmRedirect = `${window.location.origin}/login`;
-
-  if (!organizationName) {
-    errorMessage.value = "Podaj nazwę organizacji.";
-    loading.value = false;
-    return;
-  }
-  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
-    errorMessage.value = "Podaj pełne imię i nazwisko (rozdzielone spacją).";
-    loading.value = false;
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    errorMessage.value = "Podaj poprawny adres e-mail.";
-    loading.value = false;
-    return;
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password: password.value,
-    options: {
-      emailRedirectTo: emailConfirmRedirect,
-      data: {
-        full_name: fullName,
-        account_type: "business",
-        business_login: normalizedEmail.split("@")[0] || "",
-        organization_name: organizationName
-      }
-    }
-  });
-
-  loading.value = false;
-
-  if (error) {
-    errorMessage.value = error.message;
-    return;
-  }
-
-  const userId = data?.user?.id || "";
-  const session = data?.session;
-
-  if (session && userId) {
-    try {
-      await upsertProfileRow({
-        id: userId,
-        email: normalizedEmail,
-        fullName,
-        schoolId,
-        organisation: true
-      });
-      localStorage.removeItem(PENDING_PROFILE_SEED_KEY);
-    } catch {
-      // Keep registration successful even if profile upsert is temporarily unavailable.
-    }
-    router.push("/dashboard");
-    return;
-  }
-
-  if (data?.user) {
-    localStorage.setItem(
-      PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: normalizedEmail, full_name: fullName, school_id: schoolId, organisation: true, created_at: Date.now() })
-    );
-    registeredEmail.value = normalizedEmail;
-    registrationSuccess.value = true;
-  }
-}
-
-async function handleGoogleAuth() {
-  errorMessage.value = "";
-  infoMessage.value = "";
-
-  const fullName = String(name.value || "").trim();
-  const fallbackEmail = String(email.value || "").trim().toLowerCase();
-  const schoolId = null;
-
-  if (fullName || fallbackEmail) {
-    localStorage.setItem(
-      PENDING_PROFILE_SEED_KEY,
-      JSON.stringify({ email: fallbackEmail, full_name: fullName, school_id: schoolId, created_at: Date.now() })
-    );
-  }
-
-  localStorage.setItem(GOOGLE_AUTH_INTENT_KEY, "register");
-  const redirectTo = `${window.location.origin}/login`;
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo
-    }
-  });
-
-  if (error) {
-    localStorage.removeItem(GOOGLE_AUTH_INTENT_KEY);
-    errorMessage.value = error.message;
-  }
-}
 </script>
