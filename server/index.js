@@ -4800,6 +4800,21 @@ loadSchoolsFromSupabase()
         console.error("Cleanup expired homework failed:", error.message || error);
       });
     }, 10_000);
+    
+    // Serve static files from the 'dist' directory
+    const distPath = path.resolve(process.cwd(), "dist");
+    app.use(express.static(distPath));
+
+    // Catch-all route to serve index.html for Vue Router (History Mode)
+    app.get("*", (req, res) => {
+      // Only serve index.html if it's not an API request
+      if (!req.path.startsWith("/api/")) {
+        res.sendFile(path.join(distPath, "index.html"));
+      } else {
+        res.status(404).json({ error: "API route not found" });
+      }
+    });
+
     app.listen(port, () => {
       console.log(`API listening at http://localhost:${port}`);
     });
