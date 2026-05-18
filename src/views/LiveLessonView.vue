@@ -184,21 +184,21 @@
           </div>
         </div>
 
-        <!-- Metoda transkrypcji -->
+        <!-- Język Transkrybowania -->
         <div class="space-y-2">
           <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">
-            Metoda transkrypcji
+            Język Transkrybowania
           </label>
           <div class="bg-[#e0e3e6] dark:bg-input-background rounded-lg px-4 py-3 flex items-center justify-between relative">
             <select
               v-model="transcriptionMethod"
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
-              <option value="webspeech" class="dark:bg-card dark:text-foreground">Web Speech API (Domyślne)</option>
-              <option value="whisper" class="dark:bg-card dark:text-foreground">Gemini Flash AI (Zalecane dla jakości)</option>
+              <option value="webspeech" class="dark:bg-card dark:text-foreground">Język polski</option>
+              <option value="whisper" disabled class="dark:bg-card dark:text-foreground text-gray-400">Języki mieszane (wkrótce)</option>
             </select>
             <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] dark:text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
-              {{ transcriptionMethod === 'whisper' ? 'Gemini Flash AI (Zalecane dla jakości)' : 'Web Speech API (Domyślne)' }}
+              {{ transcriptionMethod === 'whisper' ? 'Języki mieszane (wkrótce)' : 'Język polski' }}
             </span>
             <svg class="size-6 pointer-events-none shrink-0" fill="none" viewBox="0 0 24 24">
               <path d="M12 9.6L16.8 14.4L21.6 9.6" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -1346,7 +1346,7 @@ async function startSession() {
       }
     }, 1000);
 
-    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Gemini Flash' : 'Web Speech'})...`;
+    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Języki mieszane (wkrótce)' : 'Język polski'})...`;
     isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
 
     try {
@@ -1355,7 +1355,7 @@ async function startSession() {
 
       if (transcriptionMethod.value === 'whisper') {
         await beginWhisperMode();
-        info.value = "Gemini Flash aktywny. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+        info.value = "Języki mieszane (wkrótce) aktywne. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
       } else {
         await beginWebSpeechMode();
       }
@@ -1423,7 +1423,7 @@ function stopSession() {
 async function beginWebSpeechMode() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    throw new Error("Twoja przeglądarka nie obsługuje Web Speech API. Użyj Gemini Flash AI.");
+    throw new Error("Twoja przeglądarka nie obsługuje lokalnej transkrypcji (Web Speech API). Użyj trybu języków mieszanych.");
   }
 
   recognition.value = new SpeechRecognition();
@@ -1436,7 +1436,7 @@ async function beginWebSpeechMode() {
 
   recognition.value.onstart = () => {
     sttStatus.value = "listening";
-    info.value = "Web Speech API aktywne. Transkrypcja odbywa się lokalnie w przeglądarce.";
+    info.value = "Transkrypcja w języku polskim aktywna. Przetwarzanie odbywa się lokalnie w przeglądarce.";
   };
 
   recognition.value.onresult = async (event) => {
@@ -1464,8 +1464,8 @@ async function beginWebSpeechMode() {
     if (event.error !== 'no-speech' && event.error !== 'aborted') {
       console.error("WebSpeech Error:", event.error);
       const errorMap = {
-        'network': 'Błąd sieci: Web Speech API nie może połączyć się z serwerem Google. Sprawdź internet lub użyj Gemini Flash AI.',
-        'not-allowed': 'Brak uprawnień do mikrofonu dla Web Speech API.',
+        'network': 'Błąd sieci: transkrypcja lokalna (Język polski) nie może połączyć się z serwerem Google. Sprawdź internet lub użyj trybu języków mieszanych.',
+        'not-allowed': 'Brak uprawnień do mikrofonu dla transkrypcji lokalnej.',
       };
       error.value = errorMap[event.error] || `Błąd transkrypcji lokalnej: ${event.error}`;
     } else {
@@ -1955,7 +1955,7 @@ async function checkApiHealth() {
 async function startMicTest() {
   try {
     error.value = "";
-    info.value = "Tryb testu: mów do mikrofonu - Gemini Flash przetworzy Twój głos.";
+    info.value = "Tryb testu: mów do mikrofonu - system w trybie języków mieszanych przetworzy Twój głos.";
     micTestActive.value = true;
     await beginMic();
   } catch (e) {
