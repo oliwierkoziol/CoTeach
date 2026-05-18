@@ -268,6 +268,33 @@
                 </p>
               </div>
             </div>
+
+            <!-- Action buttons inside active/selected homework element -->
+            <div v-if="selectedHomework?.id === lesson.id" class="mt-4 pt-3.5 border-t border-gray-100/70 flex flex-wrap gap-2.5" @click.stop>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                @click="openHomeworkLink"
+              >
+                Otwórz zadanie (link)
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+                @click="openHomeworkPreview"
+              >
+                Pokaż treść
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#e6e8eb] text-[#142588] font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
+                @click="openHomeworkEditorModal"
+              >
+                Edytuj treść
+              </button>
+            </div>
           </div>
 
           <div
@@ -573,6 +600,14 @@
                 Pokaż treść zadania
               </button>
 
+              <button
+                type="button"
+                class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+                @click="openHomeworkEditorModal"
+              >
+                Edytuj treść zadania
+              </button>
+
               <div class="pt-4 border-t border-gray-100">
                 <p class="text-xs text-[#767683] leading-relaxed">
                   Zadanie domowe jest powiązane z lekcją: <br/>
@@ -854,6 +889,120 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Homework Editor Modal -->
+    <Teleport to="body">
+      <div v-if="showHomeworkTextModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+        <div class="bg-white dark:bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] mx-4 overflow-hidden transform transition-all scale-100 flex flex-col z-[101]">
+          <!-- Header -->
+          <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-black dark:text-foreground flex items-center gap-2">
+              <span class="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </span>
+              Edycja zadania domowego (Markdown + LaTeX)
+            </h3>
+            <button @click="showHomeworkTextModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-foreground transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-border">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 flex flex-col gap-4 flex-grow overflow-hidden">
+            <!-- Asystent Matematyczny / Toolbar -->
+            <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#f0f2f4] dark:bg-input-background/50 border border-border rounded-xl w-full">
+              <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Wzory:</span>
+              
+              <button type="button" @click="insertMathInHomework('\\frac{a}{b}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Ułamek">
+                <span class="text-[10px] text-blue-500 font-bold">½</span> Ułamek
+              </button>
+
+              <button type="button" @click="insertMathInHomework('\\sqrt{x}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pierwiastek">
+                <span class="text-blue-500 font-bold">√</span> Pierwiastek
+              </button>
+
+              <button type="button" @click="insertMathInHomework('x^y')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Potęga">
+                <span class="text-blue-500 font-bold">x²</span> Potęga
+              </button>
+
+              <button type="button" @click="insertMathInHomework('x_i')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Indeks dolny">
+                <span class="text-blue-500 font-bold">xₙ</span> Indeks
+              </button>
+
+              <button type="button" @click="insertMathInHomework('\\cdot')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Mnożenie (kropka)">
+                <span class="text-blue-500 font-bold">·</span> Mnożenie
+              </button>
+
+              <button type="button" @click="insertMathInHomework('\\pm')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Plus-minus">
+                <span class="text-blue-500 font-bold">±</span> Plus-minus
+              </button>
+
+              <button type="button" @click="insertMathInHomework('\\pi')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pi">
+                <span class="text-blue-500 font-bold">π</span> Pi
+              </button>
+
+              <button type="button" @click="insertMathInHomework('\\infty')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Nieskończoność">
+                <span class="text-blue-500 font-bold">∞</span> Nieskończoność
+              </button>
+
+              <div class="h-4 w-[1px] bg-gray-300 dark:bg-border mx-1"></div>
+
+              <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Chemia:</span>
+
+              <button type="button" @click="insertMathInHomework('H_2O')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Woda">
+                <span class="text-green-500 font-bold">H₂O</span> Woda
+              </button>
+
+              <button type="button" @click="insertMathInHomework('CO_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Dwutlenek węgla">
+                <span class="text-green-500 font-bold">CO₂</span> CO₂
+              </button>
+
+              <button type="button" @click="insertMathInHomework('O_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Tlen">
+                <span class="text-green-500 font-bold">O₂</span> Tlen
+              </button>
+            </div>
+
+            <!-- Textarea Editor -->
+            <div class="flex-grow bg-[#e0e3e6] dark:bg-input-background relative rounded-xl flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 overflow-hidden">
+              <textarea 
+                ref="homeworkTextareaRef"
+                v-model="editHomeworkContent"
+                class="w-full h-full bg-transparent border-none outline-none p-6 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none"
+                placeholder="Wpisz treść zadania domowego w formacie Markdown lub wklej materiał..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-4 border-t border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+            <span class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-sm">
+              {{ editHomeworkContent.length }} / 25,000 Znaki
+            </span>
+            <div class="flex items-center gap-3">
+              <button 
+                type="button" 
+                @click="showHomeworkTextModal = false" 
+                class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-border rounded-xl transition-colors"
+              >
+                Zamknij
+              </button>
+              <button 
+                type="button" 
+                @click="handleSaveHomework" 
+                class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+                :disabled="saving"
+              >
+                {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -934,6 +1083,11 @@ const editNoteContent = ref("");
 const showRawTextModal = ref(false);
 const textareaRef = ref(null);
 const showMathModal = ref(false);
+
+// Homework editing state variables
+const showHomeworkTextModal = ref(false);
+const editHomeworkContent = ref("");
+const homeworkTextareaRef = ref(null);
 const mathModalIndex = ref(null);
 const mathModalDisplay = ref(false);
 const mathModalRaw = ref("");
@@ -1468,6 +1622,85 @@ async function handleDeleteHomework() {
     selectedHomework.value = null;
   } catch (e) {
     alert("Błąd podczas usuwania.");
+  }
+}
+
+function openHomeworkEditorModal() {
+  editHomeworkContent.value = selectedHomework.value?.homework || "";
+  showHomeworkTextModal.value = true;
+}
+
+function insertMathInHomework(latexExpr) {
+  const el = homeworkTextareaRef.value;
+  if (!el) {
+    editHomeworkContent.value += ` $${latexExpr}$`;
+    return;
+  }
+  
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const text = editHomeworkContent.value;
+  const formatted = `$${latexExpr}$`;
+  
+  editHomeworkContent.value = text.substring(0, start) + formatted + text.substring(end);
+  const newCursorPos = start + formatted.length;
+  
+  setTimeout(() => {
+    if (el) {
+      el.focus();
+      if (latexExpr.includes('{a}')) {
+        const offset = formatted.indexOf('{a}') + 1;
+        el.setSelectionRange(start + offset, start + offset + 1);
+      } else if (latexExpr.includes('{x}')) {
+        const offset = formatted.indexOf('{x}') + 1;
+        el.setSelectionRange(start + offset, start + offset + 1);
+      } else {
+        el.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }
+  }, 0);
+}
+
+async function handleSaveHomework() {
+  const hw = selectedHomework.value;
+  if (!hw || !hw.id) return;
+  try {
+    saving.value = true;
+    const { data: { session } } = await supabase.auth.getSession();
+    const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    const url = hw.isNote 
+      ? `${API_BASE}/api/notes/${hw.id}/homework`
+      : `${API_BASE}/api/lessons/${hw.id}/homework`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { 
+        "Authorization": `Bearer ${session?.access_token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        homework: editHomeworkContent.value
+      })
+    });
+
+    if (!res.ok) throw new Error("Failed to save homework");
+
+    // Sync back to local state
+    if (hw.isNote) {
+      const note = state.notes.find(n => n.id === hw.id);
+      if (note) note.homework = editHomeworkContent.value;
+    } else {
+      const lesson = state.lessons.find(l => l.id === hw.id);
+      if (lesson) lesson.homework = editHomeworkContent.value;
+    }
+    
+    // Also update selectedHomework content
+    hw.homework = editHomeworkContent.value;
+    showHomeworkTextModal.value = false;
+  } catch (e) {
+    window.alert(e?.message || "Nie udało się zapisać zadania domowego.");
+  } finally {
+    saving.value = false;
   }
 }
 
