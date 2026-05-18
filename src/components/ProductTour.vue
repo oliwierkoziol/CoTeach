@@ -132,7 +132,7 @@ const currentStepData = computed(() => steps[currentStepIndex.value]);
 const tooltipStyle = computed(() => {
   if (isMobile.value) {
     return {
-      bottom: '24px',
+      bottom: 'max(12vh, 90px)',
       left: '50%',
       transform: 'translateX(-50%)',
       width: 'calc(100% - 32px)',
@@ -196,12 +196,8 @@ function updatePosition() {
   if (targetEl) {
     targetRect.value = targetEl.getBoundingClientRect();
     
-    // Only scroll & apply pulsing rings on desktop.
-    // On mobile, the sidebar is closed, so the target element is hidden/offscreen.
-    if (!isMobile.value) {
-      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      targetEl.classList.add('tour-target-highlight');
-    }
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    targetEl.classList.add('tour-target-highlight');
   } else {
     targetRect.value = null;
   }
@@ -218,9 +214,6 @@ function clearTargetStyles() {
 
 function handleResize() {
   isMobile.value = window.innerWidth < 768;
-  if (isMobile.value) {
-    clearTargetStyles();
-  }
   updatePosition();
 }
 
@@ -236,6 +229,11 @@ async function startTour() {
   isVisible.value = true;
   currentStepIndex.value = 0;
   isMobile.value = window.innerWidth < 768;
+  
+  if (isMobile.value) {
+    const menuBtn = document.querySelector('button[aria-label="Menu"]');
+    if (menuBtn) menuBtn.click();
+  }
   
   await nextTick();
   setTimeout(updatePosition, 500);
@@ -263,6 +261,11 @@ function dismiss() {
   clearTargetStyles();
   isVisible.value = false;
   
+  if (isMobile.value) {
+    const backdrop = document.getElementById('mobile-menu-backdrop');
+    if (backdrop) backdrop.click();
+  }
+  
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session?.user?.id) {
       const STORAGE_KEY = `coteach_product_tour_${session.user.id}`;
@@ -275,6 +278,11 @@ async function forceStartTour() {
   isVisible.value = true;
   currentStepIndex.value = 0;
   isMobile.value = window.innerWidth < 768;
+  
+  if (isMobile.value) {
+    const menuBtn = document.querySelector('button[aria-label="Menu"]');
+    if (menuBtn) menuBtn.click();
+  }
   
   await nextTick();
   setTimeout(updatePosition, 500);

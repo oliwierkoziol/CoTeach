@@ -97,6 +97,7 @@
 
     <div
       v-if="open"
+      id="mobile-menu-backdrop"
       class="fixed inset-0 z-[54] bg-black/40 backdrop-blur-sm md:hidden"
       aria-hidden="true"
       @click="open = false"
