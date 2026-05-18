@@ -459,6 +459,9 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
+  // Trial license is now handled via a dedicated button or during specific flows.
+  // We no longer automatically grant it here to ensure it's a deliberate action.
+
   await syncProfileLicenseStateSafe({ userId: user.id, activeLicense: getActiveUserLicense(user.id), profileSnapshot: profile });
   return { teacherId, userId: user.id, schoolId };
 }
