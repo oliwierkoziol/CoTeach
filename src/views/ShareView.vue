@@ -85,7 +85,7 @@
               </div>
             </div>
           </div>
-          <div v-else class="note-render-area" v-html="note.html"></div>
+          <div v-else class="note-render-area" v-html="renderedNoteContent"></div>
         </div>
       </div>
     </div>
@@ -131,6 +131,52 @@ const renderedHomework = computed(() => {
     }
   });
 });
+
+const renderedNoteContent = computed(() => {
+  const content = note.value?.html || "";
+  if (isTranscript.value || isHomework.value) return "";
+
+  // Check if content looks like HTML. If it does, return as-is
+  const hasHtml = /<[a-z][\s\S]*>/i.test(content);
+  if (hasHtml) return content;
+
+  // Otherwise compile it as Markdown + KaTeX using our high-fidelity function
+  return renderMarkdownWithMath(content);
+});
+
+function renderMarkdownWithMath(text) {
+  if (!text) return "";
+  
+  let str = String(text);
+  str = str.replace(/\\\\/g, "\\");
+
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  
+  str = str.replace(regex, (match) => {
+    const isDisplay = match.startsWith('$$');
+    const mathExp = isDisplay ? match.slice(2, -2) : match.slice(1, -1);
+    
+    try {
+      const cleanMath = mathExp.trim()
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+      
+      const rendered = katex.renderToString(cleanMath, {
+        throwOnError: false,
+        displayMode: isDisplay,
+        strict: false
+      });
+      
+      return rendered;
+    } catch (e) {
+      console.warn("KaTeX rendering error:", e);
+      return match;
+    }
+  });
+
+  return marked.parse(str);
+}
 
 onMounted(async () => {
   try {

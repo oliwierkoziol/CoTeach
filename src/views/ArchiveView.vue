@@ -165,7 +165,7 @@
             v-for="note in filteredNotes"
             :key="note.id"
             class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            :class="selectedNote?.id === note.id ? 'ring-2 ring-[#0c3dfe]/40 bg-blue-50/15' : 'hover:bg-[#f5f7fb]'"
             @click="selectedNote = note"
           >
             <div class="flex w-full items-center gap-4">
@@ -176,9 +176,28 @@
                 </h3>
                 <p class="font-['Inter'] text-[#454652] text-[14px] mt-1">
                   <span v-if="note.class_name" class="font-semibold text-[#0c3dfe]">{{ note.class_name }} • </span>
-                  {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || "Brak poziomu" }}
+                  {{ note.subject || "Brak przedmiotu" }} • {{ note.classLevel || note.class_level || "Brak poziomu" }}
                 </p>
               </div>
+            </div>
+
+            <!-- Action buttons inside active/selected note element -->
+            <div v-if="selectedNote?.id === note.id" class="mt-4 pt-3.5 border-t border-gray-100/70 flex flex-wrap gap-2.5" @click.stop>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                @click="openTeacherNoteLink"
+              >
+                Otwórz notatkę (link)
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+                @click="openTeacherNotePreview"
+              >
+                Pokaż treść
+              </button>
             </div>
           </div>
 
@@ -375,23 +394,42 @@
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Tytuł</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.title || "Bez tytułu" }}</div>
+                <input v-model="editNoteTitle" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Tytuł notatki" />
               </div>
             </div>
 
             <div class="space-y-2">
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Przedmiot</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.subject || "Brak" }}</div>
+                <input v-model="editNoteSubject" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]" placeholder="Przedmiot" />
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom</label>
-              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
-                <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedNote.classLevel || "Brak" }}</div>
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Poziom Klasy</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2">
+                <select v-model="editNoteClassLevel" class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] cursor-pointer">
+                  <option v-for="level in classOptions" :key="level" :value="level">{{ level }}</option>
+                </select>
               </div>
             </div>
+
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#7b3400] text-[#ffa26e] font-['Inter'] font-semibold py-2.5 hover:bg-[#6a2d00] transition-colors disabled:opacity-60 cursor-pointer"
+              :disabled="saving"
+              @click="handleSaveTeacherNote"
+            >
+              {{ saving ? "Zapisywanie..." : "Zapisz zmiany" }}
+            </button>
+
+            <button
+              type="button"
+              class="w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+              @click="openRawTextModalForNote"
+            >
+              Edytuj treść notatki
+            </button>
 
             <button
               type="button"
@@ -400,12 +438,18 @@
             >
               Pokaż treść notatki
             </button>
-            <!-- <RouterLink
-              to="/notes"
-              class="block w-full rounded-lg bg-[#e6e8eb] py-2.5 text-center font-['Inter'] font-semibold text-[#142588] hover:bg-[#d8dadd] transition-colors cursor-pointer"
+
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] mt-4">
+              Złota notatka (QR)
+            </h3>
+
+            <button
+              type="button"
+              class="w-full rounded-xl bg-[#f2f4f7] p-3 transition-colors hover:bg-[#e8ebf0] cursor-pointer"
+              @click="openQrModal"
             >
-              Przejdź do notatek
-            </RouterLink> -->
+              <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
+            </button>
           </div>
 
           <div v-else-if="activeTab === 'presentations' && selectedPresentation" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-6 space-y-4">
@@ -594,7 +638,7 @@
         class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4"
         @click.self="textPreviewOpen = false"
       >
-        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" @click.stop>
+        <div class="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" @click.stop>
           <div class="mb-4 flex justify-end">
             <button
               type="button"
@@ -604,7 +648,201 @@
               Zamknij
             </button>
           </div>
-          <pre class="whitespace-pre-wrap font-['Plus_Jakarta_Sans'] text-[14px] leading-relaxed text-[#191c1e]">{{ textPreviewBody }}</pre>
+          <div v-if="textPreviewIsHtml" v-html="textPreviewBody" class="prose max-w-none dark:prose-invert prose-slate prose-headings:font-bold prose-headings:text-[#0c3dfe] p-4"></div>
+          <div v-else v-html="renderMarkdownWithMath(textPreviewBody)" class="prose max-w-none dark:prose-invert prose-slate prose-headings:font-bold prose-headings:text-[#0c3dfe] p-4" @click="handlePreviewClick"></div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Beautiful KaTeX Math Editor Modal -->
+    <Teleport to="body">
+      <div v-if="showMathModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+        <div class="bg-white dark:bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100 flex flex-col z-[101]">
+          <!-- Header -->
+          <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-black dark:text-foreground flex items-center gap-2">
+              <span class="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+              </span>
+              Edytor wzoru matematycznego
+            </h3>
+            <button @click="showMathModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-foreground transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-border">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 flex flex-col gap-5">
+            <!-- Realtime Preview -->
+            <div class="flex flex-col gap-2">
+              <span class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Podgląd na żywo:</span>
+              <div class="min-h-[80px] bg-slate-50 dark:bg-input-background border border-dashed border-border rounded-xl flex items-center justify-center p-4 transition-all overflow-x-auto">
+                <div v-html="mathModalPreview || '<span class=\'text-gray-400 italic text-sm\'>Wpisz wzór...</span>'"></div>
+              </div>
+            </div>
+
+            <!-- Latex Input -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Zapis matematyczny:</label>
+              <input 
+                v-model="mathModalRaw"
+                type="text" 
+                class="w-full bg-[#e0e3e6] dark:bg-input-background border-none outline-none p-3.5 rounded-xl font-mono text-base text-black dark:text-foreground focus:ring-2 focus:ring-blue-500"
+                placeholder="Wpisz np. \frac{1}{2} lub x^2"
+                @keydown.enter="saveMathEditor"
+              />
+            </div>
+
+            <!-- Modal Helper Toolbar -->
+            <div class="flex flex-col gap-2">
+              <span class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Wstaw szablon:</span>
+              <div class="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 dark:bg-input-background/50 rounded-xl border border-border">
+                <button type="button" @click="mathModalRaw += '\\frac{a}{b}'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">½ Ułamek</button>
+                <button type="button" @click="mathModalRaw += '\\sqrt{x}'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">√ Pierwiastek</button>
+                <button type="button" @click="mathModalRaw += 'x^y'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">x² Potęga</button>
+                <button type="button" @click="mathModalRaw += 'x_i'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">xₙ Indeks</button>
+                <button type="button" @click="mathModalRaw += '\\cdot'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">· Kropka</button>
+                <button type="button" @click="mathModalRaw += '\\pm'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">± Plus-minus</button>
+                <button type="button" @click="mathModalRaw += '\\pi'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">π Pi</button>
+                <button type="button" @click="mathModalRaw += '\\infty'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">∞ Nieskończoność</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-4 border-t border-border flex items-center justify-end gap-3 bg-gray-50 dark:bg-card/50">
+            <button 
+              type="button" 
+              @click="showMathModal = false" 
+              class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-border rounded-xl transition-colors"
+            >
+              Anuluj
+            </button>
+            <button 
+              type="button" 
+              @click="saveMathEditor" 
+              class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            >
+              Zapisz zmiany
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Raw Text Editor Modal -->
+    <Teleport to="body">
+      <div v-if="showRawTextModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+        <div class="bg-white dark:bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] mx-4 overflow-hidden transform transition-all scale-100 flex flex-col z-[101]">
+          <!-- Header -->
+          <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+            <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-black dark:text-foreground flex items-center gap-2">
+              <span class="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </span>
+              Edycja treści notatki (Markdown + LaTeX)
+            </h3>
+            <button @click="showRawTextModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-foreground transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-border">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 flex flex-col gap-4 flex-grow overflow-hidden">
+            <!-- Asystent Matematyczny / Toolbar -->
+            <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#f0f2f4] dark:bg-input-background/50 border border-border rounded-xl w-full">
+              <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Wzory:</span>
+              
+              <button type="button" @click="insertMath('\\frac{a}{b}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Ułamek">
+                <span class="text-[10px] text-blue-500 font-bold">½</span> Ułamek
+              </button>
+
+              <button type="button" @click="insertMath('\\sqrt{x}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pierwiastek">
+                <span class="text-blue-500 font-bold">√</span> Pierwiastek
+              </button>
+
+              <button type="button" @click="insertMath('x^y')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Potęga">
+                <span class="text-blue-500 font-bold">x²</span> Potęga
+              </button>
+
+              <button type="button" @click="insertMath('x_i')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Indeks dolny">
+                <span class="text-blue-500 font-bold">xₙ</span> Indeks
+              </button>
+
+              <button type="button" @click="insertMath('\\cdot')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Mnożenie (kropka)">
+                <span class="text-blue-500 font-bold">·</span> Mnożenie
+              </button>
+
+              <button type="button" @click="insertMath('\\pm')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Plus-minus">
+                <span class="text-blue-500 font-bold">±</span> Plus-minus
+              </button>
+
+              <button type="button" @click="insertMath('\\pi')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pi">
+                <span class="text-blue-500 font-bold">π</span> Pi
+              </button>
+
+              <button type="button" @click="insertMath('\\infty')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Nieskończoność">
+                <span class="text-blue-500 font-bold">∞</span> Nieskończoność
+              </button>
+
+              <div class="h-4 w-[1px] bg-gray-300 dark:bg-border mx-1"></div>
+
+              <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Chemia:</span>
+
+              <button type="button" @click="insertMath('H_2O')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Woda">
+                <span class="text-green-500 font-bold">H₂O</span> Woda
+              </button>
+
+              <button type="button" @click="insertMath('CO_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Dwutlenek węgla">
+                <span class="text-green-500 font-bold">CO₂</span> CO₂
+              </button>
+
+              <button type="button" @click="insertMath('O_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Tlen">
+                <span class="text-green-500 font-bold">O₂</span> Tlen
+              </button>
+            </div>
+
+            <!-- Textarea Editor -->
+            <div class="flex-grow bg-[#e0e3e6] dark:bg-input-background relative rounded-xl flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 overflow-hidden">
+              <textarea 
+                ref="textareaRef"
+                v-model="editNoteContent"
+                class="w-full h-full bg-transparent border-none outline-none p-6 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none"
+                placeholder="Wpisz treść notatki w formacie Markdown lub wklej materiał..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-4 border-t border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+            <span class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-sm">
+              {{ editNoteContent.length }} / 25,000 Znaki
+            </span>
+            <div class="flex items-center gap-3">
+              <button 
+                type="button" 
+                @click="showRawTextModal = false" 
+                class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-border rounded-xl transition-colors"
+              >
+                Zamknij
+              </button>
+              <button 
+                type="button" 
+                @click="showRawTextModal = false" 
+                class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Zapisz i wróć do podglądu
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -620,6 +858,30 @@ import { loadPresentationHistoryRaw, savePresentationHistoryRaw } from "../lib/p
 import archiveIcon from "../assets/archive.svg";
 import liveLessonIcon from "../assets/livelesson.svg";
 import presentationIcon from "../assets/presentation.svg";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+import { marked } from "marked";
+
+const classOptions = [
+  "1 Klasa Szkoły Podstawowej",
+  "2 Klasa Szkoły Podstawowej",
+  "3 Klasa Szkoły Podstawowej",
+  "4 Szkoła Podstawowa",
+  "5 Szkoła Podstawowa",
+  "6 Szkoła Podstawowa",
+  "7 Szkoła Podstawowa",
+  "8 Szkoła Podstawowa",
+  "1 Szkoła Średnia",
+  "2 Szkoła Średnia",
+  "3 Szkoła Średnia",
+  "4 Szkoła Średnia",
+  "5 Szkoła Średnia",
+  "Szkolenie firmowe",
+  "Szkolenie wewnętrzne",
+  "Warsztat",
+  "Konsultacje",
+  "Inny typ notatki"
+];
 
 const styleLabels = {
   auto: "Automatyczny",
@@ -632,11 +894,12 @@ const styleLabels = {
 const ARCHIVE_OPEN_PRESENTATION_KEY = "coteach:open-presentation-id";
 const ARCHIVE_ACTIVE_TAB_KEY = "coteach:archive-active-tab";
 const SKIP_REVIEW_KEY = "coteach:skip-review";
-const { state, fetchLessons, fetchTeacherNotes, fetchQuizzes, fetchQuizResults, deleteQuiz, updateFinalNote, deleteLesson, deleteTeacherNote, fetchUserClasses } = useLessonStore();
+const { state, fetchLessons, fetchTeacherNotes, fetchQuizzes, fetchQuizResults, deleteQuiz, updateFinalNote, deleteLesson, deleteTeacherNote, updateTeacherNote, fetchUserClasses } = useLessonStore();
 const router = useRouter();
 const historyOwnerId = ref("");
 const textPreviewOpen = ref(false);
 const textPreviewBody = ref("");
+const textPreviewIsHtml = ref(false);
 const activeTab = ref(router.currentRoute.value.query.tab || localStorage.getItem(ARCHIVE_ACTIVE_TAB_KEY) || "lessons");
 const searchQuery = ref("");
 const selected = ref(null);
@@ -652,6 +915,48 @@ const selectedQuiz = ref(null);
 const quizResults = ref([]);
 const selectedHomework = ref(null);
 const archiveAutoPlayMinutes = ref("manual");
+
+// Independent note editing state variables
+const editNoteTitle = ref("");
+const editNoteSubject = ref("");
+const editNoteClassLevel = ref("");
+const editNoteContent = ref("");
+
+// Math and raw text modal variables
+const showRawTextModal = ref(false);
+const textareaRef = ref(null);
+const showMathModal = ref(false);
+const mathModalIndex = ref(null);
+const mathModalDisplay = ref(false);
+const mathModalRaw = ref("");
+
+const mathModalPreview = computed(() => {
+  if (!mathModalRaw.value) return "";
+  try {
+    return katex.renderToString(mathModalRaw.value.trim(), {
+      throwOnError: false,
+      displayMode: mathModalDisplay.value,
+      strict: false
+    });
+  } catch (e) {
+    return "<span class='text-red-500 text-sm'>Błąd składni wzoru matematycznego...</span>";
+  }
+});
+
+// Watch for note selections to keep editing variables updated
+watch(selectedNote, (note) => {
+  if (note) {
+    editNoteTitle.value = String(note.title || "");
+    editNoteSubject.value = String(note.subject || "");
+    editNoteClassLevel.value = String(note.classLevel || note.class_level || "");
+    editNoteContent.value = String(note.content || "");
+  } else {
+    editNoteTitle.value = "";
+    editNoteSubject.value = "";
+    editNoteClassLevel.value = "";
+    editNoteContent.value = "";
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), fetchUserClasses()]);
@@ -862,14 +1167,170 @@ function stripHtml(html) {
 
 function openGoldenNotePreview() {
   const html = selected.value?.finalNote?.html || "";
-  textPreviewBody.value = stripHtml(html) || "Brak treści notatki.";
+  textPreviewBody.value = html || "Brak treści notatki.";
+  textPreviewIsHtml.value = true;
   textPreviewOpen.value = true;
 }
 
 function openTeacherNotePreview() {
   const raw = String(selectedNote.value?.content || "").trim();
   textPreviewBody.value = raw || "Brak treści notatki.";
+  textPreviewIsHtml.value = false;
   textPreviewOpen.value = true;
+}
+
+function openTeacherNoteLink() {
+  const shareId = selectedNote.value?.id;
+  if (!shareId) return;
+  window.open(`${window.location.origin}/share/${shareId}`, "_blank", "noopener,noreferrer");
+}
+
+async function handleSaveTeacherNote() {
+  if (!selectedNote.value?.id) return;
+  try {
+    saving.value = true;
+    const updated = await updateTeacherNote(selectedNote.value.id, {
+      title: editNoteTitle.value,
+      subject: editNoteSubject.value,
+      classLevel: editNoteClassLevel.value,
+      content: editNoteContent.value
+    });
+    // Sync back to state.notes so it updates dynamically in the list too
+    state.notes = state.notes.map((n) => (n.id === selectedNote.value.id ? updated : n));
+    selectedNote.value = updated;
+  } catch (e) {
+    window.alert(e?.message || "Nie udało się zapisać zmian.");
+  } finally {
+    saving.value = false;
+  }
+}
+
+function insertMath(latexExpr) {
+  const el = textareaRef.value;
+  if (!el) {
+    editNoteContent.value += ` $${latexExpr}$`;
+    return;
+  }
+  
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const text = editNoteContent.value;
+  const formatted = `$${latexExpr}$`;
+  
+  editNoteContent.value = text.substring(0, start) + formatted + text.substring(end);
+  const newCursorPos = start + formatted.length;
+  
+  setTimeout(() => {
+    if (el) {
+      el.focus();
+      if (latexExpr.includes('{a}')) {
+        const offset = formatted.indexOf('{a}') + 1;
+        el.setSelectionRange(start + offset, start + offset + 1);
+      } else if (latexExpr.includes('{x}')) {
+        const offset = formatted.indexOf('{x}') + 1;
+        el.setSelectionRange(start + offset, start + offset + 1);
+      } else {
+        el.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }
+  }, 0);
+}
+
+function updateMathAtIndex(text, targetIndex, newValue, isDisplay) {
+  let index = 0;
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  
+  return text.replace(regex, (match) => {
+    if (index === targetIndex) {
+      index++;
+      return isDisplay ? `$$\n${newValue}\n$$` : `$${newValue}$`;
+    }
+    index++;
+    return match;
+  });
+}
+
+function openMathEditor(index, isDisplay, rawMath) {
+  mathModalIndex.value = index;
+  mathModalDisplay.value = isDisplay;
+  mathModalRaw.value = rawMath;
+  showMathModal.value = true;
+}
+
+// Global math preview wrapper function
+function renderMarkdownWithMath(text) {
+  if (!text) return "";
+  
+  const placeholders = [];
+  let str = String(text);
+  
+  str = str.replace(/\\\\/g, "\\");
+
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  
+  str = str.replace(regex, (match) => {
+    const isDisplay = match.startsWith('$$');
+    const mathExp = isDisplay ? match.slice(2, -2) : match.slice(1, -1);
+    
+    try {
+      const cleanMath = mathExp.trim()
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+      
+      const rendered = katex.renderToString(cleanMath, {
+        throwOnError: false,
+        displayMode: isDisplay,
+        strict: false
+      });
+      
+      const index = placeholders.length;
+      const placeholder = `%%MATH_FORMULA_${index}%%`;
+      const wrapped = `<span class="katex-editable hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:ring-2 hover:ring-blue-500 rounded px-1.5 py-0.5 transition-all cursor-pointer inline-block" data-math-index="${index}" data-math-display="${isDisplay ? 'true' : 'false'}" data-math-raw="${encodeURIComponent(mathExp.trim())}" title="Kliknij, aby edytować ten wzór">${rendered}</span>`;
+      
+      placeholders.push({ placeholder, wrapped });
+      return placeholder;
+    } catch (e) {
+      console.warn("KaTeX rendering error:", e);
+      return match;
+    }
+  });
+
+  let html = marked.parse(str);
+
+  for (const item of placeholders) {
+    html = html.replace(item.placeholder, item.wrapped);
+  }
+
+  return html;
+}
+
+function saveMathEditor() {
+  if (mathModalIndex.value === null) return;
+  editNoteContent.value = updateMathAtIndex(
+    editNoteContent.value,
+    mathModalIndex.value,
+    mathModalRaw.value.trim(),
+    mathModalDisplay.value
+  );
+  showMathModal.value = false;
+  mathModalIndex.value = null;
+  mathModalRaw.value = "";
+}
+
+function openRawTextModalForNote() {
+  showRawTextModal.value = true;
+}
+
+function handlePreviewClick(event) {
+  const editable = event.target.closest('.katex-editable');
+  if (!editable) return;
+  
+  const index = parseInt(editable.getAttribute('data-math-index'), 10);
+  const isDisplay = editable.getAttribute('data-math-display') === 'true';
+  const rawMath = decodeURIComponent(editable.getAttribute('data-math-raw'));
+  
+  openMathEditor(index, isDisplay, rawMath);
 }
 
 async function handleDeleteTeacherNote() {
@@ -1046,5 +1507,106 @@ watch(activeTab, async (tab) => {
 .qr-modal-enter-to > div,
 .qr-modal-leave-from > div {
   transform: scale(1);
+}
+
+/* Premium KaTeX and Markdown styling for the note preview */
+.prose {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1e293b;
+  line-height: 1.7;
+}
+
+.prose :deep(h1) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.6rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #0c3dfe;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  border-bottom: 2px solid rgba(12, 61, 254, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.prose :deep(h2) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.3rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.prose :deep(h3) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.prose :deep(p) {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.prose :deep(ul) {
+  list-style-type: disc !important;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose :deep(ol) {
+  list-style-type: decimal !important;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose :deep(li) {
+  margin-bottom: 0.4rem;
+  padding-left: 0.25rem;
+}
+
+.prose :deep(strong) {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.prose :deep(code) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.prose :deep(.katex) {
+  font-size: 1.1em;
+  line-height: 1.2;
+}
+
+/* Dark Mode styling */
+:global(.dark) .prose {
+  color: #cbd5e1;
+}
+
+:global(.dark) .prose :deep(h2) {
+  color: #f8fafc;
+}
+
+:global(.dark) .prose :deep(h3) {
+  color: #e2e8f0;
+}
+
+:global(.dark) .prose :deep(strong) {
+  color: #ffffff;
+}
+
+:global(.dark) .prose :deep(code) {
+  background-color: #334155;
+  color: #f8fafc;
 }
 </style>
