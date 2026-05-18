@@ -198,6 +198,14 @@
               >
                 Pokaż treść
               </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#e6e8eb] text-[#142588] font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#d8dadd] transition-colors cursor-pointer"
+                @click="openRawTextModalForNote"
+              >
+                Edytuj treść
+              </button>
             </div>
           </div>
 
