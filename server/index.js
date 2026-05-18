@@ -1361,13 +1361,119 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
   }
 }
 
+function fixJsonEscapes(str) {
+  let result = "";
+  let inString = false;
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    
+    if (char === '"') {
+      // Check if this quote is escaped by looking at preceding backslashes
+      let backslashCount = 0;
+      for (let j = i - 1; j >= 0; j--) {
+        if (str[j] === '\\') {
+          backslashCount++;
+        } else {
+          break;
+        }
+      }
+      if (backslashCount % 2 === 0) {
+        inString = !inString;
+      }
+      result += char;
+      continue;
+    }
+    
+    if (inString && char === '\\') {
+      // Find how many consecutive backslashes start at index i
+      let consecutiveBackslashes = 0;
+      let k = i;
+      while (k < str.length && str[k] === '\\') {
+        consecutiveBackslashes++;
+        k++;
+      }
+      
+      // Pairs of backslashes \\ are valid JSON escapes, keep them
+      const pairs = Math.floor(consecutiveBackslashes / 2);
+      for (let p = 0; p < pairs; p++) {
+        result += '\\\\';
+      }
+      
+      // If there is an odd backslash left, check if its escape sequence is valid
+      if (consecutiveBackslashes % 2 !== 0) {
+        const nextChar = str[i + consecutiveBackslashes];
+        if (!nextChar) {
+          result += '\\\\';
+        } else {
+          const isValidSimpleEscape = '\"\\/bfnrt'.includes(nextChar);
+          let isValidUnicodeEscape = false;
+          if (nextChar === 'u') {
+            const next4 = str.slice(i + consecutiveBackslashes + 1, i + consecutiveBackslashes + 5);
+            isValidUnicodeEscape = /^[0-9a-fA-F]{4}$/.test(next4);
+          }
+          
+          if (isValidSimpleEscape || isValidUnicodeEscape) {
+            result += '\\';
+          } else {
+            result += '\\\\';
+          }
+        }
+      }
+      
+      // Skip the backslashes we processed
+      i += consecutiveBackslashes - 1;
+      continue;
+    }
+    
+    result += char;
+  }
+  return result;
+}
+
 function parseJsonFromModel(text) {
-  const cleaned = String(text || "")
+  let cleaned = String(text || "")
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/```$/i, "")
     .trim();
-  return JSON.parse(cleaned);
+
+  // Strip trailing commas from JSON arrays and objects
+  cleaned = cleaned.replace(/,(\s*[\]}])/g, "$1");
+
+  // Fix invalid backslash escapes (e.g. in LaTeX \Omega, math symbols, or markdown \*)
+  cleaned = fixJsonEscapes(cleaned);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Try robust extraction
+    const firstBrace = cleaned.indexOf("{");
+    const firstBracket = cleaned.indexOf("[");
+    const lastBrace = cleaned.lastIndexOf("}");
+    const lastBracket = cleaned.lastIndexOf("]");
+
+    let startIdx = -1;
+    let endIdx = -1;
+
+    if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+      startIdx = firstBrace;
+      endIdx = lastBrace;
+    } else if (firstBracket !== -1) {
+      startIdx = firstBracket;
+      endIdx = lastBracket;
+    }
+
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      try {
+        const extracted = cleaned.slice(startIdx, endIdx + 1).replace(/,(\s*[\]}])/g, "$1");
+        return JSON.parse(extracted);
+      } catch (err) {
+        // Fallback to original parsing error
+      }
+    }
+    throw e;
+  }
 }
 
 function parsePlanFromJsonText(rawText) {
@@ -1439,6 +1545,31 @@ function mapPlanItem(item, index) {
   };
 }
 
+function safeSliceText(text, limit) {
+  const str = String(text || "").trim();
+  if (str.length <= limit) return str;
+  
+  // Try to slice at the last sentence end (. ! ?) within the limit
+  const sliced = str.slice(0, limit);
+  const lastSentenceEnd = Math.max(
+    sliced.lastIndexOf(". "),
+    sliced.lastIndexOf("! "),
+    sliced.lastIndexOf("? ")
+  );
+  
+  if (lastSentenceEnd > limit * 0.6) {
+    return str.slice(0, lastSentenceEnd + 1).trim();
+  }
+  
+  // Otherwise slice at the last space so we don't cut off mid-word
+  const lastSpace = sliced.lastIndexOf(" ");
+  if (lastSpace > limit * 0.8) {
+    return str.slice(0, lastSpace).trim() + "...";
+  }
+  
+  return sliced.trim() + "...";
+}
+
 function normalizePresentationSlide(rawSlide, index) {
   const allowedTypes = new Set(["title", "agenda", "concept", "example", "comparison", "practice", "summary", "next_steps"]);
   const normalizedType = String(rawSlide?.type || "").trim().toLowerCase();
@@ -1461,13 +1592,13 @@ function normalizePresentationSlide(rawSlide, index) {
   return {
     id: rawSlide?.id || randomUUID(),
     type: allowedTypes.has(normalizedType) ? normalizedType : "concept",
-    title: title.slice(0, 120),
-    subtitle: subtitle.slice(0, 180),
-    summary: summary.slice(0, 500),
+    title: title.slice(0, 200),
+    subtitle: subtitle.slice(0, 300),
+    summary: safeSliceText(summary, 1200),
     details,
-    visualHint: visualHint.slice(0, 220),
-    imagePrompt: imagePrompt.slice(0, 320),
-    imageUrl: imageUrl.slice(0, 1200)
+    visualHint: visualHint.slice(0, 300),
+    imagePrompt: imagePrompt.slice(0, 500),
+    imageUrl: imageUrl.slice(0, 2000)
   };
 }
 
@@ -1579,43 +1710,22 @@ function buildUnsplashUrl({ query, slideKey }) {
   return `https://loremflickr.com/1280/720/${q}?lock=${sig}`;
 }
 
-async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary = "", subject = "", classLevel = "", slideKey = "" }) {
-  const cleanTitle = String(title || "").trim();
-  const cleanSubject = String(subject || "").trim();
-  const cleanPrompt = String(imagePrompt || "").trim();
-
-  const stemSubjects = ["Matematyka", "Fizyka", "Chemia", "Informatyka", "Biologia", "Geometria"];
-  const isStem = stemSubjects.some(s => cleanSubject.toLowerCase().includes(s.toLowerCase()));
-
-  // For STEM, AI generation is usually better (diagrams, clean visuals)
-  if (isStem) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const pollinationsUrl = buildSlideImageUrl({
-        imagePrompt: cleanPrompt || cleanTitle,
-        title,
-        summary,
-        subject,
-        classLevel,
-        attempt
-      });
-
-      // On server side, we can try to "bake" the image into a Data URL
-      // This also checks if the image service is responding or 429'ing
-      const baked = await fetchImageAsDataUrl(pollinationsUrl);
-      if (baked) return baked;
-      // If failed/429, loop will try next model (e.g. turbo)
-    }
+async function fetchImageAsDataUrl(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return "";
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const mimeType = res.headers.get("content-type") || "image/png";
+    return `data:${mimeType};base64,${base64}`;
+  } catch (err) {
+    console.error(`Failed to fetch image as data URL: ${url}`, err);
+    return "";
   }
+}
 
-  // Try Wikipedia for factual/historical topics (Authentic visuals)
-  const wikiQuery = (cleanPrompt || cleanTitle).slice(0, 100);
-  const wikiImage = await resolveWikipediaImage(wikiQuery);
-  if (wikiImage) return wikiImage;
-
-  // Fallback to Unsplash via loremflickr
-  const q = (cleanPrompt || cleanTitle || cleanSubject || "education").split(" ").slice(0, 3).join(",");
-  const sig = hashString(slideKey || cleanTitle) % 10000;
-  return `https://loremflickr.com/1280/720/${encodeURIComponent(q)}?lock=${sig}`;
+async function generateSlideImageWithAI() {
+  return "";
 }
 
 async function resolveWikipediaImage(query) {
@@ -1674,14 +1784,14 @@ async function generatePresentationWithLLM({
   if (!safeNote && !safePlan.length) return [];
 
   const prompt = PRESENTATION_PROMPT_TEMPLATE
-    .replace("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
-    .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
-    .replace("[KLASA]", String(classLevel || "Nie podano"))
-    .replace("[STYL_PREZENTACJI]", String(style || "auto"))
-    .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
-    .replace("[MAX_SLAJDOW]", promptMaxSlidesStr)
-    .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
-    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
+    .replaceAll("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
+    .replaceAll("[PRZEDMIOT]", String(lessonSubject || "Brak"))
+    .replaceAll("[KLASA]", String(classLevel || "Nie podano"))
+    .replaceAll("[STYL_PREZENTACJI]", String(style || "auto"))
+    .replaceAll("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
+    .replaceAll("[MAX_SLAJDOW]", promptMaxSlidesStr)
+    .replaceAll("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
+    .replaceAll("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
 
   try {
     const out = await callOpenRouter({
@@ -1700,10 +1810,17 @@ async function generatePresentationWithLLM({
     slides.push({
       id: randomUUID(),
       type: "summary",
-      title: "Dziękuję za uwagę",
-      subtitle: "Prezentacja wygenerowana przez sztuczną inteligencję",
-      summary: "Materiał został przygotowany przy wsparciu innowacyjnej platformy edukacyjnej CoTeach.pl",
-      details: ["CoTeach.pl to innowacyjne narzędzie dla nauczycieli", "Zaoszczędź czas na przygotowaniu lekcji"]
+      title: "Materiał przygotowany we współpracy z CoTeach",
+      subtitle: "Inteligentne wsparcie dla nauczycieli",
+      summary: "Prezentacja została wygenerowana przy użyciu sztucznej inteligencji w aplikacji CoTeach, która wspiera nauczycieli w codziennej pracy i ułatwia tworzenie angażujących lekcji.",
+      details: [
+        "Oszczędność czasu na przygotowanie materiałów",
+        "Treści dopasowane do poziomu Twoich uczniów",
+        "Współpraca technologii z metodyką nauczania"
+      ],
+      visualHint: "logo",
+      imagePrompt: "",
+      imageUrl: ""
     });
 
     if (slides.length <= 1) {
@@ -1734,24 +1851,27 @@ async function generatePresentationWithLLM({
       latencyMs: out.latencyMs
     });
 
-    const finalSlides = [];
-    for (let i = 0; i < slides.length; i++) {
-      const slide = slides[i];
-      try {
-        const imageUrl = await generateSlideImageWithAI({
-          imagePrompt: slide.imagePrompt,
-          title: slide.title,
-          summary: slide.summary,
-          subject: lessonSubject,
-          classLevel: classLevel,
-          slideKey: `presentation-${lessonTitle}-${i}`
-        });
-        finalSlides.push({ ...slide, imageUrl: imageUrl || "" });
-      } catch (err) {
-        console.error(`[AI Presentation] Image generation failed for slide ${i}:`, err);
-        finalSlides.push({ ...slide, imageUrl: "" });
-      }
-    }
+    const finalSlides = await Promise.all(
+      slides.map(async (slide, i) => {
+        if (slide.visualHint === "logo") {
+          return { ...slide, imageUrl: "" };
+        }
+        try {
+          const imageUrl = await generateSlideImageWithAI({
+            imagePrompt: slide.imagePrompt,
+            title: slide.title,
+            summary: slide.summary,
+            subject: lessonSubject,
+            classLevel: classLevel,
+            slideKey: `presentation-${lessonTitle}-${i}`
+          });
+          return { ...slide, imageUrl: imageUrl || "" };
+        } catch (err) {
+          console.error(`[AI Presentation] Image generation failed for slide ${i}:`, err);
+          return { ...slide, imageUrl: "" };
+        }
+      })
+    );
     return finalSlides;
   } catch (error) {
     console.error("[AI Presentation] Error:", error);
@@ -1762,10 +1882,28 @@ async function generatePresentationWithLLM({
       noteContent: safeNote,
       maxSlides: sliceMaxSlides
     });
-    return fallbackSlides.map((slide) => ({
+    const finalFallback = fallbackSlides.map((slide) => ({
       ...slide,
       imageUrl: ""
     }));
+
+    finalFallback.push({
+      id: randomUUID(),
+      type: "summary",
+      title: "Materiał przygotowany we współpracy z CoTeach",
+      subtitle: "Inteligentne wsparcie dla nauczycieli",
+      summary: "Prezentacja została wygenerowana przy użyciu sztucznej inteligencji w aplikacji CoTeach, która wspiera nauczycieli w codziennej pracy i ułatwia tworzenie angażujących lekcji.",
+      details: [
+        "Oszczędność czasu na przygotowanie materiałów",
+        "Treści dopasowane do poziomu Twoich uczniów",
+        "Współpraca technologii z metodyką nauczania"
+      ],
+      visualHint: "logo",
+      imagePrompt: "",
+      imageUrl: ""
+    });
+
+    return finalFallback;
   }
 }
 
@@ -1785,13 +1923,13 @@ async function generateQuizWithLLM({
   if (!safeNote && !safePlan.length) return { title: "Sprawdzian", questions: [] };
 
   const prompt = QUIZ_PROMPT_TEMPLATE
-    .replace("[TEMAT]", String(lessonTitle || "Bez tytułu"))
-    .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
-    .replace("[KLASA]", String(classLevel || "Nie podano"))
-    .replace("[ILOSC_ZAMKNIETYCH]", String(numClosed))
-    .replace("[ILOSC_OTWARTYCH]", String(numOpen))
-    .replace("[TRUDNOSC]", String(difficulty))
-    .replace("[TRESC_ZRODLOWA]", (safeNote + "\n" + JSON.stringify(safePlan)).slice(0, 35000));
+    .replaceAll("[TEMAT]", String(lessonTitle || "Bez tytułu"))
+    .replaceAll("[PRZEDMIOT]", String(lessonSubject || "Brak"))
+    .replaceAll("[KLASA]", String(classLevel || "Nie podano"))
+    .replaceAll("[ILOSC_ZAMKNIETYCH]", String(numClosed))
+    .replaceAll("[ILOSC_OTWARTYCH]", String(numOpen))
+    .replaceAll("[TRUDNOSC]", String(difficulty))
+    .replaceAll("[TRESC_ZRODLOWA]", (safeNote + "\n" + JSON.stringify(safePlan)).slice(0, 35000));
 
   const out = await callOpenRouter({
     model: OPENROUTER_PRESENTATION_MODEL,
@@ -1847,7 +1985,7 @@ async function generatePlanWithLLM(rawText, context = {}) {
   }
 
   try {
-    const prompt = PLAN_PROMPT_TEMPLATE.replace("[podaj tekst]", rawText.slice(0, 20000)).trim();
+    const prompt = PLAN_PROMPT_TEMPLATE.replaceAll("[podaj tekst]", rawText.slice(0, 20000)).trim();
     const out = await callOpenRouter({
       model: OPENROUTER_TEXT_MODEL,
       parts: [{ text: prompt }]
@@ -1877,7 +2015,7 @@ async function generatePlanWithLLM(rawText, context = {}) {
       const keywordsStr = Array.isArray(item.keywords) ? item.keywords.join(" ") : String(item.keywords || "");
       return titleStr.includes("#") || titleStr.includes("*") || keywordsStr.includes("#") || keywordsStr.includes("*");
     });
-    
+
     if (isMalformed) {
       throw new Error("MALFORMED_PLAN");
     }
@@ -2159,10 +2297,30 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
     throw new Error("subject and topic are required");
   }
 
-  const prompt = NOTE_PROMPT_TEMPLATE
-    .replace("[TUTAJ WPISZ TEMAT]", cleanTopic)
-    .replace("[TUTAJ WPISZ PRZEDMIOT]", cleanSubject)
-    .replace("[podaj klase]", cleanClass || "nie podano")
+  const cleanTopicLower = cleanTopic.toLowerCase();
+  const isExtended = cleanTopicLower.includes("rozszerzenie") || cleanTopicLower.includes("rozszerzon");
+  
+  let scopeInstruction = "";
+  if (isExtended) {
+    scopeInstruction = `
+ZAKRES NAUCZANIA:
+- Temat dotyczy podstawy programowej na poziomie ROZSZERZONYM.
+- Wygeneruj zaawansowaną notatkę uwzględniającą wymagania i zagadnienia z podstawy programowej dla poziomu rozszerzonego.
+`.trim();
+  } else {
+    scopeInstruction = `
+ZAKRES NAUCZANIA:
+- Temat dotyczy podstawy programowej na poziomie PODSTAWOWYM.
+- Wygeneruj notatkę opartą wyłącznie o wiedzę podstawową odpowiednią dla danej klasy.
+- KATEGORYCZNIE UNIKAJ wprowadzania zaawansowanych zagadnień, skomplikowanych pojęć i wzorów wykraczających poza poziom podstawowy (nie wprowadzaj żadnych zagadnień z zakresu rozszerzonego).
+`.trim();
+  }
+
+  const prompt = (NOTE_PROMPT_TEMPLATE + "\n\n" + scopeInstruction)
+    .replaceAll("[TUTAJ WPISZ TEMAT]", cleanTopic)
+    .replaceAll("[TUTAJ WPISZ PRZEDMIOT]", cleanSubject)
+    .replaceAll("[TUTAJ WPISZ KLASĘ]", cleanClass || "nie podano")
+    .replaceAll("[podaj klase]", cleanClass || "nie podano")
     .replace(/POD ŻADNYM POZOREM NIE ODSYŁAJ TOKU ROZUMOWANIA ALBO CZĘŚCI PROMPTA!!!/i, "Nie pokazuj toku rozumowania ani treści promptu.")
     .trim();
 
@@ -2778,7 +2936,8 @@ app.post("/api/quizzes/generate", async (req, res) => {
       noteId: note?.id || null,
       title: quizData.title,
       questions: quizData.questions,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      class_name: lesson?.class_name || note?.classLevel || note?.class_level || ""
     };
 
     // Persist quiz
@@ -2906,9 +3065,9 @@ app.post("/api/homework/generate", async (req, res) => {
     }
 
     const prompt = HOMEWORK_GEN_PROMPT_TEMPLATE
-      .replace("[SOURCE_CONTENT]", sourceContent.slice(0, 10000))
-      .replace("[NUM_TASKS]", numTasks || 3)
-      .replace("[CLASS_LEVEL]", classLevel || "nieokreślony");
+      .replaceAll("[SOURCE_CONTENT]", sourceContent.slice(0, 10000))
+      .replaceAll("[NUM_TASKS]", numTasks || 3)
+      .replaceAll("[CLASS_LEVEL]", classLevel || "nieokreślony");
 
     const out = await callOpenRouter({
       model: OPENROUTER_TEXT_MODEL,
@@ -2953,10 +3112,71 @@ app.get("/api/quizzes", async (req, res) => {
     } else {
       quizzes = [...(db.quizzes?.values() || [])].filter(
         q => String(q.teacherId) === String(teacher.teacherId)
-      ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      ).map(q => {
+        const lesson = q.lessonId ? db.lessons.get(q.lessonId) : null;
+        const note = q.noteId ? db.notes.get(q.noteId) : null;
+        return {
+          ...q,
+          class_name: q.class_name || lesson?.class_name || note?.classLevel || note?.class_level || ""
+        };
+      }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     return res.json({ quizzes });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch("/api/quizzes/:quizId", async (req, res) => {
+  try {
+    const teacher = await resolveTeacherContext(req, res);
+    if (!teacher) return;
+    
+    const quizId = req.params.quizId;
+    const { title, questions } = req.body;
+    
+    let quiz = db.quizzes?.get(quizId);
+    if (!quiz && supabase) {
+      const { data, error } = await supabase.from("quizzes").select("*").eq("id", quizId).maybeSingle();
+      if (data) {
+        quiz = {
+          id: data.id,
+          teacherId: data.teacher_id,
+          lessonId: data.lesson_id,
+          noteId: data.note_id,
+          title: data.title,
+          questions: data.questions,
+          createdAt: data.created_at
+        };
+      }
+    }
+    
+    if (!quiz) {
+      return res.status(404).json({ error: "Sprawdzian nie został znaleziony." });
+    }
+    
+    if (title !== undefined) quiz.title = title;
+    if (questions !== undefined) quiz.questions = questions;
+    
+    db.quizzes = db.quizzes || new Map();
+    db.quizzes.set(quizId, quiz);
+    
+    if (supabase) {
+      const { error: saveError } = await supabase
+        .from("quizzes")
+        .update({
+          title: quiz.title,
+          questions: quiz.questions
+        })
+        .eq("id", quizId);
+      if (saveError) {
+        console.error("Error updating quiz in Supabase:", saveError);
+        return res.status(500).json({ error: saveError.message });
+      }
+    }
+    
+    return res.json({ ok: true, quiz });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -4504,14 +4724,14 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
         },
         {
           text: "Jesteś precyzyjnym systemem transkrypcji audio (STT). Twoim zadaniem jest zapisać tekst z nagrania audio SŁOWO W SŁOWO.\n" +
-                "ZASADY:\n" +
-                "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
-                "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
-                "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
-                "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
-                "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
-                "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
-                "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz."
+            "ZASADY:\n" +
+            "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
+            "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
+            "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
+            "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
+            "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
+            "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
+            "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz."
         }
       ],
       maxTokens: 2048,
@@ -4519,7 +4739,7 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     });
 
     let rawText = String(geminiResponse.text || "").trim();
-    
+
     // Usuwamy prefiksy językowe i znaczniki czasu, które Gemini czasem dodaje mimo instrukcji
     rawText = rawText
       .replace(/^([a-z]{3,15}|język\s+[a-z]+)[:\s]*/gmi, "") // Usuwa "polski: ", "English: ", "Język polski: " itp. z początku każdej linii
@@ -4800,7 +5020,7 @@ loadSchoolsFromSupabase()
         console.error("Cleanup expired homework failed:", error.message || error);
       });
     }, 10_000);
-    
+
     // Serve static files from the 'dist' directory
     const distPath = path.resolve(process.cwd(), "dist");
     app.use(express.static(distPath));

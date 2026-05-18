@@ -47,7 +47,7 @@
                 Ocenianie
               </button>
               <button 
-                @click="activeTab = 'homework'"
+                @click="activeTab = 'homework'; sourceType = 'note'"
                 class="flex-1 py-2 text-xs font-bold rounded-md transition-all"
                 :class="activeTab === 'homework' ? 'bg-white text-[#0c3dfe] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
               >
@@ -57,8 +57,10 @@
 
             <!-- Source Selection Toggle -->
             <div v-if="activeTab !== 'grading'" class="flex items-center justify-between mb-4 px-1">
-              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">Źródło treści</label>
-              <div class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px]">
+                {{ activeTab === 'homework' ? 'Wybierz notatkę' : 'Źródło treści' }}
+              </label>
+              <div v-if="activeTab === 'quiz'" class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
                 <button 
                   @click="sourceType = 'lesson'" 
                   class="px-3 py-1 text-[11px] font-bold rounded-md transition-all"
@@ -70,6 +72,13 @@
                   @click="sourceType = 'note'" 
                   class="px-3 py-1 text-[11px] font-bold rounded-md transition-all"
                   :class="sourceType === 'note' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'"
+                >
+                  Notatki
+                </button>
+              </div>
+              <div v-else class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+                <button 
+                  class="px-3 py-1 text-[11px] font-bold rounded-md bg-white text-primary shadow-sm cursor-default"
                 >
                   Notatki
                 </button>
@@ -237,13 +246,39 @@
           <div v-if="activeTab === 'quiz' && quiz" class="space-y-6">
             <div class="flex items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-border">
               <input v-model="quiz.title" class="text-xl font-bold text-foreground bg-transparent border-none outline-none flex-1" />
-              <div class="flex gap-2">
+              <div class="flex items-center gap-2">
+                <!-- Niedziałający przycisk udostępniania -->
+                <button
+                  type="button"
+                  disabled
+                  class="relative bg-gray-100 text-gray-400 px-5 py-2.5 rounded-lg font-bold transition disabled:opacity-60 cursor-not-allowed flex items-center gap-2 text-sm"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share-2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                  Udostępnij uczniom
+                  <span class="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shadow">wkrótce</span>
+                </button>
+
                 <button @click="saveQuizEdits" class="bg-primary/10 text-primary px-4 py-2.5 rounded-lg font-bold hover:bg-primary/20 transition">
-                  Zapisz zmiany
+                  Zapisz
                 </button>
-                <button @click="printQuiz" class="bg-emerald-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
-                  Drukuj sprawdzian
+                <button @click="printQuiz" class="bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md">
+                  Drukuj
                 </button>
+              </div>
+            </div>
+
+            <!-- Banner informujący, że to jest Edytor Klucza Odpowiedzi -->
+            <div class="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-5 flex items-start gap-4 shadow-sm">
+              <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-700 dark:text-amber-300 mt-0.5">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m0-6h.01M12 3a9 9 0 110 18 9 9 0 010-18z" />
+                </svg>
+              </div>
+              <div class="space-y-1">
+                <h4 class="font-['Plus_Jakarta_Sans'] font-extrabold text-amber-900 text-[15px]">Edytor Klucza Odpowiedzi i Pytań (Widok Nauczyciela)</h4>
+                <p class="font-['Plus_Jakarta_Sans'] text-amber-800/90 text-[13.5px] leading-relaxed">
+                  To jest panel edycji przeznaczony dla <strong>Nauczyciela</strong>. Widzisz tutaj pełne poprawne odpowiedzi, opcje zadań zamkniętych oraz klucz punktowania zadań otwartych. To <strong>nie jest</strong> sprawdzian do wypełniania przez uczniów. Aby wygenerować czysty arkusz dla klasy, kliknij przycisk <strong>Drukuj</strong> (klucz odpowiedzi i notatki zostaną automatycznie ukryte przy generowaniu pliku PDF).
+                </p>
               </div>
             </div>
 
@@ -333,7 +368,15 @@
                     :disabled="isSavingHomework || !homeworkText"
                     class="bg-[#0c3dfe] text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-lg disabled:opacity-50"
                   >
-                    {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz i udostępnij' }}
+                    {{ isSavingHomework ? 'Zapisywanie...' : 'Zapisz' }}
+                  </button>
+                  <button 
+                    disabled
+                    class="relative bg-gray-100 text-gray-400 px-8 py-3 rounded-xl font-bold transition disabled:opacity-60 cursor-not-allowed flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share-2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                    Udostępnij uczniom
+                    <span class="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shadow">wkrótce</span>
                   </button>
                 </div>
               </div>
@@ -641,29 +684,27 @@ watch(selectedGradingQuizId, (newId) => {
 });
 
 const filteredLessons = computed(() => {
-  if (!state.selectedClass || !state.selectedClassName) return state.lessons;
-  return state.lessons.filter(l => 
-    l.class_id === state.selectedClass || 
-    l.class_name === state.selectedClassName ||
-    l.classLevel === state.selectedClassName
-  );
+  let archivedLessons = state.lessons || [];
+  if (state.selectedClass) {
+    archivedLessons = archivedLessons.filter(l => l.class_name === state.selectedClassName);
+  }
+  return archivedLessons;
 });
 
 const filteredNotes = computed(() => {
-  if (!state.selectedClass || !state.selectedClassName) return state.notes;
-  return state.notes.filter(n => 
-    n.class_id === state.selectedClass || 
-    n.class_name === state.selectedClassName ||
-    n.classLevel === state.selectedClassName
-  );
+  let notes = Array.isArray(state.notes) ? state.notes : [];
+  if (state.selectedClass) {
+    notes = notes.filter(n => (n.classLevel === state.selectedClassName || n.class_name === state.selectedClassName || n.class_level === state.selectedClassName));
+  }
+  return notes;
 });
 
 const filteredSavedQuizzes = computed(() => {
-  if (!state.selectedClass || !state.selectedClassName) return savedQuizzes.value;
-  return savedQuizzes.value.filter(q => 
-    q.class_name === state.selectedClassName || 
-    q.class_name === state.selectedClass
-  );
+  let quizzes = savedQuizzes.value || [];
+  if (state.selectedClass) {
+    quizzes = quizzes.filter(q => q.class_name === state.selectedClassName);
+  }
+  return quizzes;
 });
 
 function renderMarkdown(text) {

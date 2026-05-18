@@ -8,6 +8,50 @@
         >
           Zakończ prezentację
         </button>
+        <!-- Beautiful Autoplay Timer / Progress indicator -->
+        <div v-if="activeDurationMinutes !== 'manual' && totalSeconds > 0" class="flex items-center gap-4 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full backdrop-blur-sm">
+          <!-- Play / Pause Button -->
+          <button 
+            type="button" 
+            @click="toggleAutoPlay" 
+            class="text-white hover:text-indigo-400 transition-colors focus:outline-none flex items-center justify-center"
+            :title="isAutoPlaying ? 'Wstrzymaj autoodtwarzanie' : 'Wznów autoodtwarzanie'"
+          >
+            <!-- Pause Icon -->
+            <svg v-if="isAutoPlaying" class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+            <!-- Play Icon -->
+            <svg v-else class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </button>
+          
+          <div class="h-4 w-[1px] bg-white/20"></div>
+          
+          <!-- Timer Text -->
+          <span class="font-mono text-sm font-bold text-indigo-300">
+            {{ formatTime(remainingSeconds) }}
+          </span>
+          
+          <div class="h-4 w-[1px] bg-white/20"></div>
+          
+          <!-- Progress bar -->
+          <div class="w-24 bg-white/15 h-1.5 rounded-full overflow-hidden relative" title="Czas do końca podsumowania">
+            <div 
+              class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-1000"
+              :style="{ width: `${(remainingSeconds / totalSeconds) * 100}%` }"
+            ></div>
+          </div>
+          
+          <div class="h-4 w-[1px] bg-white/20"></div>
+
+          <!-- Slide Switch countdown -->
+          <span class="text-xs text-white/50 font-medium">
+            Slajd za: <span class="font-mono font-bold text-white">{{ currentSlideTimer }}s</span>
+          </span>
+        </div>
+
         <div class="text-sm text-white/80">{{ slideIndex + 1 }} / {{ slides.length }}</div>
         <div class="flex gap-2">
           <button
@@ -115,138 +159,124 @@
 
             <!-- Title Slide Layout -->
             <template v-else-if="current.type === 'title'">
-              <div class="flex h-full flex-col lg:flex-row">
-                <div :class="['w-full lg:w-[55%] flex flex-col justify-center p-12 lg:p-20', activeTheme.accentClass]">
-                  <h1 :class="['text-[clamp(2.5rem,7vh,5rem)] font-black leading-[1.1] mb-8', activeTheme.titleClass]">{{ current.title }}</h1>
-                  <p v-if="current.subtitle" :class="['text-[clamp(1.2rem,3vh,2rem)] font-bold opacity-80', activeTheme.textClass]">{{ current.subtitle }}</p>
-                  <p v-if="current.summary" :class="['mt-10 text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-70', activeTheme.textClass]">{{ current.summary }}</p>
-                </div>
-                <div :class="['flex-1 flex items-center justify-center p-12', current.imageUrl ? activeTheme.panelClass : '']">
-                  <div class="w-full h-full max-h-[500px] rounded-sm overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse">
-                    <img v-if="current.imageUrl" 
-                         :key="current.imageUrl"
-                         :src="current.imageUrl" 
-                         referrerpolicy="no-referrer"
-                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
-                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
-                         class="w-full h-full object-cover" />
+              <div class="h-full overflow-hidden flex flex-col justify-center py-6 px-6 lg:px-24">
+                <div class="max-w-4xl w-full mx-auto space-y-6 text-center">
+                  <div class="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-black uppercase tracking-widest border border-blue-500/20">
+                    Prezentacja Lekcji
                   </div>
+                  <h1 :class="['text-[clamp(1.8rem,5vh,3rem)] font-black leading-[1.1] tracking-tight', activeTheme.titleClass]" v-html="renderMath(current.title)"></h1>
+                  <div class="w-16 h-1 bg-blue-600 rounded-full mx-auto my-4"></div>
+                  <p v-if="current.subtitle" :class="['text-[clamp(1rem,2.2vh,1.3rem)] font-bold opacity-80', activeTheme.textClass]" v-html="renderMath(current.subtitle)"></p>
+                  <p v-if="current.summary" :class="['mt-4 text-[clamp(0.95rem,2.2vh,1.15rem)] font-medium leading-relaxed opacity-70 max-w-3xl mx-auto', activeTheme.textClass]" v-html="renderMath(current.summary)"></p>
                 </div>
               </div>
             </template>
-
+ 
             <!-- Summary/Agenda Slide Layout -->
             <template v-else-if="current.type === 'summary' || current.type === 'agenda'">
-              <div class="flex h-full flex-col">
-                <div :class="['flex-1 p-12 lg:p-20 flex flex-col justify-center text-center', activeTheme.panelClass]">
-                  <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-black mb-8', activeTheme.titleClass]">{{ current.title || 'Podsumowanie' }}</h2>
-                  <p :class="['mx-auto max-w-4xl text-[clamp(1.2rem,3vh,1.8rem)] font-medium leading-relaxed', activeTheme.textClass]">{{ current.summary }}</p>
-                </div>
-                <div :class="['h-[35%] w-full flex items-center justify-center p-10 relative', activeTheme.accentClass]">
-                  <div :class="['w-full max-w-2xl h-full rounded-sm overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse', current.imageUrl ? activeTheme.panelClass : '']">
-                    <img v-if="current.imageUrl" 
-                         :key="current.imageUrl"
-                         :src="current.imageUrl" 
-                         referrerpolicy="no-referrer"
-                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
-                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
-                         class="w-full h-full object-cover" />
+              <div class="h-full overflow-hidden flex flex-col justify-center py-6 px-6 lg:px-20">
+                <div class="max-w-5xl w-full mx-auto text-center space-y-6">
+                  <div class="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-black uppercase tracking-widest border border-indigo-500/20">
+                    {{ current.type === 'agenda' ? 'Rozkład lekcji' : 'Podsumowanie' }}
+                  </div>
+                  <h2 :class="['text-[clamp(1.8rem,4.5vh,2.8rem)] font-black tracking-tight', activeTheme.titleClass]" v-html="renderMath(current.title || (current.type === 'agenda' ? 'Plan lekcji' : 'Podsumowanie'))"></h2>
+                  <div :class="['p-6 md:p-8 rounded-3xl border border-white/10 backdrop-blur-md shadow-2xl w-full', activeTheme.accentClass]">
+                    <p :class="['text-[clamp(1rem,2.2vh,1.25rem)] font-semibold leading-relaxed text-left lg:text-center', activeTheme.textClass]" v-html="renderMath(current.summary)"></p>
                   </div>
                 </div>
               </div>
             </template>
 
             <template v-else>
-              <!-- 0: Text Left, Image Right (Split) -->
-              <div v-if="slideLayoutType === 0" class="flex h-full flex-col lg:flex-row">
-                <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-12 lg:p-16', activeTheme.accentClass]">
-                  <p v-if="current.type === 'practice'" class="mb-4 text-sm font-bold text-blue-600 uppercase tracking-widest">Ćwiczenie praktyczne</p>
-                  <h2 :class="['text-[clamp(2rem,5vh,3.5rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
-                  <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
-                  <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
-                  <ul v-if="current.details && current.details.length" class="mt-8 space-y-4 text-left">
-                    <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-3 text-[clamp(0.9rem,1.8vh,1.2rem)] font-medium', activeTheme.textClass]">
-                      <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
-                      <span>{{ detail }}</span>
-                    </li>
-                  </ul>
+              <!-- 0: Double-Panel Split (Key Concept + Details) -->
+              <div v-if="slideLayoutType === 0" class="h-full overflow-hidden flex flex-col lg:flex-row lg:items-stretch">
+                <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-6 lg:p-10 border-r border-white/5 shrink-0', activeTheme.panelClass]">
+                  <div class="space-y-4">
+                    <span class="px-3 py-1 text-xs font-bold bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20 uppercase tracking-widest">
+                      {{ slideTypeTranslations[current.type] || 'Koncepcja' }}
+                    </span>
+                    <h2 :class="['text-[clamp(1.5rem,3.8vh,2.4rem)] font-black leading-tight', activeTheme.titleClass]" v-html="renderMath(current.title)"></h2>
+                    <p v-if="current.subtitle" :class="['text-[clamp(0.95rem,2vh,1.2rem)] font-bold opacity-70', activeTheme.textClass]" v-html="renderMath(current.subtitle)"></p>
+                    <p :class="['text-[clamp(0.95rem,2.2vh,1.2rem)] font-medium leading-relaxed opacity-80 border-l-4 border-blue-500 pl-4', activeTheme.textClass]" v-html="renderMath(currentMainText)"></p>
+                  </div>
                 </div>
-                <div :class="['w-full lg:w-[55%] flex items-center justify-center p-8 lg:p-12 relative min-h-[300px]', current.imageUrl ? activeTheme.panelClass : '']">
-                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group bg-slate-200/50 animate-pulse">
-                    <img v-if="current.imageUrl" 
-                         :key="current.imageUrl"
-                         :src="current.imageUrl" 
-                         referrerpolicy="no-referrer"
-                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
-                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
-                         class="w-full h-full object-cover" />
+                <div :class="['flex-1 flex flex-col justify-center p-6 lg:p-10', activeTheme.accentClass]">
+                  <div class="w-full">
+                    <h3 :class="['text-xs uppercase tracking-widest font-extrabold mb-4 opacity-40', activeTheme.textClass]">Szczegóły i Ciekawostki</h3>
+                    <div class="space-y-3 max-w-2xl">
+                      <div v-for="(detail, dIdx) in current.details.slice(0, 4)" :key="dIdx" class="flex items-start gap-3 p-3.5 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm shadow-sm transition hover:translate-x-1 duration-300">
+                        <div class="flex-shrink-0 w-6 h-6 rounded-md bg-blue-500/15 flex items-center justify-center font-bold text-blue-400 text-xs">
+                          {{ dIdx + 1 }}
+                        </div>
+                        <p :class="['text-[clamp(0.85rem,1.8vh,1.1rem)] font-semibold leading-relaxed', activeTheme.textClass]" v-html="renderMath(detail)"></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+ 
+              <!-- 1: Header + Horizontal Detail Cards Grid -->
+              <div v-else-if="slideLayoutType === 1" class="h-full overflow-hidden flex flex-col justify-center py-6 px-6 lg:px-20">
+                <div class="w-full max-w-6xl mx-auto space-y-6">
+                  <div class="space-y-3">
+                    <span class="px-3 py-1 text-xs font-bold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 uppercase tracking-widest">
+                      {{ slideTypeTranslations[current.type] || 'Zagadnienie' }}
+                    </span>
+                    <h2 :class="['text-[clamp(1.6rem,4vh,2.6rem)] font-black tracking-tight', activeTheme.titleClass]" v-html="renderMath(current.title)"></h2>
+                    <p :class="['text-[clamp(1rem,2.2vh,1.25rem)] font-medium leading-relaxed opacity-85 max-w-4xl', activeTheme.textClass]" v-html="renderMath(currentMainText)"></p>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div v-for="(detail, dIdx) in current.details.slice(0, 3)" :key="dIdx" class="p-4 sm:p-5 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md shadow-lg flex flex-col justify-between">
+                      <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-extrabold text-sm mb-4">
+                        {{ dIdx + 1 }}
+                      </div>
+                      <p :class="['text-[clamp(0.85rem,1.8vh,1.05rem)] font-semibold leading-relaxed', activeTheme.textClass]" v-html="renderMath(detail)"></p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 1: Image Left, Text Right (Inverse Split) -->
-              <div v-else-if="slideLayoutType === 1" class="flex h-full flex-col lg:flex-row-reverse">
-                <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-12 lg:p-16', activeTheme.accentClass]">
-                  <h2 :class="['text-[clamp(2rem,5vh,3.5rem)] font-extrabold leading-tight mb-6', activeTheme.titleClass]">{{ current.title }}</h2>
-                  <p v-if="current.subtitle" :class="['text-[clamp(1.1rem,2.2vh,1.4rem)] font-bold opacity-70 mb-4', activeTheme.textClass]">{{ current.subtitle }}</p>
-                  <p :class="['text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-80', activeTheme.textClass]">{{ currentMainText }}</p>
-                  <ul v-if="current.details && current.details.length" class="mt-8 space-y-4 text-left">
-                    <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-3 text-[clamp(0.9rem,1.8vh,1.2rem)] font-medium', activeTheme.textClass]">
-                      <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
-                      <span>{{ detail }}</span>
-                    </li>
-                  </ul>
-                </div>
-                <div :class="['w-full lg:w-[55%] flex items-center justify-center p-8 lg:p-12 relative min-h-[300px]', current.imageUrl ? activeTheme.panelClass : '']">
-                   <div class="w-full h-full rounded-sm overflow-hidden flex items-center justify-center relative group bg-slate-200/50 animate-pulse">
-                    <img v-if="current.imageUrl" 
-                         :key="current.imageUrl"
-                         :src="current.imageUrl" 
-                         referrerpolicy="no-referrer"
-                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
-                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
-                         class="w-full h-full object-cover" />
+              <!-- 2: Centered Typographic Masterpiece -->
+              <div v-else-if="slideLayoutType === 2" class="h-full overflow-hidden flex flex-col justify-center py-6 px-6 lg:px-20">
+                <div :class="['w-full max-w-5xl mx-auto text-center space-y-4 lg:space-y-6', activeTheme.panelClass]">
+                  <span class="px-3 py-1 text-xs font-bold bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 uppercase tracking-widest">
+                    Wiedza w pigułce
+                  </span>
+                  <h2 :class="['text-[clamp(1.8rem,4.5vh,2.8rem)] font-black tracking-tight', activeTheme.titleClass]" v-html="renderMath(current.title)"></h2>
+                  <p v-if="current.subtitle" :class="['mx-auto max-w-3xl text-[clamp(1rem,2.2vh,1.3rem)] font-bold opacity-60', activeTheme.textClass]" v-html="renderMath(current.subtitle)"></p>
+                  <div class="h-0.5 w-12 bg-amber-500/50 mx-auto"></div>
+                  <p :class="['mx-auto max-w-4xl text-[clamp(0.95rem,2.2vh,1.2rem)] font-medium leading-relaxed opacity-95', activeTheme.textClass]" v-html="renderMath(currentMainText)"></p>
+                  
+                  <div v-if="current.details && current.details.length" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto text-left">
+                    <div v-for="(detail, dIdx) in current.details.slice(0, 4)" :key="dIdx" class="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 shadow-sm">
+                      <span class="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-amber-500 opacity-60"></span>
+                      <p :class="['text-[clamp(0.85rem,1.8vh,1.05rem)] font-semibold leading-relaxed', activeTheme.textClass]" v-html="renderMath(detail)"></p>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <!-- 2: Full-height Text Layout (Centered) -->
-              <div v-else-if="slideLayoutType === 2" class="flex h-full flex-col items-center justify-center">
-                <div :class="['w-full max-w-6xl p-12 lg:p-20 text-center', activeTheme.panelClass]">
-                   <h2 :class="['text-[clamp(2.5rem,6vh,4.5rem)] font-extrabold leading-tight mb-8', activeTheme.titleClass]">{{ current.title }}</h2>
-                   <p v-if="current.subtitle" :class="['mx-auto max-w-4xl text-[clamp(1.3rem,3vh,2rem)] font-bold opacity-60 mb-8', activeTheme.textClass]">{{ current.subtitle }}</p>
-                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.8vh,1.6rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
-                   <ul v-if="current.details && current.details.length" class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-5xl mx-auto text-left">
-                     <li v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-start gap-4 text-[clamp(1rem,2vh,1.3rem)] font-medium', activeTheme.textClass]">
-                       <span class="mt-2.5 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500 opacity-50"></span>
-                       <span>{{ detail }}</span>
-                     </li>
-                   </ul>
-                </div>
-              </div>
-
-              <!-- 3: Top Image Layout (Minimalist) -->
-              <div v-else class="flex h-full flex-col">
-                <div :class="['h-[35%] w-full flex items-center justify-center p-6 relative', activeTheme.accentClass]">
-                   <div :class="['w-full max-w-5xl h-full rounded-xl overflow-hidden flex items-center justify-center relative bg-slate-200/50 animate-pulse shadow-lg', current.imageUrl ? activeTheme.panelClass : '']">
-                    <img v-if="current.imageUrl" 
-                         :key="current.imageUrl"
-                         :src="current.imageUrl" 
-                         referrerpolicy="no-referrer"
-                         @load="$event.target.parentElement.classList.remove('animate-pulse', 'bg-slate-200/50')"
-                         @error="(e) => { e.target.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(current.imagePrompt || current.title || 'education') + '?lock=' + slideIndex; }"
-                         class="w-full h-full object-cover" />
+ 
+              <!-- 3: Elegant Side-by-Side Compare / Multi-Section Blocks -->
+              <div v-else class="h-full overflow-hidden flex flex-col justify-center py-6 px-6 lg:px-20">
+                <div class="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 lg:gap-10 items-stretch">
+                  <div :class="['w-full lg:w-[45%] flex flex-col justify-center p-6 lg:p-8 rounded-2xl border border-white/5 backdrop-blur-sm', activeTheme.accentClass]">
+                    <span class="px-3 py-1 text-xs font-bold bg-indigo-500/10 text-indigo-400 rounded-full border border-indigo-500/20 uppercase tracking-widest w-fit mb-4">
+                      Kluczowy wniosek
+                    </span>
+                    <h2 :class="['text-[clamp(1.4rem,3.5vh,2.2rem)] font-black leading-tight mb-4', activeTheme.titleClass]" v-html="renderMath(current.title)"></h2>
+                    <p :class="['text-[clamp(0.95rem,2vh,1.15rem)] font-semibold leading-relaxed opacity-90', activeTheme.textClass]" v-html="renderMath(currentMainText)"></p>
                   </div>
-                </div>
-                <div :class="['flex-1 p-10 lg:p-14 flex flex-col justify-center text-center relative z-10', activeTheme.panelClass]">
-                   <h2 :class="['text-[clamp(2.2rem,5vh,3.8rem)] font-extrabold leading-tight mb-4', activeTheme.titleClass]">{{ current.title }}</h2>
-                   <p :class="['mx-auto max-w-5xl text-[clamp(1.1rem,2.5vh,1.5rem)] font-medium leading-relaxed opacity-90', activeTheme.textClass]">{{ currentMainText }}</p>
-                   <div v-if="current.details && current.details.length" class="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-3">
-                     <div v-for="(detail, dIdx) in current.details" :key="dIdx" :class="['flex items-center gap-2 text-[clamp(0.9rem,1.8vh,1.1rem)] font-bold', activeTheme.textClass]">
-                       <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                       <span>{{ detail }}</span>
-                     </div>
-                   </div>
+                  
+                  <div class="flex-1 flex flex-col justify-center gap-3">
+                    <div class="w-full space-y-3">
+                      <div v-for="(detail, dIdx) in current.details.slice(0, 4)" :key="dIdx" class="p-3.5 sm:p-4 rounded-xl border border-white/10 bg-white/5 shadow-md flex items-center gap-3">
+                        <div class="w-6 h-6 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-[11px] flex-shrink-0">
+                          {{ dIdx + 1 }}
+                        </div>
+                        <p :class="['text-[clamp(0.85rem,1.8vh,1.05rem)] font-semibold leading-relaxed', activeTheme.textClass]" v-html="renderMath(detail)"></p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </template>
@@ -485,6 +515,27 @@
             </div>
           </div>
 
+          <div class="content-stretch flex flex-col gap-[8px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2">
+            <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px]">Czas podsumowania (Autoodtwarzanie)</label>
+            <div class="bg-input-background border border-border h-[48px] relative rounded-[8px] w-full flex items-center transition-colors focus-within:ring-2 focus-within:ring-primary/30">
+              <select
+                v-model="autoPlayMinutes"
+                class="bg-transparent border-none outline-none w-full h-full px-4 appearance-none text-[16px] text-foreground font-['Plus_Jakarta_Sans'] cursor-pointer"
+              >
+                <option value="manual" class="dark:bg-card dark:text-foreground">Brak automatycznego odtwarzania (Sterowanie ręczne)</option>
+                <option value="5" class="dark:bg-card dark:text-foreground">5 minut podsumowania (Automatyczne przesuwanie)</option>
+                <option value="10" class="dark:bg-card dark:text-foreground">10 minut podsumowania (Automatyczne przesuwanie)</option>
+                <option value="15" class="dark:bg-card dark:text-foreground">15 minut podsumowania (Automatyczne przesuwanie)</option>
+                <option value="20" class="dark:bg-card dark:text-foreground">20 minut podsumowania (Automatyczne przesuwanie)</option>
+              </select>
+              <div class="absolute right-[12px] flex gap-2 pointer-events-none items-center text-muted-foreground opacity-70">
+                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24">
+                  <path d="M7.2 9.6L12 14.4L16.8 9.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <div class="content-stretch flex flex-col gap-[12px] items-start justify-center relative self-start shrink-0 w-full md:col-span-2 mt-4">
             <label class="font-['Plus_Jakarta_Sans'] font-semibold text-muted-foreground text-[14px] leading-[20px] mb-2">Styl prezentacji</label>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
@@ -577,7 +628,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch, nextTick } from "vue";
+import { computed, onMounted, ref, watch, nextTick, onUnmounted } from "vue";
+import katex from "katex";
 import { useRoute } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import { useRouter } from "vue-router";
@@ -633,6 +685,30 @@ const slideTypeTranslations = {
   summary: "Podsumowanie",
   next_steps: "Zadania domowe"
 };
+
+function renderMath(text) {
+  if (!text) return "";
+  let str = String(text);
+  
+  // Clean double backslashes
+  str = str.replace(/\\\\/g, "\\");
+
+  if (!katex) return str;
+
+  // Detect formulas in $...$
+  return str.replace(/\$(.*?)\$/g, (match, mathExp) => {
+    try {
+      return katex.renderToString(mathExp, {
+        throwOnError: false,
+        displayMode: false,
+        strict: false
+      });
+    } catch (e) {
+      console.warn("KaTeX error:", e);
+      return match;
+    }
+  });
+}
 
 const availableStyles = [
   {
@@ -741,6 +817,7 @@ const selectedNoteId = ref("");
 const generationMessage = ref("");
 const presentationStyle = ref("auto");
 const maxSlidesSelection = ref("auto");
+const autoPlayMinutes = ref("manual");
 const presentationTheme = ref({
   wrapperClass: "bg-[#f3f4f6]",
   panelClass: "bg-white border-none shadow-none rounded-none",
@@ -887,6 +964,9 @@ onMounted(async () => {
     if (route.query.scope) {
       presentationScope.value = route.query.scope;
     }
+    if (route.query.autoPlayMinutes) {
+      autoPlayMinutes.value = route.query.autoPlayMinutes;
+    }
     
     await nextTick();
     if (canGenerate.value) {
@@ -942,6 +1022,109 @@ watch(slideIndex, (newVal) => {
   }
 });
 
+const activeDurationMinutes = ref("manual");
+const isAutoPlaying = ref(false);
+const totalSeconds = ref(0);
+const remainingSeconds = ref(0);
+const slideIntervalSeconds = ref(0);
+const currentSlideTimer = ref(0);
+
+let timerId = null;
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function startAutoplay(resume = false) {
+  stopAutoplay();
+  
+  if (activeDurationMinutes.value === "manual" || !slides.value.length) return;
+  
+  if (!resume) {
+    const T = parseInt(activeDurationMinutes.value) * 60;
+    totalSeconds.value = T;
+    remainingSeconds.value = T;
+    
+    // Calculate interval per slide: total seconds / number of slides
+    const interval = Math.max(2, Math.ceil(T / slides.value.length));
+    slideIntervalSeconds.value = interval;
+    currentSlideTimer.value = interval;
+  }
+  
+  isAutoPlaying.value = true;
+  
+  timerId = setInterval(() => {
+    if (!isAutoPlaying.value) return;
+    
+    // Decrement total remaining time if any left
+    if (remainingSeconds.value > 0) {
+      remainingSeconds.value--;
+    }
+    
+    // Decrement current slide countdown
+    if (currentSlideTimer.value > 1) {
+      currentSlideTimer.value--;
+    } else {
+      // Time for next slide transition
+      if (slideIndex.value < slides.value.length - 1) {
+        slideIndex.value++;
+      } else {
+        // We are on the last slide!
+        if (remainingSeconds.value > 0) {
+          // If there is still time left, loop back to the first slide!
+          slideIndex.value = 0;
+        } else {
+          // No time left, and we reached the end of the presentation, stop autoplay!
+          stopAutoplay();
+          return;
+        }
+      }
+      currentSlideTimer.value = slideIntervalSeconds.value;
+    }
+  }, 1000);
+}
+
+function stopAutoplay() {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  isAutoPlaying.value = false;
+}
+
+function toggleAutoPlay() {
+  if (isAutoPlaying.value) {
+    stopAutoplay();
+  } else {
+    if (remainingSeconds.value <= 0) {
+      startAutoplay(false);
+    } else {
+      startAutoplay(true);
+    }
+  }
+}
+
+// Watch slideIndex: if manually changed, reset the slide switch timer
+watch(slideIndex, () => {
+  if (isAutoPlaying.value) {
+    currentSlideTimer.value = slideIntervalSeconds.value;
+  }
+});
+
+// Watch isPresenting to trigger autoplay automatically when presenting starts
+watch(isPresenting, (presenting) => {
+  if (presenting) {
+    startAutoplay();
+  } else {
+    stopAutoplay();
+  }
+});
+
+onUnmounted(() => {
+  stopAutoplay();
+});
 function loadPresentationHistory() {
   const { list } = loadPresentationHistoryRaw(historyOwnerId.value);
   presentationHistory.value = list;
@@ -980,7 +1163,7 @@ function savePresentationSnapshot(currentSlides) {
   return item;
 }
 
-function startPresentation(currentSlides, skipReview = false, style = "auto") {
+function startPresentation(currentSlides, skipReview = false, style = "auto", durationMinutes = "manual") {
   slides.value = currentSlides;
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(
@@ -988,6 +1171,7 @@ function startPresentation(currentSlides, skipReview = false, style = "auto") {
     currentSlides,
     style,
   );
+  activeDurationMinutes.value = durationMinutes;
   isReviewing.value = !skipReview;
   isPresenting.value = skipReview;
 }
@@ -1035,7 +1219,7 @@ async function startGeneratedPresentation() {
     const savedItem = savePresentationSnapshot(generatedSlides);
     selectedPresentation.value = savedItem;
     generationMessage.value = `Wygenerowano prezentację (${savedItem.slideCount} slajdów).`;
-    startPresentation(generatedSlides, route.query.generate === "1", presentationStyle.value);
+    startPresentation(generatedSlides, route.query.generate === "1", presentationStyle.value, autoPlayMinutes.value);
     originatingLessonId.value = (presentationSource.value === "lesson" && selectedLesson.value?.id) ? selectedLesson.value.id : null;
   } catch (error) {
     generationMessage.value = error?.message
@@ -1060,6 +1244,9 @@ function tryOpenRequestedPresentation() {
   const shouldSkipReview = localStorage.getItem(SKIP_REVIEW_KEY) === 'true';
   localStorage.removeItem(SKIP_REVIEW_KEY);
 
+  const autoplayMinutes = localStorage.getItem("coteach:open-presentation-autoplay") || "manual";
+  localStorage.removeItem("coteach:open-presentation-autoplay");
+
   const requested = presentationHistory.value.find((item) => String(item.id) === requestedId);
   if (!requested) return;
   
@@ -1072,6 +1259,8 @@ function tryOpenRequestedPresentation() {
   slideIndex.value = 0;
   presentationTheme.value = resolvePresentationTheme(requested.title, storedSlides, requested.style || "auto");
   
+  activeDurationMinutes.value = autoplayMinutes;
+
   if (shouldSkipReview) {
     isPresenting.value = true;
     isReviewing.value = false;
@@ -1085,12 +1274,15 @@ function exitPresentation() {
   if (isPilot.value && syncChannel.value) {
     syncChannel.value.postMessage({ type: 'CLOSE_WINDOW' });
   }
-  if (originatingLessonId.value) {
-    router.push({ name: 'live-lesson', params: { lessonId: originatingLessonId.value } });
+  
+  // Clean, intuitive navigation: go back to where the user came from (e.g. Dashboard, Archive, Notes, or Live Lesson)
+  if (window.history.length > 1 && window.history.state && window.history.state.back) {
+    router.back();
   } else {
-    router.push({ path: '/archive', query: { tab: 'presentations' } });
+    router.push({ path: '/dashboard' });
   }
-  // Reset local state after navigation is initiated, as this component will be unmounted.
+
+  // Reset local state after navigation is initiated
   isPresenting.value = false;
   isReviewing.value = false;
   isPilot.value = false;
@@ -1138,8 +1330,8 @@ function resolvePresentationTheme(title, slides, style = "auto") {
     return {
       wrapperClass: "bg-[#fff1f2]",
       panelClass: basePanel,
-      titleClass: "text-[#9f1239] italic",
-      textClass: "text-[#4c0519]",
+      titleClass: "text-[#9f1239] font-black tracking-tight",
+      textClass: "text-[#4c0519] font-sans font-medium",
       accentClass: "bg-rose-50 rounded-3xl"
     };
   }
@@ -1192,8 +1384,8 @@ function resolvePresentationTheme(title, slides, style = "auto") {
     return {
       wrapperClass: "bg-[#f4f1ea]",
       panelClass: "bg-[#fdfcf9] shadow-inner",
-      titleClass: "text-[#2c2c2c] font-serif font-bold italic",
-      textClass: "text-[#4a4a4a] font-serif",
+      titleClass: "text-[#2c2c2c] font-serif font-extrabold tracking-wide",
+      textClass: "text-[#4a4a4a] font-sans font-medium",
       accentClass: "bg-[#e5e0d4] border-y-2 border-[#d1cbb8]"
     };
   }
@@ -1225,6 +1417,39 @@ function resolvePresentationTheme(title, slides, style = "auto") {
 </script>
 
 <style scoped>
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css');
+
+/* Custom beautiful scrollbar for slides */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* For dark wrappers, make scrollbar white-translucent */
+:deep(.bg-\[\#05070f\]) .overflow-y-auto,
+:deep(.bg-\[oklch\(0\.18_0\.026_265\)\]) .overflow-y-auto,
+:deep(.bg-black) .overflow-y-auto {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+:deep(.bg-\[\#05070f\]) .overflow-y-auto::-webkit-scrollbar-thumb,
+:deep(.bg-\[oklch\(0\.18_0\.026_265\)\]) .overflow-y-auto::-webkit-scrollbar-thumb,
+:deep(.bg-black) .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
 .clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

@@ -1594,9 +1594,14 @@ async function beginWhisperMode() {
     }
   };
 
-  // Function to send collected audio for transcription
-  const sendAudioForTranscription = async () => {
-    if (audioChunks.value.length === 0 || !state.lesson?.id) {
+  // Function to send collected audio for transcription (accepts parameter to avoid race conditions)
+  const sendAudioForTranscription = async (chunksToSend) => {
+    const activeChunks = chunksToSend || [...audioChunks.value];
+    if (!chunksToSend) {
+      audioChunks.value = []; // Clear the source array if we read it here
+    }
+
+    if (activeChunks.length === 0 || !state.lesson?.id) {
       return;
     }
 
@@ -1611,17 +1616,16 @@ async function beginWhisperMode() {
     try {
       interimCaption.value = "Przetwarzanie audio...";
 
-      const audioBlob = new Blob(audioChunks.value, { type: recorder.mimeType || 'audio/webm' });
-      console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${audioChunks.value.length} chunks`);
+      const audioBlob = new Blob(activeChunks, { type: recorder.mimeType || 'audio/webm' });
+      console.log(`🔊 Processing audio: ${audioBlob.size} bytes, ${activeChunks.length} chunks`);
 
       // More reasonable filtering - balance between filtering noise and capturing speech
       const minSize = 1000; // Minimum ~1KB of audio
-      const estimatedDurationMs = audioChunks.value.length * 1000; // ~1 second per chunk
+      const estimatedDurationMs = activeChunks.length * 1000; // ~1 second per chunk
       const minDuration = 1000; // Require at least 1 second of audio
 
       if (audioBlob.size < minSize || estimatedDurationMs < minDuration) {
         console.log(`❌ Audio too short: ${audioBlob.size}b / ${estimatedDurationMs}ms (min: ${minSize}b/${minDuration}ms)`);
-        audioChunks.value.length = 0;
         interimCaption.value = "";
         return;
       }
@@ -1669,13 +1673,10 @@ async function beginWhisperMode() {
         .replace(/\b(\d{1,2}:)?\d{1,2}:\d{2}\b/g, "")        // Usuwa znaczniki czasu typu 02:53 lub 1:02:53
         .trim();
 
-
-
       const isValidTranscription = cleanText &&
                               cleanText.length > 3 &&
                               !obviousHallucinations.test(cleanText) &&
                               !hallucinationRegex.test(cleanText);
-
 
       if (isValidTranscription) {
         // Check if this text is already in the array to prevent duplicates
@@ -1688,14 +1689,13 @@ async function beginWhisperMode() {
           console.log(`✅ Added transcription #${transcription.value.length}`);
           await nextTick();
 
-
           // Reset user scrolling flag when new content is added
           isUserScrolling.value = false;
 
           // Auto-scroll to bottom after adding new transcription
           autoScrollToBottom();
 
-          await sendTranscript(state.lesson.id, text);
+          await sendTranscript(state.lesson.id, cleanText); // FIXED: 'text' -> 'cleanText'
 
           // Small delay to prevent overwhelming the server, then check coverage
           setTimeout(() => {
@@ -1704,7 +1704,7 @@ async function beginWhisperMode() {
 
         }
       } else {
-        console.log(`❌ Filtered: "${text}" (hallucination/too short)`);
+        console.log(`❌ Filtered: "${cleanText}" (hallucination/too short)`);
       }
 
       if (data.limitReached) {
@@ -1717,7 +1717,6 @@ async function beginWhisperMode() {
       error.value = `Błąd transkrypcji: ${e.message}`;
     } finally {
       interimCaption.value = "";
-      audioChunks.value.length = 0;
       isTranscribing.value = false; // Reset transcription flag
       console.log(`🧹 Cleaned up`);
     }
@@ -1745,6 +1744,53 @@ async function beginWhisperMode() {
     audioContext.close();
     throw new Error(`Nie udało się uruchomić nagrywania: ${startErr.message}`);
   }
+
+  // Safe and clean function to stop and restart the MediaRecorder.
+  // Solving the asynchronous restart bug on Safari and mobile WebKit.
+  const stopAndRestartRecorder = () => {
+    if (!recorder || recorder.state === 'inactive') return;
+
+    // Capture the chunks currently in the queue
+    const chunksToSend = [...audioChunks.value];
+    audioChunks.value = []; // Clear the queue immediately for the next recording cycle
+
+    // Temporarily override the onstop handler to handle our safe restart
+    const originalOnStop = recorder.onstop;
+    recorder.onstop = () => {
+      console.log(`[MediaRecorder] Stopped safely. State is now: ${recorder.state}`);
+      
+      // Process transcription in background
+      if (chunksToSend.length > 0 && hasSpeechDetected) {
+        void sendAudioForTranscription(chunksToSend);
+      } else {
+        console.log("[MediaRecorder] No speech detected or empty chunks, skipping send");
+      }
+
+      // Reset state for next cycle
+      recordingStartTime = Date.now();
+      silenceStart = null;
+      hasSpeechDetected = false;
+
+      // Restore original onstop handler
+      recorder.onstop = originalOnStop;
+
+      // Safely restart the recorder only when state is inactive
+      if (isRecording.value && transcriptionMethod.value === 'whisper') {
+        try {
+          recorder.start(1000);
+          console.log("[MediaRecorder] Restarted safely in dynamically overridden onstop");
+        } catch (err) {
+          console.error("[MediaRecorder] Failed to restart in dynamically overridden onstop:", err);
+        }
+      }
+    };
+
+    try {
+      recorder.stop();
+    } catch (err) {
+      console.error("[MediaRecorder] Error stopping recorder:", err);
+    }
+  };
 
   // Monitor audio levels for silence detection
   let recordingStartTime = Date.now();
@@ -1786,18 +1832,7 @@ async function beginWhisperMode() {
     const recordingDuration = Date.now() - recordingStartTime;
     if (recordingDuration > MAX_RECORDING_TIME && audioChunks.value.length > 0) {
       console.log(`⏱️ Max time reached, forcing transcription`);
-      if (hasSpeechDetected) {
-        sendAudioForTranscription();
-      } else {
-        console.log("🤫 Max time reached but no speech detected, clearing chunks");
-        audioChunks.value.length = 0;
-      }
-      recorder.stop();
-      audioChunks.value.length = 0;
-      recorder.start(1000);
-      recordingStartTime = Date.now();
-      silenceStart = null;
-      hasSpeechDetected = false;
+      stopAndRestartRecorder();
       requestAnimationFrame(monitorAudio);
       return;
     }
@@ -1816,18 +1851,7 @@ async function beginWhisperMode() {
       const silenceDuration = Date.now() - silenceStart;
       if (silenceDuration >= SILENCE_DURATION && audioChunks.value.length > 0) {
         console.log(`⏸️ Silence detected, sending transcription`);
-        if (hasSpeechDetected) {
-          sendAudioForTranscription();
-        } else {
-          console.log("🤫 Silence detected but no speech was heard during this cycle, skipping API call");
-          audioChunks.value.length = 0;
-        }
-        recorder.stop();
-        audioChunks.value.length = 0;
-        recorder.start(1000);
-        recordingStartTime = Date.now();
-        silenceStart = null;
-        hasSpeechDetected = false; // Reset for next cycle
+        stopAndRestartRecorder();
       } else if (frameCount % 60 === 0) {
         info.value = `Czekam na mowę... (${Math.round(silenceDuration/1000)}s ciszy)`;
       }

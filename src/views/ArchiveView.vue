@@ -102,7 +102,7 @@
             v-for="lesson in filteredLessons"
             :key="lesson.id"
             class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-5 cursor-pointer transition-colors"
-            :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/30' : 'hover:bg-[#f5f7fb]'"
+            :class="selected?.id === lesson.id ? 'ring-2 ring-[#0c3dfe]/40 bg-blue-50/15' : 'hover:bg-[#f5f7fb]'"
             @click="selectLesson(lesson)"
           >
             <div class="flex items-start justify-between gap-4">
@@ -124,6 +124,35 @@
               <span class="shrink-0 rounded-lg bg-[#e8eefb] px-3 py-1.5 font-['Inter'] font-semibold text-[12px] text-[#142588]">
                 {{ lesson.month || "Brak miesiąca" }}
               </span>
+            </div>
+
+            <!-- Action buttons inside active/selected lesson element -->
+            <div v-if="selected?.id === lesson.id && lesson.finalNote" class="mt-4 pt-3.5 border-t border-gray-100/70 flex flex-wrap gap-2.5" @click.stop>
+              <button
+                v-if="lesson.finalNote.shareUrl"
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                @click="openFinalNote"
+              >
+                Otwórz notatkę (link)
+              </button>
+
+              <button
+                v-if="lesson.finalNote.shareUrl"
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0043b2] transition-colors cursor-pointer"
+                @click="openTranscript"
+              >
+                Otwórz transkrypcję (link)
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold text-xs px-3.5 py-2 hover:bg-[#0f1d66] transition-colors cursor-pointer"
+                @click="openGoldenNotePreview"
+              >
+                Pokaż treść
+              </button>
             </div>
           </div>
 
@@ -297,30 +326,6 @@
               <img :src="qrCodeUrl" alt="QR" width="220" height="220" class="mx-auto" />
             </button>
 
-            <button
-              v-if="selected.finalNote.shareUrl"
-              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
-              @click="openFinalNote"
-            >
-              Otwórz notatkę (link)
-            </button>
-
-            <button
-              v-if="selected.finalNote.shareUrl"
-              class="w-full rounded-lg bg-[#0053db] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0043b2] transition-colors cursor-pointer"
-              @click="openTranscript"
-            >
-              Otwórz transkrypcję (link)
-            </button>
-
-            <button
-              type="button"
-              class="w-full rounded-lg bg-[#142588] text-white font-['Inter'] font-semibold py-2.5 hover:bg-[#0f1d66] transition-colors cursor-pointer"
-              @click="openGoldenNotePreview"
-            >
-              Pokaż treść notatki
-            </button>
-
             <!-- Homework integration in Lesson Details -->
             <div v-if="selected.homework" class="pt-6 mt-6 border-t border-gray-100">
               <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[16px] mb-4 flex items-center gap-2">
@@ -442,6 +447,22 @@
               <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Data utworzenia</label>
               <div class="bg-[#e0e3e6] rounded-lg px-4 py-2.5">
                 <div class="font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e]">{{ selectedPresentation.createdAtLabel || formatDate(selectedPresentation.createdAt) }}</div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="font-['Plus_Jakarta_Sans'] font-semibold text-[#454652] text-[14px] block">Czas podsumowania (Autoplay)</label>
+              <div class="bg-[#e0e3e6] rounded-lg px-4 py-2">
+                <select
+                  v-model="archiveAutoPlayMinutes"
+                  class="w-full bg-transparent border-none outline-none font-['Plus_Jakarta_Sans'] text-[15px] text-[#191c1e] cursor-pointer"
+                >
+                  <option value="manual">Brak automatycznego odtwarzania (Sterowanie ręczne)</option>
+                  <option value="5">5 minut podsumowania (Automatyczne przesuwanie)</option>
+                  <option value="10">10 minut podsumowania (Automatyczne przesuwanie)</option>
+                  <option value="15">15 minut podsumowania (Automatyczne przesuwanie)</option>
+                  <option value="20">20 minut podsumowania (Automatyczne przesuwanie)</option>
+                </select>
               </div>
             </div>
 
@@ -630,6 +651,7 @@ const isQrModalOpen = ref(false);
 const selectedQuiz = ref(null);
 const quizResults = ref([]);
 const selectedHomework = ref(null);
+const archiveAutoPlayMinutes = ref("manual");
 
 onMounted(async () => {
   await Promise.all([fetchLessons(), fetchTeacherNotes(), fetchQuizzes(), fetchUserClasses()]);
@@ -886,6 +908,7 @@ function openSelectedPresentation() {
   if (!selectedPresentation.value?.id) return;
   localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, String(selectedPresentation.value.id));
   localStorage.setItem(SKIP_REVIEW_KEY, 'true');
+  localStorage.setItem("coteach:open-presentation-autoplay", archiveAutoPlayMinutes.value);
   router.push("/presentation");
 }
 
@@ -893,6 +916,7 @@ function editSelectedPresentation() {
   if (!selectedPresentation.value?.id) return;
   localStorage.setItem(ARCHIVE_OPEN_PRESENTATION_KEY, String(selectedPresentation.value.id));
   localStorage.setItem(SKIP_REVIEW_KEY, 'false');
+  localStorage.setItem("coteach:open-presentation-autoplay", archiveAutoPlayMinutes.value);
   router.push("/presentation");
 }
 
@@ -981,6 +1005,7 @@ async function handleDeleteHomework() {
 watch(activeTab, async (tab) => {
   localStorage.setItem(ARCHIVE_ACTIVE_TAB_KEY, tab);
   searchQuery.value = "";
+  archiveAutoPlayMinutes.value = "manual";
   if (tab === "lessons" && filteredLessons.value.length && !selected.value) {
     selectLesson(filteredLessons.value[0]);
   }

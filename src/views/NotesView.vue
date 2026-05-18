@@ -84,31 +84,35 @@
         <div class="xl:col-[1/span_9] content-stretch flex flex-col items-start relative shrink-0 w-full h-full">
           <div class="bg-white relative rounded-[12px] shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] shrink-0 w-full h-full">
             <div class="content-stretch flex flex-col gap-[24px] items-start p-[20px] sm:p-[32px] relative size-full h-full">
-              <div class="relative flex w-full shrink-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="content-stretch flex flex-col items-start relative shrink-0">
-                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] whitespace-nowrap">Materiały źródłowe</h3>
+              <div class="relative flex w-full shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-[16px] shrink-0">
+                  <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-[#191c1e] text-[18px] leading-[28px] whitespace-nowrap">Treść notatki</h3>
                 </div>
+
                 <div class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-[16px]">
+                  <button type="button" @click="showRawTextModal = true" class="bg-white dark:bg-card border border-border content-stretch flex items-center justify-center px-[20px] py-[10px] rounded-[8px] hover:bg-slate-50 dark:hover:bg-border transition-colors text-black dark:text-foreground font-semibold text-[16px] w-full sm:w-auto shadow-sm" :disabled="loading">
+                    <svg class="mr-2 w-[18px] h-[18px] text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Edytuj całą notatkę
+                  </button>
+
                   <button type="button" class="bg-[#0c3dfe] content-stretch flex items-center justify-center px-[20px] sm:px-[32px] py-[10px] rounded-[8px] hover:bg-[#0a34d4] transition-colors shadow-[0px_10px_15px_-3px_rgba(20,37,136,0.2)] disabled:opacity-50 w-full sm:w-auto" :disabled="loading" @click="handleGenerate">
                     <span class="font-['Plus_Jakarta_Sans'] font-semibold text-[16px] text-white leading-[24px]">{{ loading ? "Generowanie..." : "Generuj notatkę AI" }}</span>
                     <svg class="ml-2 w-[16px] h-[16px]" fill="none" viewBox="0 0 15.7635 15.7635">
                       <path d="M7.88175 0L10.3204 5.4431L15.7635 7.88175L10.3204 10.3204L7.88175 15.7635L5.4431 10.3204L0 7.88175L5.4431 5.4431L7.88175 0Z" fill="white" />
                     </svg>
                   </button>
-                  <div class="content-stretch flex flex-col items-start sm:items-end">
-                    <p class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-[12px] leading-[16px]">
-                      {{ rawTextContent.length }} / 25,000 Znaki
-                    </p>
-                  </div>
                 </div>
               </div>
 
-              <div class="bg-[#e0e3e6] dark:bg-input-background relative rounded-[8px] w-full flex-grow flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 min-h-[250px]">
-                <textarea 
-                  v-model="rawTextContent"
-                  class="w-full h-full bg-transparent border-none outline-none p-[24px] text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none rounded-[8px]"
-                  placeholder="Wklej tu notatki z lekcji, fragmenty książek lub struktury sylabusów do analizy AI..."
-                ></textarea>
+              <!-- Main Content Workspace -->
+              <div class="w-full flex-grow flex flex-col gap-2 min-h-[300px] relative">
+                <!-- Preview container -->
+                <div class="bg-white border border-[#e0e3e6] dark:border-border dark:bg-card relative rounded-[8px] w-full p-[24px] text-[16px] text-[#191c1e] dark:text-foreground font-['Plus_Jakarta_Sans'] overflow-y-auto max-h-[450px] min-h-[250px] flex-grow flex flex-col">
+                  <div v-if="rawTextContent.trim()" class="prose max-w-none dark:prose-invert prose-slate prose-headings:font-bold prose-headings:text-[#0c3dfe] flex-grow" v-html="renderMarkdownWithMath(rawTextContent)" @click="handlePreviewClick"></div>
+                  <div v-else class="text-gray-400 italic text-center py-10 w-full my-auto">Wpisz temat i przedmiot po lewej stronie, prześlij plik z materiałem lub kliknij "Edytuj całą notatkę", aby zacząć!</div>
+                </div>
               </div>
             </div>
           </div>
@@ -167,14 +171,205 @@
         </div>
       </div>
     </div>
+
+    <!-- Beautiful KaTeX Math Editor Modal -->
+    <div v-if="showMathModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white dark:bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100 flex flex-col">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-black dark:text-foreground flex items-center gap-2">
+            <span class="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+            </span>
+            Edytor wzoru matematycznego
+          </h3>
+          <button @click="showMathModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-foreground transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-border">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-5">
+          <!-- Realtime Preview -->
+          <div class="flex flex-col gap-2">
+            <span class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Podgląd na żywo:</span>
+            <div class="min-h-[80px] bg-slate-50 dark:bg-input-background border border-dashed border-border rounded-xl flex items-center justify-center p-4 transition-all overflow-x-auto">
+              <div v-html="mathModalPreview || '<span class=\'text-gray-400 italic text-sm\'>Wpisz wzór...</span>'"></div>
+            </div>
+          </div>
+
+          <!-- Latex Input -->
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Zapis matematyczny:</label>
+            <input 
+              v-model="mathModalRaw"
+              type="text" 
+              class="w-full bg-[#e0e3e6] dark:bg-input-background border-none outline-none p-3.5 rounded-xl font-mono text-base text-black dark:text-foreground focus:ring-2 focus:ring-blue-500"
+              placeholder="Wpisz np. \frac{1}{2} lub x^2"
+              @keydown.enter="saveMathEditor"
+            />
+          </div>
+
+          <!-- Modal Helper Toolbar -->
+          <div class="flex flex-col gap-2">
+            <span class="text-xs font-semibold text-gray-500 dark:text-muted-foreground uppercase tracking-wider">Wstaw szablon:</span>
+            <div class="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 dark:bg-input-background/50 rounded-xl border border-border">
+              <button type="button" @click="mathModalRaw += '\\frac{a}{b}'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">½ Ułamek</button>
+              <button type="button" @click="mathModalRaw += '\\sqrt{x}'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">√ Pierwiastek</button>
+              <button type="button" @click="mathModalRaw += 'x^y'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">x² Potęga</button>
+              <button type="button" @click="mathModalRaw += 'x_i'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">xₙ Indeks</button>
+              <button type="button" @click="mathModalRaw += '\\cdot'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">· Kropka</button>
+              <button type="button" @click="mathModalRaw += '\\pm'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">± Plus-minus</button>
+              <button type="button" @click="mathModalRaw += '\\pi'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">π Pi</button>
+              <button type="button" @click="mathModalRaw += '\\infty'" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card border border-border rounded hover:bg-gray-100 dark:hover:bg-border transition-colors">∞ Nieskończoność</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-border flex items-center justify-end gap-3 bg-gray-50 dark:bg-card/50">
+          <button 
+            type="button" 
+            @click="showMathModal = false" 
+            class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-border rounded-xl transition-colors"
+          >
+            Anuluj
+          </button>
+          <button 
+            type="button" 
+            @click="saveMathEditor" 
+            class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+          >
+            Zapisz zmiany
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Raw Text Editor Modal -->
+    <div v-if="showRawTextModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white dark:bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] mx-4 overflow-hidden transform transition-all scale-100 flex flex-col">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+          <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-black dark:text-foreground flex items-center gap-2">
+            <span class="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </span>
+            Edycja treści notatki (Markdown + LaTeX)
+          </h3>
+          <button @click="showRawTextModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-foreground transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-border">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-4 flex-grow overflow-hidden">
+          <!-- Asystent Matematyczny / Toolbar -->
+          <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#f0f2f4] dark:bg-input-background/50 border border-border rounded-xl w-full">
+            <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Wzory:</span>
+            
+            <button type="button" @click="insertMath('\\frac{a}{b}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Ułamek">
+              <span class="text-[10px] text-blue-500 font-bold">½</span> Ułamek
+            </button>
+
+            <button type="button" @click="insertMath('\\sqrt{x}')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pierwiastek">
+              <span class="text-blue-500 font-bold">√</span> Pierwiastek
+            </button>
+
+            <button type="button" @click="insertMath('x^y')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Potęga">
+              <span class="text-blue-500 font-bold">x²</span> Potęga
+            </button>
+
+            <button type="button" @click="insertMath('x_i')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Indeks dolny">
+              <span class="text-blue-500 font-bold">xₙ</span> Indeks
+            </button>
+
+            <button type="button" @click="insertMath('\\cdot')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Mnożenie (kropka)">
+              <span class="text-blue-500 font-bold">·</span> Mnożenie
+            </button>
+
+            <button type="button" @click="insertMath('\\pm')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Plus-minus">
+              <span class="text-blue-500 font-bold">±</span> Plus-minus
+            </button>
+
+            <button type="button" @click="insertMath('\\pi')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Pi">
+              <span class="text-blue-500 font-bold">π</span> Pi
+            </button>
+
+            <button type="button" @click="insertMath('\\infty')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Nieskończoność">
+              <span class="text-blue-500 font-bold">∞</span> Nieskończoność
+            </button>
+
+            <div class="h-4 w-[1px] bg-gray-300 dark:bg-border mx-1"></div>
+
+            <span class="text-xs font-semibold text-[#454652] dark:text-muted-foreground mr-1">Chemia:</span>
+
+            <button type="button" @click="insertMath('H_2O')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Woda">
+              <span class="text-green-500 font-bold">H₂O</span> Woda
+            </button>
+
+            <button type="button" @click="insertMath('CO_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Dwutlenek węgla">
+              <span class="text-green-500 font-bold">CO₂</span> CO₂
+            </button>
+
+            <button type="button" @click="insertMath('O_2')" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-border border border-border rounded transition-all flex items-center gap-1 shadow-sm" title="Tlen">
+              <span class="text-green-500 font-bold">O₂</span> Tlen
+            </button>
+          </div>
+
+          <!-- Textarea Editor -->
+          <div class="flex-grow bg-[#e0e3e6] dark:bg-input-background relative rounded-xl flex transition-colors focus-within:ring-2 focus-within:ring-[#0c3dfe]/50 overflow-hidden">
+            <textarea 
+              ref="textareaRef"
+              v-model="rawTextContent"
+              class="w-full h-full bg-transparent border-none outline-none p-6 text-[16px] text-[#191c1e] dark:text-foreground placeholder-[#767683] font-['Plus_Jakarta_Sans'] resize-none"
+              placeholder="Wpisz treść notatki w formacie Markdown lub wklej materiał..."
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-border flex items-center justify-between bg-gray-50 dark:bg-card/50">
+          <span class="font-['Plus_Jakarta_Sans'] font-medium text-[#767683] text-sm">
+            {{ rawTextContent.length }} / 25,000 Znaki
+          </span>
+          <div class="flex items-center gap-3">
+            <button 
+              type="button" 
+              @click="showRawTextModal = false" 
+              class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-border rounded-xl transition-colors"
+            >
+              Zamknij
+            </button>
+            <button 
+              type="button" 
+              @click="showRawTextModal = false" 
+              class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            >
+              Zapisz i wróć do podglądu
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useLessonStore } from "../composables/useLessonStore";
 import cloudIcon from "../assets/cloud.svg";
+import { marked } from "marked";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 let pdfMakeInstance = null;
 let pdfMakeLoadingPromise = null;
@@ -265,6 +460,154 @@ const lessonDate = ref(new Date().toISOString().split("T")[0]);
 const classLevel = ref("4 Szkoła Średnia");
 const rawTextContent = ref("");
 const selectedFile = ref(null);
+const activeTab = ref("edit");
+const showRawTextModal = ref(false);
+const textareaRef = ref(null);
+
+function insertMath(latexExpr) {
+  const el = textareaRef.value;
+  if (!el) {
+    rawTextContent.value += ` $${latexExpr}$`;
+    return;
+  }
+  
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const text = rawTextContent.value;
+  const formatted = `$${latexExpr}$`;
+  
+  rawTextContent.value = text.substring(0, start) + formatted + text.substring(end);
+  
+  const newCursorPos = start + formatted.length;
+  
+  setTimeout(() => {
+    el.focus();
+    if (latexExpr.includes('{a}')) {
+      const offset = formatted.indexOf('{a}') + 1;
+      el.setSelectionRange(start + offset, start + offset + 1);
+    } else if (latexExpr.includes('{x}')) {
+      const offset = formatted.indexOf('{x}') + 1;
+      el.setSelectionRange(start + offset, start + offset + 1);
+    } else {
+      el.setSelectionRange(newCursorPos, newCursorPos);
+    }
+  }, 0);
+}
+
+function updateMathAtIndex(text, targetIndex, newValue, isDisplay) {
+  let index = 0;
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  
+  return text.replace(regex, (match) => {
+    if (index === targetIndex) {
+      index++;
+      return isDisplay ? `$$\n${newValue}\n$$` : `$${newValue}$`;
+    }
+    index++;
+    return match;
+  });
+}
+
+function renderMarkdownWithMath(text) {
+  if (!text) return "";
+  
+  const placeholders = [];
+  let str = String(text);
+  
+  // 1. Normalizuj podwójne backslashe (LLM/JSON strings)
+  str = str.replace(/\\\\/g, "\\");
+
+  // 2. Jednoprzebiegowe wyciąganie wzorów w kolejności ich występowania w tekście
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  
+  str = str.replace(regex, (match) => {
+    const isDisplay = match.startsWith('$$');
+    const mathExp = isDisplay ? match.slice(2, -2) : match.slice(1, -1);
+    
+    try {
+      const cleanMath = mathExp.trim()
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+      
+      const rendered = katex.renderToString(cleanMath, {
+        throwOnError: false,
+        displayMode: isDisplay,
+        strict: false
+      });
+      
+      const index = placeholders.length;
+      const placeholder = `%%MATH_FORMULA_${index}%%`;
+      
+      // Wrappowanie wyrenderowanego kodu w klikalny, interaktywny kontener z danymi
+      const wrapped = `<span class="katex-editable hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:ring-2 hover:ring-blue-500 rounded px-1.5 py-0.5 transition-all cursor-pointer inline-block" data-math-index="${index}" data-math-display="${isDisplay ? 'true' : 'false'}" data-math-raw="${encodeURIComponent(mathExp.trim())}" title="Kliknij, aby edytować ten wzór">${rendered}</span>`;
+      
+      placeholders.push({ placeholder, wrapped });
+      return placeholder;
+    } catch (e) {
+      console.warn("KaTeX rendering error:", e);
+      return match;
+    }
+  });
+
+  // 3. Przepuść tekst z bezpiecznymi placeholderami przez marked.parse
+  let html = marked.parse(str);
+
+  // 4. Wstaw z powrotem wyrenderowane i opakowane spany KaTeX
+  for (const item of placeholders) {
+    html = html.replace(item.placeholder, item.wrapped);
+  }
+
+  return html;
+}
+
+const showMathModal = ref(false);
+const mathModalIndex = ref(null);
+const mathModalDisplay = ref(false);
+const mathModalRaw = ref("");
+const mathModalPreview = computed(() => {
+  if (!mathModalRaw.value) return "";
+  try {
+    return katex.renderToString(mathModalRaw.value.trim(), {
+      throwOnError: false,
+      displayMode: mathModalDisplay.value,
+      strict: false
+    });
+  } catch (e) {
+    return "<span class='text-red-500 text-sm'>Błąd składni wzoru matematycznego...</span>";
+  }
+});
+
+function openMathEditor(index, isDisplay, rawMath) {
+  mathModalIndex.value = index;
+  mathModalDisplay.value = isDisplay;
+  mathModalRaw.value = rawMath;
+  showMathModal.value = true;
+}
+
+function saveMathEditor() {
+  if (mathModalIndex.value === null) return;
+  rawTextContent.value = updateMathAtIndex(
+    rawTextContent.value,
+    mathModalIndex.value,
+    mathModalRaw.value.trim(),
+    mathModalDisplay.value
+  );
+  showMathModal.value = false;
+  mathModalIndex.value = null;
+  mathModalRaw.value = "";
+}
+
+function handlePreviewClick(event) {
+  const editable = event.target.closest('.katex-editable');
+  if (!editable) return;
+  
+  const index = parseInt(editable.getAttribute('data-math-index'), 10);
+  const isDisplay = editable.getAttribute('data-math-display') === 'true';
+  const rawMath = decodeURIComponent(editable.getAttribute('data-math-raw'));
+  
+  openMathEditor(index, isDisplay, rawMath);
+}
 
 const loading = ref(false);
 const saving = ref(false);
@@ -320,6 +663,7 @@ async function handleGenerate() {
     });
     rawTextContent.value = result || "";
     info.value = "Notatka wygenerowana. Możesz ją edytować i zapisać.";
+    activeTab.value = "preview"; // Auto-switch to Preview tab so the teacher can see the formatted math!
   } catch (e) {
     error.value = e.message || "Nie udało się wygenerować notatki.";
   } finally {
@@ -478,3 +822,106 @@ async function downloadNotePdf() {
   }
 }
 </script>
+
+<style scoped>
+/* Premium KaTeX and Markdown styling for the note preview workspace */
+.prose {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1e293b;
+  line-height: 1.7;
+}
+
+.prose :deep(h1) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.6rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #0c3dfe;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  border-bottom: 2px solid rgba(12, 61, 254, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.prose :deep(h2) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.3rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.prose :deep(h3) {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.prose :deep(p) {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.prose :deep(ul) {
+  list-style-type: disc !important;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose :deep(ol) {
+  list-style-type: decimal !important;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose :deep(li) {
+  margin-bottom: 0.4rem;
+  padding-left: 0.25rem;
+}
+
+.prose :deep(strong) {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.prose :deep(code) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.prose :deep(.katex) {
+  font-size: 1.1em;
+  line-height: 1.2;
+}
+
+/* Dark Mode styling */
+:global(.dark) .prose {
+  color: #cbd5e1;
+}
+
+:global(.dark) .prose :deep(h2) {
+  color: #f8fafc;
+}
+
+:global(.dark) .prose :deep(h3) {
+  color: #e2e8f0;
+}
+
+:global(.dark) .prose :deep(strong) {
+  color: #ffffff;
+}
+
+:global(.dark) .prose :deep(code) {
+  background-color: #334155;
+  color: #f8fafc;
+}
+</style>

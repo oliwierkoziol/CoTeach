@@ -1358,12 +1358,48 @@ async function callOpenRouter({ model = OPENROUTER_TEXT_MODEL, parts, maxTokens,
 }
 
 function parseJsonFromModel(text) {
-  const cleaned = String(text || "")
+  let cleaned = String(text || "")
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/```$/i, "")
     .trim();
-  return JSON.parse(cleaned);
+
+  // Strip trailing commas from JSON arrays and objects
+  cleaned = cleaned.replace(/,(\s*[\]}])/g, "$1");
+
+  // Fix invalid backslash escapes (e.g. in LaTeX \Omega, math symbols, or markdown \*)
+  cleaned = cleaned.replace(/\\(?!["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "\\\\");
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Try robust extraction
+    const firstBrace = cleaned.indexOf("{");
+    const firstBracket = cleaned.indexOf("[");
+    const lastBrace = cleaned.lastIndexOf("}");
+    const lastBracket = cleaned.lastIndexOf("]");
+
+    let startIdx = -1;
+    let endIdx = -1;
+
+    if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+      startIdx = firstBrace;
+      endIdx = lastBrace;
+    } else if (firstBracket !== -1) {
+      startIdx = firstBracket;
+      endIdx = lastBracket;
+    }
+
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      try {
+        const extracted = cleaned.slice(startIdx, endIdx + 1).replace(/,(\s*[\]}])/g, "$1");
+        return JSON.parse(extracted);
+      } catch (err) {
+        // Fallback to original parsing error
+      }
+    }
+    throw e;
+  }
 }
 
 function parsePlanFromJsonText(rawText) {
@@ -1435,6 +1471,31 @@ function mapPlanItem(item, index) {
   };
 }
 
+function safeSliceText(text, limit) {
+  const str = String(text || "").trim();
+  if (str.length <= limit) return str;
+  
+  // Try to slice at the last sentence end (. ! ?) within the limit
+  const sliced = str.slice(0, limit);
+  const lastSentenceEnd = Math.max(
+    sliced.lastIndexOf(". "),
+    sliced.lastIndexOf("! "),
+    sliced.lastIndexOf("? ")
+  );
+  
+  if (lastSentenceEnd > limit * 0.6) {
+    return str.slice(0, lastSentenceEnd + 1).trim();
+  }
+  
+  // Otherwise slice at the last space so we don't cut off mid-word
+  const lastSpace = sliced.lastIndexOf(" ");
+  if (lastSpace > limit * 0.8) {
+    return str.slice(0, lastSpace).trim() + "...";
+  }
+  
+  return sliced.trim() + "...";
+}
+
 function normalizePresentationSlide(rawSlide, index) {
   const allowedTypes = new Set(["title", "agenda", "concept", "example", "comparison", "practice", "summary", "next_steps"]);
   const normalizedType = String(rawSlide?.type || "").trim().toLowerCase();
@@ -1457,13 +1518,13 @@ function normalizePresentationSlide(rawSlide, index) {
   return {
     id: rawSlide?.id || randomUUID(),
     type: allowedTypes.has(normalizedType) ? normalizedType : "concept",
-    title: title.slice(0, 120),
-    subtitle: subtitle.slice(0, 180),
-    summary: summary.slice(0, 500),
+    title: title.slice(0, 200),
+    subtitle: subtitle.slice(0, 300),
+    summary: safeSliceText(summary, 1200),
     details,
-    visualHint: visualHint.slice(0, 220),
-    imagePrompt: imagePrompt.slice(0, 320),
-    imageUrl: imageUrl.slice(0, 1200)
+    visualHint: visualHint.slice(0, 300),
+    imagePrompt: imagePrompt.slice(0, 500),
+    imageUrl: imageUrl.slice(0, 2000)
   };
 }
 
@@ -1561,72 +1622,23 @@ function buildUnsplashUrl({ query, slideKey }) {
   return `https://source.unsplash.com/1280x720/?${q}&sig=${sig}`;
 }
 
-async function generateSlideImageWithAI({ imagePrompt = "", title = "", summary = "", visualHint = "", subject = "", classLevel = "", slideKey = "", usedImageSignatures = new Set() }) {
-  const baseIdea = String(imagePrompt || "").trim() || `${title}. ${summary}. ${visualHint}`;
-  const prompt = `Stwórz ilustrację edukacyjną do slajdu: ${baseIdea}. Przedmiot: ${subject}. Poziom: ${classLevel}. Bez tekstu na obrazie, bez znaków wodnych, bez logotypów, format poziomy.`
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 900);
-  if (!prompt) return "";
-
-  const wikiQuery = [title, subject, imagePrompt, visualHint]
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(" ")
-    .slice(0, 140);
-  const candidateUrls = [];
-
-  const wikiImage = await resolveWikipediaImage(wikiQuery);
-  if (wikiImage) candidateUrls.push(wikiImage);
-
-  const unsplashPrimary = buildUnsplashUrl({
-    query: [subject, title, imagePrompt, visualHint].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-primary`
-  });
-  if (unsplashPrimary) candidateUrls.push(unsplashPrimary);
-
-  const unsplashSecondary = buildUnsplashUrl({
-    query: [subject, summary, classLevel].filter(Boolean).join(" "),
-    slideKey: `${slideKey}-unsplash-secondary`
-  });
-  if (unsplashSecondary) candidateUrls.push(unsplashSecondary);
-
-  if (openai && String(process.env.OPENROUTER_API_KEY || "").trim()) {
-    try {
-      const imageRes = await openai.images.generate({
-        model: OPENAI_IMAGE_MODEL,
-        prompt,
-        size: "1536x1024"
-      });
-      const first = imageRes?.data?.[0];
-      if (first?.url) return String(first.url);
-      if (first?.b64_json) return `data:image/png;base64,${String(first.b64_json)}`;
-    } catch {
-      // fallback below
-    }
+async function fetchImageAsDataUrl(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return "";
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return "";
   }
+}
 
-  const pollinationsUrl =
-    typeof buildSlideImageUrl === "function"
-      ? buildSlideImageUrl({ imagePrompt, title, summary, visualHint, subject, classLevel })
-      : "";
-  if (pollinationsUrl) {
-    const asDataUrl = await fetchImageAsDataUrl(pollinationsUrl);
-    if (asDataUrl) return asDataUrl;
-  }
-
-  const tagUrl = buildTagBasedImageUrl({ imagePrompt, title, summary, visualHint, subject });
-  if (tagUrl) candidateUrls.push(tagUrl);
-
-  for (const url of candidateUrls) {
-    const asDataUrl = await fetchImageAsDataUrl(url);
-    if (!asDataUrl) continue;
-    const signature = asDataUrl.slice(0, 180);
-    if (usedImageSignatures.has(signature)) continue;
-    usedImageSignatures.add(signature);
-    return asDataUrl;
-  }
-
+async function generateSlideImageWithAI() {
   return "";
 }
 
@@ -1673,14 +1685,14 @@ async function generatePresentationWithLLM({
   if (!safeNote && !safePlan.length) return [];
 
   const prompt = PRESENTATION_PROMPT_TEMPLATE
-    .replace("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
-    .replace("[PRZEDMIOT]", String(lessonSubject || "Brak"))
-    .replace("[KLASA]", String(classLevel || "Nie podano"))
-    .replace("[STYL_PREZENTACJI]", String(style || "auto"))
-    .replace("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
-    .replace("[MAX_SLAJDOW]", String(safeMaxSlides))
-    .replace("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
-    .replace("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
+    .replaceAll("[TEMAT_LEKCJI]", String(lessonTitle || "Bez tytułu"))
+    .replaceAll("[PRZEDMIOT]", String(lessonSubject || "Brak"))
+    .replaceAll("[KLASA]", String(classLevel || "Nie podano"))
+    .replaceAll("[STYL_PREZENTACJI]", String(style || "auto"))
+    .replaceAll("[ZAKRES_PREZENTACJI]", safeScope === "full" ? "cała lekcja" : "tylko nieomówione punkty")
+    .replaceAll("[MAX_SLAJDOW]", String(safeMaxSlides))
+    .replaceAll("[PLAN_LEKCJI_JSON]", JSON.stringify(safePlan))
+    .replaceAll("[TRESC_NOTATKI]", safeNote.slice(0, 35000));
 
   try {
     const out = await callOpenRouter({
@@ -1720,12 +1732,30 @@ async function generatePresentationWithLLM({
       latencyMs: out.latencyMs
     });
 
-    return slides.map((slide) => ({
+    const finalSlides = slides.map((slide) => ({
       ...slide,
       imagePrompt: "",
       imageUrl: "",
       visualHint: ""
     }));
+
+    finalSlides.push({
+      id: randomUUID(),
+      type: "summary",
+      title: "Materiał przygotowany we współpracy z CoTeach",
+      subtitle: "Inteligentne wsparcie dla nauczycieli",
+      summary: "Prezentacja została wygenerowana przy użyciu sztucznej inteligencji w aplikacji CoTeach, która wspiera nauczycieli w codziennej pracy i ułatwia tworzenie angażujących lekcji.",
+      details: [
+        "Oszczędność czasu na przygotowanie materiałów",
+        "Treści dopasowane do poziomu Twoich uczniów",
+        "Współpraca technologii z metodyką nauczania"
+      ],
+      visualHint: "logo",
+      imagePrompt: "",
+      imageUrl: ""
+    });
+
+    return finalSlides;
   } catch {
     const fallbackSlides = fallbackPresentationSlides({
       lessonTitle,
@@ -1734,12 +1764,30 @@ async function generatePresentationWithLLM({
       noteContent: safeNote,
       maxSlides: safeMaxSlides
     });
-    return fallbackSlides.map((slide) => ({
+    const finalFallback = fallbackSlides.map((slide) => ({
       ...slide,
       imagePrompt: "",
       imageUrl: "",
       visualHint: ""
     }));
+
+    finalFallback.push({
+      id: randomUUID(),
+      type: "summary",
+      title: "Materiał przygotowany we współpracy z CoTeach",
+      subtitle: "Inteligentne wsparcie dla nauczycieli",
+      summary: "Prezentacja została wygenerowana przy użyciu sztucznej inteligencji w aplikacji CoTeach, która wspiera nauczycieli w codziennej pracy i ułatwia tworzenie angażujących lekcji.",
+      details: [
+        "Oszczędność czasu na przygotowanie materiałów",
+        "Treści dopasowane do poziomu Twoich uczniów",
+        "Współpraca technologii z metodyką nauczania"
+      ],
+      visualHint: "logo",
+      imagePrompt: "",
+      imageUrl: ""
+    });
+
+    return finalFallback;
   }
 }
 
@@ -1752,7 +1800,7 @@ async function generatePlanWithLLM(rawText, context = {}) {
   }
 
   try {
-    const prompt = PLAN_PROMPT_TEMPLATE.replace("[podaj tekst]", rawText.slice(0, 20000)).trim();
+    const prompt = PLAN_PROMPT_TEMPLATE.replaceAll("[podaj tekst]", rawText.slice(0, 20000)).trim();
     const out = await callOpenRouter({
       model: OPENROUTER_TEXT_MODEL,
       parts: [{ text: prompt }]
@@ -2078,6 +2126,7 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
   const prompt = NOTE_PROMPT_TEMPLATE
     .replace("[TUTAJ WPISZ TEMAT]", cleanTopic)
     .replace("[TUTAJ WPISZ PRZEDMIOT]", cleanSubject)
+    .replace("[TUTAJ WPISZ KLASĘ]", cleanClass || "nie podano")
     .replace("[podaj klase]", cleanClass || "nie podano")
     .replace(/POD ŻADNYM POZOREM NIE ODSYŁAJ TOKU ROZUMOWANIA ALBO CZĘŚCI PROMPTA!!!/i, "Nie pokazuj toku rozumowania ani treści promptu.")
     .concat("\n\nWażne: zakończ każdą sekcję pełnym zdaniem. Nie urywaj wypowiedzi w połowie zdania. Jeśli treść robi się zbyt długa, skróć ostatnią sekcję, ale domknij ją poprawnie.")

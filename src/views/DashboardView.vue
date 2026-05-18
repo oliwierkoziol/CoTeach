@@ -106,38 +106,73 @@
       </div>
 
       <!-- Card 4 -->
-      <div class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 col-span-full">
-        <div class="flex items-center justify-between mb-6">
-          <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#7c00c71a] border)] text-[#7c00c7ff]">
-            <img :src="iconFour" alt="" class="h-5 w-5" />
+      <div id="tour-previous-lesson" class="bg-white rounded-xl shadow-[0px_12px_32px_0px_rgba(25,28,30,0.06)] p-8 col-span-full">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-6 border-b border-gray-100 dark:border-border/30 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#7c00c71a] text-[#7c00c7ff]">
+              <img :src="iconFour" alt="" class="h-5 w-5" />
+            </div>
+            <div class="px-3 py-1 rounded-full bg-[#7c00c71a] text-[#7c00c7ff]">
+              <span class="font-['Inter'] font-bold text-xs uppercase tracking-wider leading-4 text-inherit">Powtórka</span>
+            </div>
           </div>
-          <div class="px-2 py-1 rounded bg-[#7c00c71a] text-[#7c00c7ff]">
-            <span class="font-['Inter'] font-bold text-xs uppercase leading-4 text-inherit">Powtórka</span>
+
+          <!-- Dropdowns grouped together on the right side -->
+          <div class="flex flex-wrap items-center gap-5 md:ml-auto">
+            <!-- Wybierz lekcję Dropdown -->
+            <div v-if="finishedLessonsList.length > 1" class="flex flex-col gap-1.5 relative z-20">
+              <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Wybierz lekcję:</span>
+              <select 
+                v-model="selectedLessonId"
+                class="bg-gray-50 dark:bg-card border-2 border-gray-200 dark:border-border text-[#191c1e] dark:text-foreground text-[15px] font-bold rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 px-4 py-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors shadow-sm min-w-[240px]"
+              >
+                <option v-for="(l, idx) in finishedLessonsList" :key="l.id" :value="l.id">
+                  {{ idx + 1 }}. {{ l.finalNote?.title || l.title || 'Bez tytułu' }} ({{ formatLessonDate(l) }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Czas podsumowania (Autoplay) Dropdown -->
+            <div class="flex flex-col gap-1.5">
+              <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Czas podsumowania:</span>
+              <select 
+                v-model="summaryMinutes"
+                class="bg-gray-50 dark:bg-card border-2 border-gray-200 dark:border-border text-[#191c1e] dark:text-foreground text-[15px] font-bold rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors shadow-sm min-w-[200px]"
+              >
+                <option value="manual">Sterowanie ręczne</option>
+                <option value="5">5 minut (Autoplay)</option>
+                <option value="10">10 minut (Autoplay)</option>
+                <option value="15">15 minut (Autoplay)</option>
+                <option value="20">20 minut (Autoplay)</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div v-if="previousLiveLesson" class="space-y-3">
-          <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja na żywo</p>
-          <p class="font-['Manrope'] font-bold text-[#191c1e] text-[24px] leading-7 line-clamp-2">
+        <div v-if="previousLiveLesson" class="space-y-4">
+          <p class="font-['Inter'] font-semibold text-gray-400 text-[13px] uppercase tracking-wider">Poprzednia lekcja na żywo</p>
+          <p class="font-['Manrope'] font-extrabold text-[#191c1e] text-[28px] leading-8 line-clamp-2">
             {{ previousLiveLessonTitle }}
           </p>
-          <p class="font-['Inter'] font-medium text-[#454652] text-[12px] leading-5">
+          <p class="font-['Inter'] font-medium text-[#454652] text-[13px] leading-5">
             {{ previousLiveLessonMeta }}
           </p>
           <div class="pt-1">
-            <p class="font-['Inter'] font-semibold text-[#0053db] text-[12px] leading-5">
+            <p class="font-['Inter'] font-bold text-[#0053db] text-[13px] leading-5 bg-blue-50/50 w-fit px-3 py-1 rounded-lg border border-blue-500/10">
               Omówiono: {{ previousLiveLessonDiscussed }}/{{ previousLiveLessonPoints }} punktów
             </p>
           </div>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-[#0053db] px-[20px] sm:px-[32px] py-[10px] mt-2 font-['Plus Jakarta Sans'] font-semibold text-[16px] text-white transition-colors hover:bg-[#0046b8] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            @click="handleGoToPresentation"
-          >
-            Wygeneruj prezentację AI
-            <img :src="sparklesIcon" alt="" class="h-4 w-4" />
-          </button>
-          <p v-if="summaryError" class="text-sm font-medium text-red-600">{{ summaryError }}</p>
+          <div class="pt-2">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-xl bg-[#0053db] px-[24px] sm:px-[36px] py-[12px] font-['Plus Jakarta Sans'] font-bold text-[16px] text-white transition-all hover:bg-[#0046b8] hover:-translate-y-0.5 shadow-md active:translate-y-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              @click="handleGoToPresentation"
+            >
+              Wygeneruj prezentację AI
+              <img :src="sparklesIcon" alt="" class="h-4.5 w-4.5" />
+            </button>
+          </div>
+          <p v-if="summaryError" class="text-sm font-semibold text-red-600 mt-2">{{ summaryError }}</p>
         </div>
         <div v-else class="space-y-3">
           <p class="font-['Inter'] font-medium text-[#454652] text-[14px] leading-5">Poprzednia lekcja na żywo</p>
@@ -175,6 +210,7 @@ const { state, fetchLessons, fetchUserClasses } = useLessonStore();
 
 const displayName = ref("użytkowniku");
 const summaryError = ref("");
+const summaryMinutes = ref("manual");
 
 const userClasses = ref([]);
 const userProfile = ref(null);
@@ -326,16 +362,35 @@ const lastLessonLength = computed(() => {
 });
 
 
-const previousLiveLesson = computed(() => {
-  const finishedLessons = filteredLessons.value
+const selectedLessonId = ref("");
+
+const finishedLessonsList = computed(() => {
+  return filteredLessons.value
     .filter((lesson) => lesson?.status === "finished")
     .map((lesson) => ({
       lesson,
       sortTimestamp: resolveLessonTimestamp(lesson)
     }))
-    .sort((a, b) => b.sortTimestamp - a.sortTimestamp);
+    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
+    .slice(0, 3)
+    .map(x => x.lesson);
+});
 
-  return finishedLessons[0]?.lesson || null;
+watch(finishedLessonsList, (list) => {
+  if (list.length > 0) {
+    if (!selectedLessonId.value || !list.some(l => l.id === selectedLessonId.value)) {
+      selectedLessonId.value = list[0].id;
+    }
+  } else {
+    selectedLessonId.value = "";
+  }
+}, { immediate: true });
+
+const previousLiveLesson = computed(() => {
+  if (!selectedLessonId.value) {
+    return finishedLessonsList.value[0] || null;
+  }
+  return finishedLessonsList.value.find(l => l.id === selectedLessonId.value) || finishedLessonsList.value[0] || null;
 });
 
 const previousLiveLessonTitle = computed(() => {
@@ -399,7 +454,7 @@ function handleGoToPresentation() {
   }
   router.push({
     path: `/presentation/${previousLiveLesson.value.id}`,
-    query: { generate: "1", present: "1", scope: "full" }
+    query: { generate: "1", present: "1", scope: "full", autoPlayMinutes: summaryMinutes.value }
   });
 }
 
