@@ -1428,7 +1428,10 @@ async function beginWebSpeechMode() {
 
   recognition.value = new SpeechRecognition();
   recognition.value.lang = 'pl-PL';
-  recognition.value.continuous = true;
+  // Na Androidzie continuous = true powoduje, że wyniki nie są w ogóle zwracane lub tylko na samym końcu. 
+  // Ustawienie false wymusza szybsze zwracanie finalnych wyników po każdej frazie i restart w onend.
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  recognition.value.continuous = !isAndroid;
   recognition.value.interimResults = true;
 
   recognition.value.onstart = () => {
