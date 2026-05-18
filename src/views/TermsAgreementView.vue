@@ -108,20 +108,6 @@ async function handleAccept() {
 
     if (updateError) throw updateError;
 
-    // 2. Grant 7-day trial license automatically
-    try {
-      await fetch(`${API_BASE}/api/account/grant-license`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
-      });
-    } catch (trialErr) {
-      console.error('Trial auto-grant failed:', trialErr);
-      // We don't block the user if trial grant fails, they can try again from dashboard
-    }
-
     router.push('/dashboard');
   } catch (err) {
     console.error('Error accepting terms:', err);

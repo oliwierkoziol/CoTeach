@@ -473,31 +473,6 @@ async function resolveTeacherContext(req, res) {
     }
   }
 
-  // Grant a 30-day trial license upon registration (temporary solution)
-  // We check if the user has NO licenses at all and NO active license in profile
-  if (!profile?.license) {
-    const hasAnyLicense = [...db.licenses.values()].some((l) => l.assignedUserId === user.id);
-    if (!hasAnyLicense) {
-      try {
-        const trialLicenseId = randomUUID();
-        const trialLicense = {
-          id: trialLicenseId,
-          key: `TRIAL-7D-${trialLicenseId.slice(0, 8).toUpperCase()}`,
-          assignedUserId: user.id,
-          maxActiveUsers: 1,
-          expiresAt: new Date(Date.now() + 7 * DAY_MS).toISOString(),
-          demoMode: true,
-          schoolId: schoolId,
-          createdAt: new Date().toISOString()
-        };
-        await persistLicense(trialLicense);
-        db.licenses.set(trialLicense.id, trialLicense);
-      } catch (licenseError) {
-        console.error(`Failed to grant trial license: ${licenseError.message}`);
-      }
-    }
-  }
-
   await syncProfileLicenseStateSafe({ userId: user.id, activeLicense: getActiveUserLicense(user.id), profileSnapshot: profile });
   return { teacherId, userId: user.id, schoolId };
 }

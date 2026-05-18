@@ -227,7 +227,7 @@
 
           <section v-show="activeProfileSection === 'security'" class="rounded-xl border border-[#e0e3e6] bg-[#fbfcfd] p-6">
             <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#191c1e] text-[18px]">Bezpieczeństwo</h2>
-            <p class="mt-1 text-sm text-[#454652]">Ustawienia krytyczne konta.</p>
+            <p class="mt-1 text-sm text-[#454652]">Ustawienia krytyczne konta. test</p>
             <div class="mt-6 space-y-6">
 
 
