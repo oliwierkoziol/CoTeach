@@ -263,6 +263,29 @@ async function ensureSupabaseSchoolRow({ schoolId, schoolName, businessEmailDoma
     {
       id: schoolId,
       slug
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      business_email_domain: businessEmailDomain,
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      business_email_domain: businessEmailDomain
+    },
+    {
+      id: schoolId,
+      name: schoolName,
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: schoolId,
+      name: schoolName
+    },
+    {
+      id: schoolId
     }
   ];
 
@@ -758,8 +781,7 @@ function licenseToRow(license) {
     expires_at: license.expiresAt || null,
     demo_mode: Boolean(license.demoMode),
     school_id: license.schoolId ? String(license.schoolId) : null,
-    created_at: license.createdAt || new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: license.createdAt || new Date().toISOString()
   };
 }
 
