@@ -225,7 +225,7 @@ async function migrateSchoolIdEverywhere(oldSchoolId, newSchoolId) {
 
   const tablesWithSchoolId = [
     "profiles",
-    "user_licenses",
+    "licenses",
     "lessons",
     "saved_notes",
     "final_notes",
@@ -442,11 +442,40 @@ async function resolveTeacherContext(req, res) {
     return null;
   }
 
-  const { data: profile, error: profileError } = await supabase
+  let profile = null;
+  let profileError = null;
+
+  const firstTry = await supabase
     .from("profiles")
     .select("teacher_id, school_id, license, license_lenght")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (firstTry.error) {
+    const errorMsg = String(firstTry.error.message || "");
+    if (errorMsg.includes("license") || errorMsg.includes("exist")) {
+      const secondTry = await supabase
+        .from("profiles")
+        .select("teacher_id, school_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (secondTry.error) {
+        profileError = secondTry.error;
+      } else {
+        profile = secondTry.data;
+        if (profile) {
+          const activeLicense = getActiveUserLicense(user.id);
+          profile.license = Boolean(activeLicense);
+          profile.license_lenght = activeLicense ? getRemainingLicenseDays(activeLicense.expiresAt) : 0;
+        }
+      }
+    } else {
+      profileError = firstTry.error;
+    }
+  } else {
+    profile = firstTry.data;
+  }
 
   if (profileError) {
     res.status(500).json({ error: `Nie udało się odczytać profilu: ${profileError.message}` });
@@ -537,15 +566,31 @@ async function syncProfileLicenseState({ userId, activeLicense = null, profileSn
 
   if (currentLicense === nextLicense && currentLength === nextLength) return;
 
+  const payload = {
+    updated_at: new Date().toISOString()
+  };
+
   const { error } = await supabase
     .from("profiles")
     .update({
       license: nextLicense,
       license_lenght: nextLength,
-      updated_at: new Date().toISOString()
+      ...payload
     })
     .eq("id", userId);
-  if (error) throw new Error(`Nie udało się zsynchronizować licencji w profilu: ${error.message}`);
+
+  if (error) {
+    const errorMsg = String(error.message || "");
+    if (errorMsg.includes("license") || errorMsg.includes("exist")) {
+      // Fallback: update only updated_at
+      await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", userId);
+    } else {
+      throw new Error(`Nie udało się zsynchronizować licencji w profilu: ${error.message}`);
+    }
+  }
 }
 
 async function syncProfileLicenseStateSafe(params) {
@@ -961,20 +1006,20 @@ async function removeFinalNoteSafe(lessonId) {
 async function persistLicense(license) {
   if (!supabase || !license) return;
   const { error } = await supabase
-    .from("user_licenses")
+    .from("licenses")
     .upsert(licenseToRow(license), { onConflict: "id" });
   if (error) throw new Error(`Supabase license upsert failed: ${error.message}`);
 }
 
 async function removeLicense(licenseId) {
   if (!supabase || !licenseId) return;
-  const { error } = await supabase.from("user_licenses").delete().eq("id", licenseId);
+  const { error } = await supabase.from("licenses").delete().eq("id", licenseId);
   if (error) throw new Error(`Supabase license delete failed: ${error.message}`);
 }
 
 async function loadLicensesFromSupabase() {
   if (!supabase) return;
-  const { data, error } = await supabase.from("user_licenses").select("*");
+  const { data, error } = await supabase.from("licenses").select("*");
   if (error) throw new Error(`Supabase licenses load failed: ${error.message}`);
   for (const row of data || []) {
     const license = rowToLicense(row);

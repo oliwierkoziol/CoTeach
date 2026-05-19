@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     terms_accepted BOOLEAN DEFAULT false,
     trial_used BOOLEAN DEFAULT false,
     school_id TEXT,
+    license BOOLEAN DEFAULT false,
+    license_lenght INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -174,6 +177,9 @@ CREATE POLICY "View school" ON public.schools
 -- Bezpieczne dodanie kolumn dla istniejących tabel
 ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS homework TEXT;
 ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS homework TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license BOOLEAN DEFAULT false;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license_lenght INTEGER DEFAULT 0;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 
 -- Natychmiastowe odświeżenie pamięci podręcznej (Schema Cache)
 NOTIFY pgrst, 'reload schema';
