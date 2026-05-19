@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.schools (
     name TEXT NOT NULL,
     slug TEXT,
     business_email_domain TEXT,
+    organization TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -182,6 +183,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license BOOLEAN DEFAULT fal
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license_lenght INTEGER DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
 ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS organization TEXT;
 
 -- Natychmiastowe odświeżenie pamięci podręcznej (Schema Cache)
 NOTIFY pgrst, 'reload schema';

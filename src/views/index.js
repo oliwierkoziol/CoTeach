@@ -446,6 +446,35 @@ async function resolveAdminSchoolContext(req, res) {
   return { schoolId: String(profile?.school_id || defaultSchoolId), userId: user.id };
 }
 
+async function resolveAllowedSchoolIds(schoolId) {
+  if (!supabase) return [schoolId];
+  try {
+    const { data: school, error } = await supabase
+      .from("schools")
+      .select("id, organization")
+      .eq("id", schoolId)
+      .maybeSingle();
+
+    if (error || !school || !school.organization) {
+      return [schoolId];
+    }
+
+    const { data: schools, error: schoolsError } = await supabase
+      .from("schools")
+      .select("id")
+      .eq("organization", school.organization);
+
+    if (schoolsError || !schools || schools.length === 0) {
+      return [schoolId];
+    }
+
+    return schools.map((s) => s.id);
+  } catch (e) {
+    console.warn("[resolveAllowedSchoolIds] Failed to resolve organization, falling back to schoolId:", e);
+    return [schoolId];
+  }
+}
+
 async function requireAdmin(req, res) {
   const admin = await isRequestAdmin(req);
   if (!admin) {
@@ -3353,9 +3382,15 @@ app.get("/api/admin/users", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return res.json({ users: [] });
 
+  const adminSchool = await resolveAdminSchoolContext(req, res);
+  if (!adminSchool) return;
+
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, admin, blocked, school_id, created_at")
+    .in("school_id", allowedSchoolIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -3387,12 +3422,14 @@ app.get("/api/admin/dashboard", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
-  let lessons = [...db.lessons.values()].filter((lesson) => String(lesson.schoolId || "") === adminSchool.schoolId);
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
+  let lessons = [...db.lessons.values()].filter((lesson) => allowedSchoolIds.includes(String(lesson.schoolId || "")));
   if (supabase) {
     const { data: lessonRows, error: lessonError } = await supabase
       .from("lessons")
       .select("*")
-      .eq("school_id", adminSchool.schoolId)
+      .in("school_id", allowedSchoolIds)
       .order("updated_at", { ascending: false });
 
     if (lessonError) {
@@ -3428,6 +3465,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, admin, blocked, school_id, created_at")
+      .in("school_id", allowedSchoolIds)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -3557,12 +3595,14 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
   const allowedSort = new Set(["teacher", "notes", "live", "presentation", "other", "total"]);
   const sortBy = allowedSort.has(sortByRaw) ? sortByRaw : "total";
 
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const teacherMeta = new Map();
   if (supabase) {
     const { data } = await supabase
       .from("profiles")
       .select("id, teacher_id, full_name, email, school_id")
-      .eq("school_id", adminSchool.schoolId);
+      .in("school_id", allowedSchoolIds);
     for (const profile of data || []) {
       const teacherId = String(profile.teacher_id || "").trim();
       if (!teacherId) continue;
@@ -3580,7 +3620,7 @@ app.get("/api/admin/teacher-costs", async (req, res) => {
     const { data: costRows, error } = await supabase
       .from("openrouter_usage_events")
       .select("*")
-      .eq("school_id", adminSchool.schoolId)
+      .in("school_id", allowedSchoolIds)
       .order("created_at", { ascending: true });
     if (error) {
       return res.status(500).json({ error: `Nie udało się pobrać kosztów: ${error.message}` });
@@ -3671,12 +3711,14 @@ app.patch("/api/admin/users/:userId/block", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const blocked = req.body?.blocked === true;
   const { data, error } = await supabase
     .from("profiles")
     .update({ blocked, updated_at: new Date().toISOString() })
     .eq("id", req.params.userId)
-    .eq("school_id", adminSchool.schoolId)
+    .in("school_id", allowedSchoolIds)
     .select("id, blocked")
     .maybeSingle();
 
@@ -3695,7 +3737,28 @@ app.patch("/api/admin/users/:userId", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const userId = req.params.userId;
+
+  const { data: targetProfile, error: targetProfileError } = await supabase
+    .from("profiles")
+    .select("school_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetProfileError) {
+    return res.status(500).json({ error: `Nie udało się pobrać profilu użytkownika: ${targetProfileError.message}` });
+  }
+  if (!targetProfile) {
+    return res.status(404).json({ error: "Użytkownik nie istnieje." });
+  }
+
+  const targetSchoolId = String(targetProfile.school_id || defaultSchoolId);
+  if (!allowedSchoolIds.includes(targetSchoolId)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "").trim();
 
@@ -3796,6 +3859,8 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const userId = req.params.userId;
   const days = Number(req.body?.days ?? 30);
   const maxActiveUsers = Number(req.body?.maxActiveUsers || 1);
@@ -3817,7 +3882,7 @@ app.patch("/api/admin/users/:userId/license", async (req, res) => {
     }
 
     const targetSchoolId = String(targetProfile.school_id || "").trim();
-    if (targetSchoolId && targetSchoolId !== adminSchool.schoolId) {
+    if (targetSchoolId && !allowedSchoolIds.includes(targetSchoolId)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     if (targetSchoolId) {
@@ -3935,6 +4000,8 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
   const adminSchool = await resolveAdminSchoolContext(req, res);
   if (!adminSchool) return;
 
+  const allowedSchoolIds = await resolveAllowedSchoolIds(adminSchool.schoolId);
+
   const userId = req.params.userId;
 
   const { data: targetProfile, error: targetProfileError } = await supabase
@@ -3947,7 +4014,7 @@ app.delete("/api/admin/users/:userId", async (req, res) => {
     return res.status(500).json({ error: `Nie udało się pobrać teacher_id użytkownika: ${targetProfileError.message}` });
   }
 
-  if (String(targetProfile?.school_id || defaultSchoolId) !== adminSchool.schoolId) {
+  if (!allowedSchoolIds.includes(String(targetProfile?.school_id || defaultSchoolId))) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
