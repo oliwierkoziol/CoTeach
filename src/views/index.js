@@ -104,6 +104,15 @@ const openaiClientConfig = process.env.OPENROUTER_API_KEY
   : null;
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
+// Dedicated Whisper Client using standard OpenAI API or custom base URL (avoids OpenRouter connection errors)
+const whisperClient = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    })
+  : null;
+
+
 const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_notatki_przedmiotowej.txt"),
   "utf8"
@@ -2174,7 +2183,11 @@ RZECZYWISTE POKRYCIE PLANU: ${JSON.stringify(coverageFacts)}
 Transkrypcja: ${transcript}
 `.trim();
   try {
-    const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: prompt }] });
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: prompt }],
+      maxTokens: 6000 // Ensure long lesson summaries are never cut off
+    });
     recordCostFromBase({
       lessonId: context.lessonId || lesson.id || null,
       schoolId: context.schoolId || lesson.schoolId || null,
@@ -2231,7 +2244,7 @@ async function generateTeacherNoteWithLLM({ subject, topic, classLevel, context 
   const note = await callOpenRouter({
     model: OPENROUTER_TEXT_MODEL,
     parts: [{ text: prompt }],
-    maxTokens: Math.min(3000, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS : 2000)
+    maxTokens: 8192 // Raise limit to model's native maximum output tokens to prevent note truncation
   });
 
   if (!note?.text) {
@@ -4176,66 +4189,107 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Audio file is required." });
     }
 
-    /* 
-    const summary = getCostSummary(lessonId);
-    if (summary.total >= SESSION_LIMIT_PLN) {
-      return res.status(402).json({ error: "Budget exceeded", message: "Limit kosztu sesji został osiągnięty." });
+    let rawText = "";
+    let provider = "";
+    let modelUsed = "";
+    let baseAmountPLN = 0.02;
+
+    if (whisperClient) {
+      // 1. Direct OpenAI Whisper API (Dedicated STT, avoids OpenRouter connection errors)
+      const whisperModel = process.env.OPENAI_WHISPER_MODEL
+        ? process.env.OPENAI_WHISPER_MODEL
+        : (OPENAI_BASE_URL ? "whisper-large-v3-turbo" : "whisper-1");
+
+      console.log('[transcribe] Processing audio with Direct OpenAI Whisper:', {
+        filename: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.buffer.length,
+        model: whisperModel,
+        lessonId
+      });
+
+      const transcriptionResponse = await whisperClient.audio.transcriptions.create({
+        file: await toFile(req.file.buffer, `audio-${Date.now()}.webm`),
+        model: whisperModel,
+        prompt: "Transkrybuj audio słowo w słowo. Nagranie może zawierać wtrącenia po angielsku lub innych językach obcych (np. pojęcia techniczne, programistyczne, zwroty). Zapisz je dokładnie w oryginalnym języku, nie tłumacz ich na język polski."
+      });
+
+      rawText = String(transcriptionResponse.text || "").trim();
+      provider = OPENAI_PROVIDER_NAME || "OpenAI";
+      modelUsed = whisperModel;
+
+      const durationSec = 2; // Default chunk estimate
+      const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
+      baseAmountPLN = durationSec * pricePerSecPLN;
+
+    } else if (openai) {
+      // 2. Gemini 2.5 Flash via OpenRouter Chat Completions (Fallback when OpenAI API key is missing)
+      console.log('[transcribe] Processing audio with Gemini 2.5 Flash (via OpenRouter Chat Completions):', {
+        filename: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.buffer.length,
+        lessonId
+      });
+
+      const base64Audio = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype || "audio/webm";
+
+      const geminiResponse = await callOpenRouter({
+        model: "google/gemini-2.5-flash",
+        parts: [
+          {
+            inlineData: {
+              data: base64Audio,
+              mimeType: mimeType
+            }
+          },
+          {
+            text: "Jesteś precyzyjnym systemem transkrypcji audio (STT). Twoim zadaniem jest zapisać tekst z nagrania audio SŁOWO W SŁOWO.\n" +
+              "Nagranie może zawierać mowę w jednym lub wielu językach (np. wtrącenia, cytaty, nauka języka obcego, mieszane wypowiedzi polsko-angielskie). Zapisuj słowa w oryginalnym języku, w jakim zostały wypowiedziane. KATEGORYCZNIE NIE tłumacz wypowiedzi między językami.\n" +
+              "ZASADY:\n" +
+              "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
+              "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
+              "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
+              "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
+              "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
+              "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
+              "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz.\n" +
+              "8. POD ŻADNYM POZOREM nie powtarzaj w kółko tej samej frazy (unikaj zapętleń). Jeśli nagranie zawiera tylko szum lub ciszę, zwróć pusty ciąg znaków."
+          }
+        ],
+        maxTokens: 2048,
+        temperature: 0.15
+      });
+
+      rawText = String(geminiResponse.text || "").trim();
+      provider = "Google";
+      modelUsed = "google/gemini-2.5-flash";
+
+      const usage = geminiResponse.usage || {};
+      baseAmountPLN = estimateOpenRouterBaseUsdCost({
+        model: "google/gemini-2.5-flash",
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens
+      }) * USD_TO_PLN;
+
+    } else {
+      return res.status(500).json({ error: "No AI client (OpenAI or OpenRouter) is configured." });
     }
-    */
 
-    if (!openai) {
-      return res.status(500).json({ error: "OPENROUTER_API_KEY is missing for AI transcription." });
-    }
+    console.log(`[🎤] STT (${modelUsed}): "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
-    console.log('[transcribe] Processing audio file:', {
-      filename: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.buffer.length,
-      lessonId
-    });
-
-    // Use openai/gpt-4o-transcribe via OpenRouter
-    const transcriptionResponse = await openai.audio.transcriptions.create({
-      file: await toFile(req.file.buffer, `audio-${Date.now()}.webm`),
-      model: "openai/gpt-4o-transcribe",
-      prompt: "Transcribe the audio exactly as heard, including all punctuation (commas, periods, exclamation marks). Do not summarize, do not add commentary, and do not repeat phrases if there is silence."
-    });
-
-    const transcription = {
-      text: transcriptionResponse.text || "",
-      duration: undefined 
-    };
-
-    console.log(`[🎤] Transcription: "${transcription.text?.substring(0, 40)}..." (${transcription.text?.length} chars)`);
-
-    const durationSec = Number(transcription.duration || 0);
-    const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
-    const fragmentCost = durationSec > 0 ? durationSec * pricePerSecPLN : 0.02;
-
-    const rawText = String(transcription.text || "").trim();
-    console.log(`[📝] Raw text: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
-
-    // Rozszerzone serwerowe filtrowanie halucynacji Whispera
+    // Standard hallucination and loop filters
     const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
-    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
-    const isValidTranscription = rawText &&
-      rawText.length > 5 &&
-      !obviousHallucinations.test(rawText) &&
-      !hallucinationRegex.test(rawText);
+    const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?|cisza\.?|brak mowy\.?)$/i;
 
-    // Only record cost if transcription is valid
+    const isValidTranscription = rawText &&
+      rawText.length >= 2 &&
+      !obviousHallucinations.test(rawText) &&
+      !hallucinationRegex.test(rawText) &&
+      !hasRepetitiveLoops(rawText);
+
     if (isValidTranscription) {
       // Cost recording removed as per request
-      /*
-      recordCostFromBase({
-        lessonId,
-        schoolId: teacher.schoolId,
-        teacherId: teacher.teacherId,
-        provider: OPENAI_PROVIDER_NAME,
-        category: "live_transcription",
-        baseAmountPLN: fragmentCost
-      });
-      */
     } else {
       console.log(`[❌] Skipping cost - transcription filtered`);
     }
@@ -4243,28 +4297,16 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
     const text = isValidTranscription ? rawText : "";
     return res.json({
       text,
-      durationSec,
+      durationSec: undefined,
       cost: getCostSummary(lessonId).total,
       limitReached: getCostSummary(lessonId).exceeded
     });
   } catch (error) {
     console.error(`[❌] Transcription failed:`, error.message);
-
-    // Handle specific error cases
-    if (error.response) {
-      console.error('[transcribe] API response error:', {
-        status: error.response.status,
-        data: error.response.data
-      });
-      return res.status(500).json({
-        error: `Whisper API error: ${error.response.data?.error?.message || error.message}`,
-        details: error.response.data
-      });
-    }
-
-    return res.status(500).json({ error: `Whisper transcription failed: ${error.message}` });
+    return res.status(500).json({ error: `Transcription failed: ${error.message}` });
   }
 });
+
 
 app.post("/api/ask-me", async (req, res) => {
   try {
@@ -4471,15 +4513,28 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-loadSchoolsFromSupabase()
-  .then(() => loadLessonsFromSupabase())
-  .then(() => loadLicensesFromSupabase())
-  .then(() => loadFinalNotesFromSupabase())
-  .then(() => loadSavedNotesFromSupabase())
-  .then(() => loadCostEventsFromSupabase())
-  .catch((error) => {
-    console.error(`Persistence bootstrap failed: ${error.message}`);
-  })
+async function bootstrapPersistence() {
+  const tasks = [
+    { name: "schools", fn: loadSchoolsFromSupabase },
+    { name: "lessons", fn: loadLessonsFromSupabase },
+    { name: "licenses", fn: loadLicensesFromSupabase },
+    { name: "finalNotes", fn: loadFinalNotesFromSupabase },
+    { name: "savedNotes", fn: loadSavedNotesFromSupabase },
+    { name: "costEvents", fn: loadCostEventsFromSupabase }
+  ];
+
+  console.log("[Persistence] Bootstrapping data from Supabase...");
+  for (const task of tasks) {
+    try {
+      await task.fn();
+      console.log(`[Persistence] ✅ Loaded ${task.name} successfully.`);
+    } catch (err) {
+      console.error(`[Persistence] ❌ Failed to load ${task.name}:`, err.message);
+    }
+  }
+}
+
+bootstrapPersistence()
   .finally(() => {
     setInterval(() => {
       autoFinishDueLessons().catch((error) => {

@@ -195,7 +195,7 @@
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             >
               <option value="webspeech" class="dark:bg-card dark:text-foreground">Język polski</option>
-              <option value="whisper" disabled class="dark:bg-card dark:text-foreground text-gray-400">Języki mieszane (wkrótce)</option>
+              <option value="whisper" class="dark:bg-card dark:text-foreground" disabled>Języki mieszane (wkrótce)</option>
             </select>
             <span class="font-['Plus_Jakarta_Sans'] text-[#191c1e] dark:text-foreground text-[16px] truncate max-w-[85%] pointer-events-none">
               {{ transcriptionMethod === 'whisper' ? 'Języki mieszane (wkrótce)' : 'Język polski' }}
@@ -644,6 +644,40 @@ function formatTimestamp(ms) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function hasRepetitiveLoops(text) {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 8) return false;
+
+  // 1. Check unique words ratio for longer texts - adjusted to prevent false positives for lists of math terms
+  const uniqueWords = new Set(words);
+  const ratio = uniqueWords.size / words.length;
+  if (words.length >= 20 && ratio < 0.25) {
+    console.warn(`[RepetitionDetector] Triggered unique words ratio: ${ratio.toFixed(2)} (${uniqueWords.size}/${words.length})`);
+    return true;
+  }
+
+  // 2. Check consecutive word sequences - safer thresholds to avoid false positives for emphasis/teaching repetitions
+  for (let len = 1; len <= 4; len++) {
+    const requiredRepeats = len === 1 ? 6 : (len === 2 ? 5 : 4);
+    for (let i = 0; i <= words.length - len * requiredRepeats; i++) {
+      const sequences = [];
+      for (let r = 0; r < requiredRepeats; r++) {
+        sequences.push(words.slice(i + r * len, i + (r + 1) * len).join(" "));
+      }
+      
+      const allEqual = sequences.every(seq => seq === sequences[0]);
+      if (allEqual) {
+        console.warn(`[RepetitionDetector] Triggered consecutive sequence loop: "${sequences[0]}" repeated ${requiredRepeats} times`);
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 const API_BASE = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) || "";
@@ -1346,7 +1380,7 @@ async function startSession() {
       }
     }, 1000);
 
-    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Języki mieszane (wkrótce)' : 'Język polski'})...`;
+    info.value = `Uruchamiam transkrypcję (${transcriptionMethod.value === 'whisper' ? 'Języki mieszane' : 'Język polski'})...`;
     isRecording.value = true; // Set to true BEFORE starting mic so monitorAudio doesn't stop
 
     try {
@@ -1355,7 +1389,7 @@ async function startSession() {
 
       if (transcriptionMethod.value === 'whisper') {
         await beginWhisperMode();
-        info.value = "Języki mieszane (wkrótce) aktywne. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
+        info.value = "Języki mieszane aktywne. Mów do mikrofonu - transkrypcja będzie aktualizowana co kilka sekund.";
       } else {
         await beginWebSpeechMode();
       }
@@ -1445,6 +1479,11 @@ async function beginWebSpeechMode() {
       if (event.results[i].isFinal) {
         const text = event.results[i][0].transcript.trim();
         if (text) {
+          if (hasRepetitiveLoops(text)) {
+            console.warn(`[WebSpeech] Discarded highly repetitive transcript loop: "${text.substring(0, 100)}..."`);
+            interimCaption.value = "";
+            return;
+          }
           const relativeMs = Date.now() - startAt.value;
           transcription.value.push({ text, timestamp: formatTimestamp(relativeMs) });
           isUserScrolling.value = false;
@@ -1548,13 +1587,13 @@ async function beginWhisperMode() {
   analyser.fftSize = 2048;
   source.connect(analyser);
 
-  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  const dataArray = new Uint8Array(analyser.fftSize);
   let silenceStart = null;
   let hasSpeechDetected = false; // Flag to track if any speech was heard in current fragment
-  const SILENCE_THRESHOLD = 15; // Slightly lower to catch quieter speech
+  let noiseFloor = 2.0; // Dynamic baseline noise floor
   const SILENCE_DURATION = 2000; // 2 seconds of silence before sending (allow for natural pauses)
 
-  console.log(`[WhisperMode] Audio setup complete. Threshold: ${SILENCE_THRESHOLD}, Duration: ${SILENCE_DURATION}ms`);
+  console.log(`[WhisperMode] Audio setup complete (Adaptive RMS volume detection). Duration: ${SILENCE_DURATION}ms`);
 
   // Set up MediaRecorder
   let recorder;
@@ -1610,7 +1649,11 @@ async function beginWhisperMode() {
 
     // Prevent duplicate transcriptions
     if (isTranscribing.value) {
-      console.log("⏸️ Already transcribing, skipping duplicate");
+      console.log("⏸️ Already transcribing, queueing chunks for next cycle");
+      audioChunks.value = [...activeChunks, ...audioChunks.value];
+      setTimeout(() => {
+        hasSpeechDetected = true;
+      }, 0);
       return;
     }
 
@@ -1671,24 +1714,27 @@ async function beginWhisperMode() {
       const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
       const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?)$/i;
 
-      let cleanText = rawText
-        .replace(/^([a-z]{3,15}|język\s+[a-z]+)[:\s]*/gmi, "") // Usuwa "polski: ", "English: ", "Język polski: " itp. z początku każdej linii
-        .replace(/\b(\d{1,2}:)?\d{1,2}:\d{2}\b/g, "")        // Usuwa znaczniki czasu typu 02:53 lub 1:02:53
-        .trim();
+      let cleanText = rawText;
 
       const isValidTranscription = cleanText &&
-                              cleanText.length > 3 &&
+                              cleanText.length >= 2 &&
                               !obviousHallucinations.test(cleanText) &&
-                              !hallucinationRegex.test(cleanText);
+                              !hallucinationRegex.test(cleanText) &&
+                              !hasRepetitiveLoops(cleanText);
 
       if (isValidTranscription) {
-        // Check if this text is already in the array to prevent duplicates
-        const isDuplicate = transcription.value.some(t => t.text === cleanText);
+        // Prevent duplicate double-triggers within 1.5 seconds, while allowing repeated speech throughout the lesson
+        const lastItem = transcription.value[transcription.value.length - 1];
+        const isDuplicate = lastItem && lastItem.text === cleanText && (Date.now() - (lastItem.addedAt || 0) < 1500);
         if (isDuplicate) {
-          console.log(`⚠️ Duplicate skipped: "${cleanText.substring(0, 30)}..."`);
+          console.log(`⚠️ Duplicate double-trigger skipped: "${cleanText.substring(0, 30)}..."`);
         } else {
           const relativeMs = Date.now() - startAt.value;
-          transcription.value.push({ text: cleanText, timestamp: formatTimestamp(relativeMs) });
+          transcription.value.push({
+            text: cleanText,
+            timestamp: formatTimestamp(relativeMs),
+            addedAt: Date.now()
+          });
           console.log(`✅ Added transcription #${transcription.value.length}`);
           await nextTick();
 
@@ -1763,10 +1809,10 @@ async function beginWhisperMode() {
       console.log(`[MediaRecorder] Stopped safely. State is now: ${recorder.state}`);
       
       // Process transcription in background
-      if (chunksToSend.length > 0 && hasSpeechDetected) {
+      if (hasSpeechDetected && chunksToSend.length > 0) {
         void sendAudioForTranscription(chunksToSend);
       } else {
-        console.log("[MediaRecorder] No speech detected or empty chunks, skipping send");
+        console.log(`[MediaRecorder] Skipping send. Speech detected: ${hasSpeechDetected}, Chunks: ${chunksToSend.length}`);
       }
 
       // Reset state for next cycle
@@ -1777,14 +1823,20 @@ async function beginWhisperMode() {
       // Restore original onstop handler
       recorder.onstop = originalOnStop;
 
-      // Safely restart the recorder only when state is inactive
+      // Safely restart the recorder only when state is inactive, with a slight delay
+      // to ensure the browser's audio pipeline has fully released the previous session.
       if (isRecording.value && transcriptionMethod.value === 'whisper') {
-        try {
-          recorder.start(1000);
-          console.log("[MediaRecorder] Restarted safely in dynamically overridden onstop");
-        } catch (err) {
-          console.error("[MediaRecorder] Failed to restart in dynamically overridden onstop:", err);
-        }
+        setTimeout(() => {
+          if (!isRecording.value || transcriptionMethod.value !== 'whisper') return;
+          try {
+            if (recorder.state === 'inactive') {
+              recorder.start(1000);
+              console.log("[MediaRecorder] Restarted safely after delay in dynamically overridden onstop");
+            }
+          } catch (err) {
+            console.error("[MediaRecorder] Failed to restart after delay in dynamically overridden onstop:", err);
+          }
+        }, 150);
       }
     };
 
@@ -1812,36 +1864,60 @@ async function beginWhisperMode() {
 
     if (!isMonitoring) return;
 
-    analyser.getByteFrequencyData(dataArray);
+    analyser.getByteTimeDomainData(dataArray);
 
-    // Calculate average volume
-    let sum = 0;
+    // Calculate Root Mean Square (RMS) for precise volume detection
+    let sumSquares = 0;
     for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i];
+      const normalized = (dataArray[i] - 128) / 128; // scale to -1.0 to 1.0
+      sumSquares += normalized * normalized;
     }
-    const average = sum / dataArray.length;
+    const rms = Math.sqrt(sumSquares / dataArray.length);
+    const average = rms * 100; // scale to 0-100
+
+    // Adapt noise floor (slowly follow the quietest level observed)
+    if (average < noiseFloor) {
+      noiseFloor = average; // Instantly follow downward spikes
+    } else {
+      noiseFloor = noiseFloor * 0.999 + average * 0.0015; // Slowly drift upwards to adapt to background noise
+    }
+    noiseFloor = Math.max(0.5, Math.min(15, noiseFloor));
+    const dynamicThreshold = Math.max(noiseFloor + 3.0, noiseFloor * 1.6);
 
     // Update mic level for UI
-    micLevel.value = Math.min(100, average);
+    micLevel.value = Math.min(100, average * 2.5); // scale/amplify for excellent UI visualization
 
     frameCount++;
 
     // Status logging every 60 frames
     if (frameCount % 60 === 0) {
-      console.log(`🎤 Recording active | Level: ${average.toFixed(1)} | Chunks: ${audioChunks.value.length}`);
+      console.log(`🎤 Recording active | Level: ${average.toFixed(1)} | Floor: ${noiseFloor.toFixed(1)} | Thresh: ${dynamicThreshold.toFixed(1)} | Chunks: ${audioChunks.value.length}`);
     }
 
     // Force send after max recording time
     const recordingDuration = Date.now() - recordingStartTime;
     if (recordingDuration > MAX_RECORDING_TIME && audioChunks.value.length > 0) {
-      console.log(`⏱️ Max time reached, forcing transcription`);
-      stopAndRestartRecorder();
+      if (isTranscribing.value) {
+        // If we are already transcribing, do not force stop, just let it keep recording
+        requestAnimationFrame(monitorAudio);
+        return;
+      }
+      if (hasSpeechDetected) {
+        console.log(`⏱️ Max time reached, forcing transcription`);
+        stopAndRestartRecorder();
+      } else {
+        // Safe memory cleanup for long silence
+        console.log(`🧹 Clearing silent chunks after max recording time`);
+        audioChunks.value = [];
+        recordingStartTime = Date.now();
+        silenceStart = null;
+      }
       requestAnimationFrame(monitorAudio);
       return;
     }
 
     // Detect silence or speech
-    if (average > SILENCE_THRESHOLD) {
+    if (average > dynamicThreshold) {
       silenceStart = null;
       hasSpeechDetected = true; // Mark that we heard something in this fragment
       if (frameCount % 60 === 0) {
@@ -1852,11 +1928,22 @@ async function beginWhisperMode() {
     } else {
       // Check if silence has lasted long enough
       const silenceDuration = Date.now() - silenceStart;
-      if (silenceDuration >= SILENCE_DURATION && audioChunks.value.length > 0) {
-        console.log(`⏸️ Silence detected, sending transcription`);
-        stopAndRestartRecorder();
+      if (silenceDuration >= SILENCE_DURATION && audioChunks.value.length > 0 && hasSpeechDetected) {
+        if (isTranscribing.value) {
+          // If we are already transcribing, do not stop and restart the recorder.
+          // This prevents stopping and restarting every 2 seconds while waiting for the server,
+          // which avoids pipeline corruption and duplicate requests.
+          if (frameCount % 60 === 0) {
+            info.value = "Przetwarzam poprzedni fragment...";
+          }
+        } else {
+          console.log(`⏸️ Silence detected, sending transcription`);
+          stopAndRestartRecorder();
+        }
       } else if (frameCount % 60 === 0) {
-        info.value = `Czekam na mowę... (${Math.round(silenceDuration/1000)}s ciszy)`;
+        info.value = hasSpeechDetected 
+          ? `Czekam na mowę... (${Math.round(silenceDuration/1000)}s ciszy)` 
+          : "Wykrywam dźwięk...";
       }
     }
 

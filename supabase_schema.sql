@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS public.lessons (
     final_note JSONB,
     homework TEXT,
     homework_due_date TIMESTAMPTZ,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -63,14 +65,18 @@ CREATE TABLE IF NOT EXISTS public.lessons (
 CREATE TABLE IF NOT EXISTS public.saved_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     teacher_id TEXT,
+    school_id TEXT,
     title TEXT NOT NULL,
     subject TEXT,
     content TEXT,
     class_level TEXT,
+    class_name TEXT,
     date TEXT,
     homework TEXT,
     homework_due_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
+    source TEXT DEFAULT 'manual',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 6. Licenses Table
@@ -88,17 +94,25 @@ CREATE TABLE IF NOT EXISTS public.licenses (
 -- 7. OpenRouter Usage Events
 CREATE TABLE IF NOT EXISTS public.openrouter_usage_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    teacher_id TEXT,
+    user_id UUID,
     school_id TEXT,
+    teacher_id TEXT,
     lesson_id UUID,
     feature TEXT,
     model TEXT,
+    provider TEXT,
     prompt_tokens INTEGER,
     completion_tokens INTEGER,
     total_tokens INTEGER,
-    base_amount_pln NUMERIC(10,5),
+    cost_usd NUMERIC(10,5),
+    cost_pln NUMERIC(10,5),
     provider_cost_usd NUMERIC(10,5),
+    provider_cost_pln NUMERIC(10,5),
+    margin_pln NUMERIC(10,5),
+    status TEXT DEFAULT 'ok',
+    request_id TEXT,
     latency_ms INTEGER,
+    error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -176,14 +190,57 @@ CREATE POLICY "View assigned license" ON public.licenses
 CREATE POLICY "View school" ON public.schools
     FOR SELECT USING (id IN (SELECT school_id FROM public.profiles WHERE id::text = auth.uid()::text));
 
+-- 10. Final Notes Table
+CREATE TABLE IF NOT EXISTS public.final_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lesson_id UUID REFERENCES public.lessons(id) ON DELETE CASCADE,
+    school_id TEXT,
+    teacher_id TEXT,
+    title TEXT NOT NULL,
+    subject TEXT,
+    date TEXT,
+    html TEXT,
+    public_path TEXT,
+    share_url TEXT,
+    class_name TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.final_notes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Manage own final notes" ON public.final_notes;
+CREATE POLICY "Manage own final notes" ON public.final_notes 
+    FOR ALL USING (teacher_id IN (SELECT teacher_id FROM public.profiles WHERE id::text = auth.uid()::text));
+
 -- Bezpieczne dodanie kolumn dla istniejących tabel
 ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS homework TEXT;
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ;
+
 ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS homework TEXT;
+ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS school_id TEXT;
+ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS class_name TEXT;
+ALTER TABLE public.saved_notes ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual';
+
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license BOOLEAN DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS license_lenght INTEGER DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+
 ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS slug TEXT;
 ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS organization TEXT;
+
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS provider TEXT;
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS cost_usd NUMERIC(10,5);
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS cost_pln NUMERIC(10,5);
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS provider_cost_usd NUMERIC(10,5);
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS provider_cost_pln NUMERIC(10,5);
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS margin_pln NUMERIC(10,5);
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ok';
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE public.openrouter_usage_events ADD COLUMN IF NOT EXISTS error_message TEXT;
 
 -- Natychmiastowe odświeżenie pamięci podręcznej (Schema Cache)
 NOTIFY pgrst, 'reload schema';

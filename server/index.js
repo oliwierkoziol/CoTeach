@@ -78,6 +78,15 @@ if (openaiClientConfig) {
 
 const openai = openaiClientConfig ? new OpenAI(openaiClientConfig) : null;
 
+// Dedicated Whisper Client using standard OpenAI API or custom base URL (avoids OpenRouter connection errors)
+const whisperClient = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      ...(OPENAI_BASE_URL ? { baseURL: OPENAI_BASE_URL } : {})
+    })
+  : null;
+
+
 const NOTE_PROMPT_TEMPLATE = fs.readFileSync(
   path.resolve(process.cwd(), "prompty_do_ai", "prompt_generacja_notatki_przedmiotowej.txt"),
   "utf8"
@@ -655,8 +664,13 @@ function countUserFileUploads(teacherId, schoolId = null) {
   }, 0);
 }
 
-function getOwnedLessonOrRespond(req, res, teacherId, schoolId = null) {
-  const lesson = db.lessons.get(req.params.lessonId);
+async function getOwnedLessonOrRespond(req, res, teacherId, schoolId = null) {
+  let lesson = db.lessons.get(req.params.lessonId);
+  if (!lesson) {
+    console.warn(`[getOwnedLessonOrRespond] Lesson ${req.params.lessonId} not found in memory, refreshing from Supabase`);
+    await refreshSingleLessonFromSupabaseSafe(req.params.lessonId, teacherId, schoolId);
+    lesson = db.lessons.get(req.params.lessonId);
+  }
   if (!lesson) {
     res.status(404).json({ error: "Lesson not found" });
     return null;
@@ -729,7 +743,7 @@ function rowToSavedNote(row) {
     homeworkDueDate: row.homework_due_date || null,
     source: row.source || "manual",
     createdAt: row.created_at || null,
-    updatedAt: row.updated_at || null
+    updatedAt: row.updated_at || row.created_at || null
   };
 }
 
@@ -781,7 +795,7 @@ function finalNoteToRow(finalNote, teacherId) {
 }
 
 function savedNoteToRow(note, teacherId) {
-  return {
+  const row = {
     id: note.id,
     school_id: note.schoolId || null,
     teacher_id: String(teacherId || defaultTeacherId),
@@ -830,6 +844,40 @@ function rowToLicense(row) {
 
 function roundMoney(value) {
   return Number(Number(value || 0).toFixed(4));
+}
+
+function hasRepetitiveLoops(text) {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 8) return false;
+
+  // 1. Check unique words ratio for longer texts - adjusted to prevent false positives for lists of math terms
+  const uniqueWords = new Set(words);
+  const ratio = uniqueWords.size / words.length;
+  if (words.length >= 20 && ratio < 0.25) {
+    console.warn(`[RepetitionDetector] Triggered unique words ratio: ${ratio.toFixed(2)} (${uniqueWords.size}/${words.length})`);
+    return true;
+  }
+
+  // 2. Check consecutive word sequences - safer thresholds to avoid false positives for emphasis/teaching repetitions
+  for (let len = 1; len <= 4; len++) {
+    const requiredRepeats = len === 1 ? 6 : (len === 2 ? 5 : 4);
+    for (let i = 0; i <= words.length - len * requiredRepeats; i++) {
+      const sequences = [];
+      for (let r = 0; r < requiredRepeats; r++) {
+        sequences.push(words.slice(i + r * len, i + (r + 1) * len).join(" "));
+      }
+      
+      const allEqual = sequences.every(seq => seq === sequences[0]);
+      if (allEqual) {
+        console.warn(`[RepetitionDetector] Triggered consecutive sequence loop: "${sequences[0]}" repeated ${requiredRepeats} times`);
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 function getOpenRouterPricing(model) {
@@ -1101,7 +1149,7 @@ async function loadSchoolsFromSupabase() {
   const { data, error } = await supabase
     .from("schools")
     .select("*")
-    .order("updated_at", { ascending: false });
+    .order("created_at", { ascending: false });
   if (error) throw new Error(`Supabase schools load failed: ${error.message}`);
 
   for (const row of data || []) {
@@ -1111,7 +1159,7 @@ async function loadSchoolsFromSupabase() {
       id,
       name: String(row.name || "").trim() || "Twoja szkoła",
       businessEmailDomain: normalizeBusinessDomain(row.business_email_domain || row.domain || ""),
-      updatedAt: row.updated_at || null
+      updatedAt: row.created_at || null
     };
     db.schools.set(id, school);
   }
@@ -1241,20 +1289,24 @@ async function refreshSingleLessonFromSupabaseSafe(lessonId, teacherId, schoolId
 
 async function loadFinalNotesFromSupabase() {
   if (!supabase) return;
-  const { data, error } = await supabase.from("final_notes").select("*");
-  if (error) throw new Error(`Supabase final notes load failed: ${error.message}`);
-  for (const row of data || []) {
-    const lesson = db.lessons.get(row.lesson_id);
-    if (!lesson) continue;
-    lesson.finalNote = rowToFinalNote(row);
-    db.lessons.set(lesson.id, lesson);
+  try {
+    const { data, error } = await supabase.from("final_notes").select("*");
+    if (error) throw new Error(`Supabase final notes load failed: ${error.message}`);
+    for (const row of data || []) {
+      const lesson = db.lessons.get(row.lesson_id);
+      if (!lesson) continue;
+      lesson.finalNote = rowToFinalNote(row);
+      db.lessons.set(lesson.id, lesson);
+    }
+  } catch (error) {
+    console.error(error.message);
   }
 }
 
 async function loadSavedNotesFromSupabase() {
   if (!supabase) return;
   try {
-    const { data, error } = await supabase.from("saved_notes").select("*").order("updated_at", { ascending: false });
+    const { data, error } = await supabase.from("saved_notes").select("*").order("created_at", { ascending: false });
     if (error) throw new Error(`Supabase saved notes load failed: ${error.message}`);
     for (const row of data || []) {
       const note = rowToSavedNote(row);
@@ -2348,7 +2400,11 @@ RZECZYWISTE POKRYCIE PLANU: ${JSON.stringify(coverageFacts)}
 Transkrypcja: ${transcript}
 `.trim();
   try {
-    const out = await callOpenRouter({ model: OPENROUTER_TEXT_MODEL, parts: [{ text: prompt }] });
+    const out = await callOpenRouter({
+      model: OPENROUTER_TEXT_MODEL,
+      parts: [{ text: prompt }],
+      maxTokens: 6000 // Ensure long lesson summaries are never cut off
+    });
     recordCostFromBase({
       lessonId: context.lessonId || lesson.id || null,
       schoolId: context.schoolId || lesson.schoolId || null,
@@ -2423,7 +2479,7 @@ ZAKRES NAUCZANIA:
   const note = await callOpenRouter({
     model: OPENROUTER_TEXT_MODEL,
     parts: [{ text: prompt }],
-    maxTokens: Math.min(3000, Number.isFinite(OPENROUTER_MAX_TOKENS) ? OPENROUTER_MAX_TOKENS : 2000)
+    maxTokens: 8192 // Raise limit to model's native maximum output tokens to prevent note truncation
   });
 
   if (!note?.text) {
@@ -2778,7 +2834,7 @@ app.post("/api/lessons/:lessonId/upload", upload.single("file"), async (req, res
   try {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
-    const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+    const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     const uploadPolicy = getUserUploadPolicy(teacher.userId);
@@ -3359,7 +3415,7 @@ app.post("/api/lessons/:lessonId/homework", async (req, res) => {
     const homework = String(req.body?.homework || "").trim();
     const homeworkDueDate = req.body?.homeworkDueDate || null;
 
-    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    const lesson = await getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     lesson.homework = homework;
@@ -3419,7 +3475,7 @@ app.delete("/api/lessons/:lessonId/homework", async (req, res) => {
     const teacher = await resolveTeacherContext(req, res);
     if (!teacher) return;
     const lessonId = req.params.lessonId;
-    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    const lesson = await getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     lesson.homework = "";
@@ -3474,7 +3530,7 @@ app.post("/api/insights/live-lesson-summary", async (req, res) => {
       return res.status(400).json({ error: "Brak lessonId." });
     }
 
-    const lesson = getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
+    const lesson = await getOwnedLessonOrRespond({ params: { lessonId } }, res, teacher.teacherId, teacher.schoolId);
     if (!lesson) return;
 
     const planLines = (Array.isArray(lesson.plan) ? lesson.plan : []).map((point, index) => {
@@ -3733,7 +3789,7 @@ app.put("/api/lessons/:lessonId/plan", async (req, res) => {
 app.put("/api/lessons/:lessonId/plan/:pointId/manual", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
   const pointId = String(req.params.pointId || "").trim();
@@ -3765,7 +3821,7 @@ app.post("/api/lessons/:lessonId/live/start", async (req, res) => {
   if (!teacher) return;
   const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Rozpoczęcie lekcji");
   if (!activeLicense) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
   // Demo limit enforcement removed
@@ -3785,7 +3841,7 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   if (!teacher) return;
   const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Transkrypcja lekcji live");
   if (!activeLicense) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   if (shouldAutoFinishLesson(lesson)) {
     markLessonFinished(lesson);
@@ -3796,6 +3852,11 @@ app.post("/api/lessons/:lessonId/transcript", async (req, res) => {
   // Demo limit enforcement removed
   const { text, startedAtMs = 0, language = "pl" } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: "Transcript text required" });
+
+  if (hasRepetitiveLoops(text)) {
+    console.warn(`[Transcript] Discarded highly repetitive transcript loop: "${String(text).substring(0, 100)}..."`);
+    return res.json({ ok: true, discarded: true });
+  }
 
   lesson.transcripts.push({
     id: randomUUID(),
@@ -3823,7 +3884,7 @@ app.get("/api/lessons/:lessonId/coverage", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
   if (!requireActiveLicenseForTeacher(teacher, res, "Analiza pokrycia")) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   lesson.plan = await calculateCoverageWithLLM(lesson.plan, lesson.transcripts, { lessonId: lesson.id, schoolId: teacher.schoolId, teacherId: teacher.teacherId });
   db.lessons.set(lesson.id, lesson);
@@ -3837,7 +3898,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
   if (!teacher) return;
   const activeLicense = requireActiveLicenseForTeacher(teacher, res, "Generowanie prezentacji i notatki końcowej");
   if (!activeLicense) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   const html = await generateFinalNoteWithLLM(lesson, {
     lessonId: lesson.id,
@@ -3868,7 +3929,7 @@ app.post("/api/lessons/:lessonId/finalize", async (req, res) => {
 app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
@@ -3895,7 +3956,7 @@ app.put("/api/lessons/:lessonId/final-note", async (req, res) => {
 app.delete("/api/lessons/:lessonId/final-note", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   if (!lesson.finalNote) return res.status(404).json({ error: "Final note not found" });
 
@@ -3910,7 +3971,7 @@ app.delete("/api/lessons/:lessonId", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
 
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
   try {
@@ -3938,7 +3999,7 @@ app.delete("/api/lessons/:lessonId", async (req, res) => {
 app.get("/api/lessons/:lessonId/costs", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
   return res.json(getCostSummary(lesson.id));
 });
@@ -3946,7 +4007,7 @@ app.get("/api/lessons/:lessonId/costs", async (req, res) => {
 app.delete("/api/lessons/:lessonId/costs", async (req, res) => {
   const teacher = await resolveTeacherContext(req, res);
   if (!teacher) return;
-  const lesson = getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
+  const lesson = await getOwnedLessonOrRespond(req, res, teacher.teacherId, teacher.schoolId);
   if (!lesson) return;
 
   // Reset costs for this lesson
@@ -4832,101 +4893,127 @@ app.post("/api/transcribe", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Audio file is required." });
     }
 
-    if (!openai) {
-      return res.status(500).json({ error: "OPENROUTER_API_KEY is missing for AI transcription." });
+    let rawText = "";
+    let provider = "";
+    let modelUsed = "";
+    let baseAmountPLN = 0.02;
+
+    if (whisperClient) {
+      // 1. Direct OpenAI Whisper API (Dedicated STT, avoids OpenRouter connection errors)
+      const whisperModel = process.env.OPENAI_WHISPER_MODEL
+        ? process.env.OPENAI_WHISPER_MODEL
+        : (OPENAI_BASE_URL ? "whisper-large-v3-turbo" : "whisper-1");
+
+      console.log('[transcribe] Processing audio with Direct OpenAI Whisper:', {
+        filename: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.buffer.length,
+        model: whisperModel,
+        lessonId
+      });
+
+      const transcriptionResponse = await whisperClient.audio.transcriptions.create({
+        file: await toFile(req.file.buffer, `audio-${Date.now()}.webm`),
+        model: whisperModel,
+        prompt: "Transkrybuj audio słowo w słowo. Nagranie może zawierać wtrącenia po angielsku lub innych językach obcych (np. pojęcia techniczne, programistyczne, zwroty). Zapisz je dokładnie w oryginalnym języku, nie tłumacz ich na język polski."
+      });
+
+      rawText = String(transcriptionResponse.text || "").trim();
+      provider = OPENAI_PROVIDER_NAME || "OpenAI";
+      modelUsed = whisperModel;
+
+      const durationSec = 2; // Default chunk estimate
+      const pricePerSecPLN = (WHISPER_PRICE_PER_MIN_USD / 60) * USD_TO_PLN;
+      baseAmountPLN = durationSec * pricePerSecPLN;
+
+    } else if (openai) {
+      // 2. Gemini 2.5 Flash via OpenRouter Chat Completions (Fallback when OpenAI API key is missing)
+      console.log('[transcribe] Processing audio with Gemini 2.5 Flash (via OpenRouter Chat Completions):', {
+        filename: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.buffer.length,
+        lessonId
+      });
+
+      const base64Audio = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype || "audio/webm";
+
+      const geminiResponse = await callOpenRouter({
+        model: "google/gemini-2.5-flash",
+        parts: [
+          {
+            inlineData: {
+              data: base64Audio,
+              mimeType: mimeType
+            }
+          },
+          {
+            text: "Jesteś precyzyjnym systemem transkrypcji audio (STT). Twoim zadaniem jest zapisać tekst z nagrania audio SŁOWO W SŁOWO.\n" +
+              "Nagranie może zawierać mowę w jednym lub wielu językach (np. wtrącenia, cytaty, nauka języka obcego, mieszane wypowiedzi polsko-angielskie). Zapisuj słowa w oryginalnym języku, w jakim zostały wypowiedziane. KATEGORYCZNIE NIE tłumacz wypowiedzi między językami.\n" +
+              "ZASADY:\n" +
+              "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
+              "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
+              "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
+              "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
+              "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
+              "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
+              "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz.\n" +
+              "8. POD ŻADNYM POZOREM nie powtarzaj w kółko tej samej frazy (unikaj zapętleń). Jeśli nagranie zawiera tylko szum lub ciszę, zwróć pusty ciąg znaków."
+          }
+        ],
+        maxTokens: 2048,
+        temperature: 0.15
+      });
+
+      rawText = String(geminiResponse.text || "").trim();
+      provider = "Google";
+      modelUsed = "google/gemini-2.5-flash";
+
+      const usage = geminiResponse.usage || {};
+      baseAmountPLN = estimateOpenRouterBaseUsdCost({
+        model: "google/gemini-2.5-flash",
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens
+      }) * USD_TO_PLN;
+
+    } else {
+      return res.status(500).json({ error: "No AI client (OpenAI or OpenRouter) is configured." });
     }
 
-    console.log('[transcribe] Processing audio with Gemini Flash:', {
-      filename: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.buffer.length,
-      lessonId
-    });
+    console.log(`[🎤] STT (${modelUsed}): "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
 
-    // Use Gemini Flash via OpenRouter for multimodal STT
-    const base64Audio = req.file.buffer.toString("base64");
-    const mimeType = req.file.mimetype || "audio/webm";
-
-    const geminiResponse = await callOpenRouter({
-      model: OPENROUTER_TRANSCRIPTION_MODEL,
-      parts: [
-        {
-          inlineData: {
-            data: base64Audio,
-            mimeType: mimeType
-          }
-        },
-        {
-          text: "Jesteś precyzyjnym systemem transkrypcji audio (STT). Twoim zadaniem jest zapisać tekst z nagrania audio SŁOWO W SŁOWO.\n" +
-            "ZASADY:\n" +
-            "1. Zwróć TYLKO czysty tekst transkrypcji.\n" +
-            "2. NIE dodawaj nazw języków (np. 'polski:', 'angielski:').\n" +
-            "3. NIE dodawaj znaczników czasu ani timerów (np. '02:53').\n" +
-            "4. NIE dodawaj komentarzy, streszczeń ani nagłówków.\n" +
-            "5. Zachowaj oryginalną interpunkcję i wielkość liter.\n" +
-            "6. Jeśli w nagraniu nie ma mowy, zwróć PUSTY CIĄG ZNAKÓW.\n" +
-            "7. Nie poprawiaj błędów językowych, zapisz dokładnie to, co słyszysz."
-        }
-      ],
-      maxTokens: 2048,
-      temperature: 0.0
-    });
-
-    let rawText = String(geminiResponse.text || "").trim();
-
-    // Usuwamy prefiksy językowe i znaczniki czasu, które Gemini czasem dodaje mimo instrukcji
-    rawText = rawText
-      .replace(/^([a-z]{3,15}|język\s+[a-z]+)[:\s]*/gmi, "") // Usuwa "polski: ", "English: ", "Język polski: " itp. z początku każdej linii
-      .replace(/\b(\d{1,2}:)?\d{1,2}:\d{2}\b/g, "")        // Usuwa znaczniki czasu typu 02:53 lub 1:02:53
-      .trim();
-
-
-
-    console.log(`[🎤] Gemini STT: "${rawText.substring(0, 40)}..." (${rawText.length} chars)`);
-
-    // Obliczanie kosztu na podstawie tokenów (Gemini Flash jest bardzo tani)
-    const usage = geminiResponse.usage || {};
-    const baseAmountPLN = estimateOpenRouterBaseUsdCost({
-      model: OPENROUTER_TRANSCRIPTION_MODEL,
-      promptTokens: usage.promptTokens,
-      completionTokens: usage.completionTokens
-    }) * USD_TO_PLN;
-
-    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej|zapisz tekst z nagrania|zwróć tylko transkrypcję|dokładna transkrypcja|wykryj automatycznie język|nigger|murzyn)/i;
+    // Standard hallucination and loop filters
+    const hallucinationRegex = /(napisy (by|przygotował|stworzone)|facebooku i instagramie|oglądajcie, subskrybujcie|dzięki za oglądanie|amara\.org|nie dodawaj podpisów|ignorować ciszę|lekcji online prowadzonej)/i;
     const obviousHallucinations = /^(dziękuję|dzięki|dzień dobry|dobry wieczór|proszę|cześć|hej|hi|hello|thanks|please|dziękuję,? dzień dobry\.?|dziękuję bardzo\.?|do widzenia\.?|cisza\.?|brak mowy\.?)$/i;
 
     const isValidTranscription = rawText &&
-      rawText.length > 3 && // Gemini rzadziej halucynuje niż Whisper, ale zostawiamy krótki filtr
+      rawText.length >= 2 &&
       !obviousHallucinations.test(rawText) &&
-      !hallucinationRegex.test(rawText);
+      !hallucinationRegex.test(rawText) &&
+      !hasRepetitiveLoops(rawText);
 
     if (isValidTranscription) {
       recordCostFromBase({
         lessonId,
         schoolId: teacher.schoolId,
         teacherId: teacher.teacherId,
-        provider: "Google",
-        model: OPENROUTER_TRANSCRIPTION_MODEL,
+        provider: provider,
+        model: modelUsed,
         category: "live_transcription",
-        baseAmountPLN: baseAmountPLN,
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
-        totalTokens: usage.totalTokens,
-        requestId: geminiResponse.requestId,
-        latencyMs: geminiResponse.latencyMs
+        baseAmountPLN: baseAmountPLN
       });
     }
 
     const text = isValidTranscription ? rawText : "";
     return res.json({
       text,
-      durationSec: undefined, // Gemini nie zwraca czasu trwania w prosty sposób
+      durationSec: undefined,
       cost: getCostSummary(lessonId).total,
       limitReached: getCostSummary(lessonId).exceeded
     });
   } catch (error) {
-    console.error(`[❌] Gemini Transcription failed:`, error.message);
-    return res.status(500).json({ error: `Gemini transcription failed: ${error.message}` });
+    console.error(`[❌] Transcription failed:`, error.message);
+    return res.status(500).json({ error: `Transcription failed: ${error.message}` });
   }
 });
 
@@ -5135,16 +5222,29 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-loadSchoolsFromSupabase()
-  .then(() => loadLessonsFromSupabase())
-  .then(() => loadLicensesFromSupabase())
-  .then(() => loadFinalNotesFromSupabase())
-  .then(() => loadSavedNotesFromSupabase())
-  .then(() => loadQuizzesFromSupabase())
-  .then(() => loadCostEventsFromSupabase())
-  .catch((error) => {
-    console.error(`Persistence bootstrap failed: ${error.message}`);
-  })
+async function bootstrapPersistence() {
+  const tasks = [
+    { name: "schools", fn: loadSchoolsFromSupabase },
+    { name: "lessons", fn: loadLessonsFromSupabase },
+    { name: "licenses", fn: loadLicensesFromSupabase },
+    { name: "finalNotes", fn: loadFinalNotesFromSupabase },
+    { name: "savedNotes", fn: loadSavedNotesFromSupabase },
+    { name: "quizzes", fn: loadQuizzesFromSupabase },
+    { name: "costEvents", fn: loadCostEventsFromSupabase }
+  ];
+
+  console.log("[Persistence] Bootstrapping data from Supabase...");
+  for (const task of tasks) {
+    try {
+      await task.fn();
+      console.log(`[Persistence] ✅ Loaded ${task.name} successfully.`);
+    } catch (err) {
+      console.error(`[Persistence] ❌ Failed to load ${task.name}:`, err.message);
+    }
+  }
+}
+
+bootstrapPersistence()
   .finally(() => {
     setInterval(() => {
       autoFinishDueLessons().catch((error) => {
